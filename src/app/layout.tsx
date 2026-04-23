@@ -41,6 +41,9 @@ const almarena = localFont({
 export const metadata: Metadata = {
   title: "Just Tattoos",
   description: "Authentic tattoo lifestyle and apparel.",
+  other: {
+    "facebook-domain-verification": "pxy8rtt4m4qc86h0j1nmxcs4prlwbe",
+  },
   icons: {
     // 1. Primary Favicon (SVG)
     icon: [
