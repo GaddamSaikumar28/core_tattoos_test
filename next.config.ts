@@ -20,7 +20,8 @@ const config: NextConfig = {
         source: '/blogs/:path*', 
         
         // This silently proxies the traffic to your native Shopify blog behind the scenes
-        destination: 'https://justtattoos.myshopify.com/blogs/:path*', 
+        // destination: 'https://justtattoos.myshopify.com/blogs/:path*', 
+        destination: 'https://checkout.justtattoos.com/blogs/:path*',
       },
     ];
   },
