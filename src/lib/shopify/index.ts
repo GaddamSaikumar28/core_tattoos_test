@@ -1280,3 +1280,37 @@ export async function getHomeFreeGiftSectionData(handle: string = 'home_free_gif
     buttonLink: mo.button_link?.value || '/collections',
   };
 }
+
+// --- ADD TO BOTTOM OF index.ts ---
+
+import { getBlogArticlesQuery, getArticleByHandleQuery } from './queries';
+
+export async function getBlogArticles(blogHandle: string = 'news') {
+  const res = await shopifyFetch<any>({
+    query: getBlogArticlesQuery,
+    variables: { blogHandle },
+    tags: ['blog', blogHandle],
+  });
+  return res.body?.data?.blog;
+}
+
+export async function getArticle(blogHandle: string, articleHandle: string) {
+  const res = await shopifyFetch<any>({
+    query: getArticleByHandleQuery,
+    variables: { blogHandle, articleHandle },
+    tags: ['blog', articleHandle],
+  });
+  return res.body?.data?.blog?.articleByHandle;
+}
+
+import { getBlogsQuery } from './queries';
+
+export async function getBlogs() {
+  const res = await shopifyFetch<any>({
+    query: getBlogsQuery,
+    tags: ['blogs'],
+  });
+  
+  // Return a clean array of blog nodes
+  return res.body?.data?.blogs?.edges?.map((edge: any) => edge.node) || [];
+}

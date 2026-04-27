@@ -35,6 +35,7 @@ const FOOTER_LINKS = [
       { name: "About us", href: "/about" },
       { name: "How it works", href: "/how-it-works" },
       { name: "Contact us", href: "/contact" },
+      { name: "Blogs", href: "/blogs" },
     ],
   },
   {

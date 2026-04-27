@@ -915,3 +915,78 @@ export const getHomeFreeGiftSectionQuery = /* GraphQL */ `
     }
   }
 `;
+
+// --- ADD TO BOTTOM OF queries.ts ---
+
+export const getBlogArticlesQuery = /* GraphQL */ `
+  query getBlogArticles($blogHandle: String!) {
+    blog(handle: $blogHandle) {
+      title
+      seo {
+        title
+        description
+      }
+      articles(first: 20, sortKey: PUBLISHED_AT, reverse: true) {
+        edges {
+          node {
+            id
+            title
+            handle
+            publishedAt
+            excerptHtml
+            image {
+              url
+              altText
+              width
+              height
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const getArticleByHandleQuery = /* GraphQL */ `
+  query getArticleByHandle($blogHandle: String!, $articleHandle: String!) {
+    blog(handle: $blogHandle) {
+      articleByHandle(handle: $articleHandle) {
+        id
+        title
+        publishedAt
+        contentHtml
+        seo {
+          title
+          description
+        }
+        image {
+          url
+          altText
+          width
+          height
+        }
+        authorV2 {
+          name
+        }
+      }
+    }
+  }
+`;
+
+export const getBlogsQuery = /* GraphQL */ `
+  query getBlogs {
+    blogs(first: 10) {
+      edges {
+        node {
+          id
+          handle
+          title
+          seo {
+            title
+            description
+          }
+        }
+      }
+    }
+  }
+`;
