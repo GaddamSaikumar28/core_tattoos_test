@@ -19,7 +19,7 @@ export default function NewArrivalsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [pageInfo, setPageInfo] = useState({ hasNextPage: false, endCursor: null as string | null });
-
+  const [bannerImage, setBannerImage] = useState<string>('/assets/images/temporary_tattoos.webp');
   // 1. STATE INITIALIZATION
   const [collectionMap, setCollectionMap] = useState<Record<string, string>>({});
   
@@ -100,6 +100,67 @@ export default function NewArrivalsPage() {
   }, []);
 
   // 3. HYBRID PRODUCT FETCHING LOGIC
+  // const fetchProducts = useCallback(async (cursor: string | null = null) => {
+  //   if (cursor) setIsLoadingMore(true);
+  //   else setIsLoading(true);
+
+  //   try {
+  //     const hasSecondaryFilters = 
+  //       activeFilters.styles.length > 0 || 
+  //       activeFilters.sizes.length > 0 || 
+  //       activeFilters.placements.length > 0;
+
+  //     // 🚀 LOGIC HUB: Determine Base Collection
+  //     // If user selected a collection in the sidebar, use its mapped handle. 
+  //     // Otherwise, default strictly to 'new-arrivals'.
+  //     const selectedCollection = activeFilters.collections[0];
+  //     const baseHandle = (selectedCollection && collectionMap[selectedCollection]) 
+  //       ? collectionMap[selectedCollection] 
+  //       : 'new-arrival';
+
+  //     let result;
+
+  //     if (!hasSecondaryFilters) {
+  //       // SCENARIO A: Strict Collection Fetch
+  //       result = await getCollectionProducts({
+  //         handle: baseHandle, 
+  //         first: itemsPerPage,
+  //         after: cursor || undefined
+  //       });
+  //     } else {
+  //       // SCENARIO B: Filtered Search Query within the target collection
+  //       const queryParts = [`collection:'${baseHandle}'`];
+  //       const buildGroup = (items: string[]) => items.map(i => `(tag:'${i}' OR "${i}")`).join(' OR ');
+
+  //       if (activeFilters.styles.length > 0) queryParts.push(`(${buildGroup(activeFilters.styles)})`);
+  //       if (activeFilters.sizes.length > 0) queryParts.push(`(${buildGroup(activeFilters.sizes)})`);
+  //       if (activeFilters.placements.length > 0) queryParts.push(`(${buildGroup(activeFilters.placements)})`);
+
+  //       result = await getProducts({
+  //         query: queryParts.join(' AND '),
+  //         first: itemsPerPage,
+  //         after: cursor || undefined,
+  //         sortKey: 'CREATED_AT',
+  //         reverse: true
+  //       });
+  //     }
+  //     console.log("Fetched Products Result: in new arrivals", result);
+  //     if (cursor) {
+  //       setProducts(prev => [...prev, ...result.formattedData]);
+  //     } else {
+  //       setProducts(result.formattedData);
+  //       if (!cursor) window.scrollTo({ top: 0, behavior: 'smooth' });
+  //     }
+  //     setPageInfo(result.pageInfo);
+  //   } catch (error) {
+  //     console.error("Failed to fetch products", error);
+  //     if (!cursor) setProducts([]);
+  //   } finally {
+  //     setIsLoading(false);
+  //     setIsLoadingMore(false);
+  //   }
+  // }, [activeFilters, itemsPerPage, collectionMap]);
+// 3. HYBRID PRODUCT FETCHING LOGIC
   const fetchProducts = useCallback(async (cursor: string | null = null) => {
     if (cursor) setIsLoadingMore(true);
     else setIsLoading(true);
@@ -110,9 +171,6 @@ export default function NewArrivalsPage() {
         activeFilters.sizes.length > 0 || 
         activeFilters.placements.length > 0;
 
-      // 🚀 LOGIC HUB: Determine Base Collection
-      // If user selected a collection in the sidebar, use its mapped handle. 
-      // Otherwise, default strictly to 'new-arrivals'.
       const selectedCollection = activeFilters.collections[0];
       const baseHandle = (selectedCollection && collectionMap[selectedCollection]) 
         ? collectionMap[selectedCollection] 
@@ -127,6 +185,15 @@ export default function NewArrivalsPage() {
           first: itemsPerPage,
           after: cursor || undefined
         });
+
+        // UPDATE BANNER IMAGE IF IT EXISTS
+        if (!cursor && result.collectionImage?.url) {
+          setBannerImage(result.collectionImage.url);
+        } else if (!cursor && !result.collectionImage?.url) {
+          // Fallback if the collection has no specific image
+          setBannerImage('/assets/images/temporary_tattoos.webp'); 
+        }
+
       } else {
         // SCENARIO B: Filtered Search Query within the target collection
         const queryParts = [`collection:'${baseHandle}'`];
@@ -144,12 +211,14 @@ export default function NewArrivalsPage() {
           reverse: true
         });
       }
-
+      
+      console.log("Fetched Products Result: in new arrivals", result);
+      
       if (cursor) {
         setProducts(prev => [...prev, ...result.formattedData]);
       } else {
         setProducts(result.formattedData);
-        if (!cursor) window.scrollTo({ top: 0, behavior: 'smooth' });
+        // REMOVED window.scrollTo HERE TO STOP THE ANNOYING SCROLL JUMP
       }
       setPageInfo(result.pageInfo);
     } catch (error) {
@@ -200,7 +269,8 @@ export default function NewArrivalsPage() {
     <div className="bg-slate-50 min-h-screen mt-20">
       <SharedHeroBanner 
         title="NEW ARRIVALS"
-        image="/assets/images/temporary_tattoos.webp"
+        image={bannerImage}
+        mobileImage={bannerImage} 
         textColor="var(--color-brand-orange)"
       />
 

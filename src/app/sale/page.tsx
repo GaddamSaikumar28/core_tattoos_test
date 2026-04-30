@@ -19,7 +19,7 @@ export default function SalePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [pageInfo, setPageInfo] = useState({ hasNextPage: false, endCursor: null as string | null });
-
+  const [bannerImage, setBannerImage] = useState<string>('/assets/images/SaleBanner.png');
   // 1. STATE INITIALIZATION
   const [collectionMap, setCollectionMap] = useState<Record<string, string>>({});
 
@@ -99,6 +99,7 @@ export default function SalePage() {
   }, []);
 
   // 3. HYBRID PRODUCT FETCHING WITH FALLBACK LOGIC
+  // 3. HYBRID PRODUCT FETCHING WITH FALLBACK LOGIC
   const fetchProducts = useCallback(async (cursor: string | null = null) => {
     if (cursor) setIsLoadingMore(true);
     else setIsLoading(true);
@@ -119,6 +120,14 @@ export default function SalePage() {
           first: itemsPerPage,
           after: cursor || undefined
         });
+        console.log("Fetched collection products for 'sale' high ", result.collectionImage);
+        // UPDATE BANNER IMAGE IF IT EXISTS
+        if (!cursor && result.collectionImage?.url) {
+          setBannerImage(result.collectionImage.url);
+        } else if (!cursor && !result.collectionImage?.url) {
+          // Fallback if the collection has no specific image
+          setBannerImage('/assets/images/SaleBanner.png'); 
+        }
 
         // 🚨 FALLBACK: If 'sale' is empty or doesn't exist, fetch general products
         if (result.formattedData.length === 0 && !cursor) {
@@ -163,11 +172,12 @@ export default function SalePage() {
         }
       }
 
+      console.log("Fetched products: in sale", result.formattedData);
       if (cursor) {
         setProducts(prev => [...prev, ...result.formattedData]);
       } else {
         setProducts(result.formattedData);
-        if (!cursor) window.scrollTo({ top: 0, behavior: 'smooth' });
+        // REMOVED window.scrollTo HERE TO STOP THE ANNOYING SCROLL JUMP
       }
       setPageInfo(result.pageInfo);
     } catch (error) {
@@ -178,6 +188,85 @@ export default function SalePage() {
       setIsLoadingMore(false);
     }
   }, [activeFilters, itemsPerPage, collectionMap]);
+  // const fetchProducts = useCallback(async (cursor: string | null = null) => {
+  //   if (cursor) setIsLoadingMore(true);
+  //   else setIsLoading(true);
+
+  //   try {
+  //     const hasFilters = 
+  //       activeFilters.collections.length > 0 ||
+  //       activeFilters.styles.length > 0 || 
+  //       activeFilters.sizes.length > 0 || 
+  //       activeFilters.placements.length > 0;
+
+  //     let result;
+
+  //     if (!hasFilters) {
+  //       // SCENARIO A: Strict 'Sale' Collection Fetch
+  //       result = await getCollectionProducts({
+  //         handle: 'sale', 
+  //         first: itemsPerPage,
+  //         after: cursor || undefined
+  //       });
+
+  //       // 🚨 FALLBACK: If 'sale' is empty or doesn't exist, fetch general products
+  //       if (result.formattedData.length === 0 && !cursor) {
+  //           console.warn("Sale collection is empty. Falling back to all products.");
+  //           result = await getProducts({ first: itemsPerPage });
+  //       }
+
+  //     } else {
+  //       // SCENARIO B: Filtered Search Query within 'Sale'
+  //       const queryParts = [`collection:'sale'`];
+  //       const buildGroup = (items: string[]) => items.map(i => `(tag:'${i}' OR "${i}")`).join(' OR ');
+
+  //       // If a collection is selected, intersect it with the sale query
+  //       if (activeFilters.collections.length > 0) {
+  //           const selectedCol = activeFilters.collections[0];
+  //           const handle = collectionMap[selectedCol];
+  //           if (handle) {
+  //               queryParts.push(`(tag:'${handle}' OR tag:'${selectedCol}' OR "${handle}")`);
+  //           }
+  //       }
+
+  //       if (activeFilters.styles.length > 0) queryParts.push(`(${buildGroup(activeFilters.styles)})`);
+  //       if (activeFilters.sizes.length > 0) queryParts.push(`(${buildGroup(activeFilters.sizes)})`);
+  //       if (activeFilters.placements.length > 0) queryParts.push(`(${buildGroup(activeFilters.placements)})`);
+
+  //       result = await getProducts({
+  //         query: queryParts.join(' AND '),
+  //         first: itemsPerPage,
+  //         after: cursor || undefined,
+  //         sortKey: 'CREATED_AT',
+  //         reverse: true
+  //       });
+
+  //       // 🚨 FALLBACK: If the filtered sale query returns nothing, try fetching just the filters without the 'sale' restriction
+  //       if (result.formattedData.length === 0 && !cursor) {
+  //           console.warn("Filtered sale query is empty. Falling back to general filtered products.");
+  //           const fallbackQuery = queryParts.filter(part => part !== `collection:'sale'`).join(' AND ');
+  //           result = await getProducts({
+  //               query: fallbackQuery || undefined,
+  //               first: itemsPerPage
+  //           });
+  //       }
+  //     }
+
+  //     if (cursor) {
+  //       setProducts(prev => [...prev, ...result.formattedData]);
+  //     } else {
+  //       setProducts(result.formattedData);
+  //       if (!cursor) window.scrollTo({ top: 0, behavior: 'smooth' });
+  //     }
+  //     setPageInfo(result.pageInfo);
+  //   } catch (error) {
+  //     console.error("Failed to fetch products", error);
+  //     if (!cursor) setProducts([]);
+  //   } finally {
+  //     setIsLoading(false);
+  //     setIsLoadingMore(false);
+  //   }
+  // }, [activeFilters, itemsPerPage, collectionMap]);
 
   useEffect(() => {
     fetchProducts(null);
@@ -219,8 +308,10 @@ export default function SalePage() {
       
       {/* PREMIUM HERO BANNER */}
       <SharedHeroBanner
-        image="/assets/images/SaleBanner.png" 
-        mobileImage="/assets/images/SaleMobileBackground.png" 
+        // image="/assets/images/SaleBanner.png" 
+        // mobileImage="/assets/images/SaleMobileBackground.png" 
+        image={bannerImage} 
+        mobileImage={bannerImage} 
         title="FLASH SALE"
         textColor="#FF3366" 
       />

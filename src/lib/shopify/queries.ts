@@ -1025,6 +1025,12 @@ export const getCollectionProductsQuery = /* GraphQL */ `
     $after: String
   ) {
     collection(handle: $handle) {
+      image {
+        url
+        altText
+        width
+        height
+      }
       products(first: $first, after: $after) {
         pageInfo {
           hasNextPage

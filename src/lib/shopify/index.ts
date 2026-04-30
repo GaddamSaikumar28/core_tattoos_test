@@ -1342,15 +1342,16 @@ export async function getCollectionProducts({
     variables: { handle, first, after },
     cache: 'no-store'
   });
-
+  const collectionData = res.body?.data?.collection;
   const productsData = res.body?.data?.collection?.products;
 
   if (!productsData?.edges) {
-    return { formattedData: [], pageInfo: { hasNextPage: false, endCursor: null } };
+    return { formattedData: [], pageInfo: { hasNextPage: false, endCursor: null }, collectionImage: collectionData?.image || null };
   }
 
   return {
     formattedData: await mapShopifyProductsForProduction(productsData),
     pageInfo: productsData.pageInfo,
+    collectionImage: collectionData?.image || null
   };
 }

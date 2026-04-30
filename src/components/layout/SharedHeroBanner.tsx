@@ -49,7 +49,7 @@ const imageFadeVariants: Variants = {
 
 export default function SharedHeroBanner({
   image = "/assets/images/NewArrivalsHeroDesktop.png",
-  mobileImage = "/assets/images/NewArrivalsHeroMobile.png",
+  mobileImage = "/assets/images/temporary_tattoos.webp",
   title = "NEW ARRIVALS",
   textColor = "#FFFFFF",
   useMobileImage = true,
