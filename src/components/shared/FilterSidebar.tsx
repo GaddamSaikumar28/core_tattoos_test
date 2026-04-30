@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React from 'react';
@@ -69,7 +68,7 @@ export function FilterSidebar({ filters, activeFilters, onToggle }: FilterSideba
       {Object.values(activeFilters).some(arr => arr.length > 0) && (
         <button 
           onClick={() => onToggle('RESET')} 
-          className="w-full py-3 rounded-xl bg-slate-950 text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-slate-800 transition-colors shadow-lg"
+          className="w-full py-3 rounded-xl bg-slate-950 text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-[var(--color-brand-orange)] transition-colors shadow-lg"
         >
           Reset Filters
         </button>
@@ -92,7 +91,8 @@ function FilterGroup({ title, items, activeItems, onToggle }: { title: string, i
               <div 
                 className={clsx(
                   "w-4 h-4 rounded-sm border transition-all flex items-center justify-center",
-                  isActive ? "bg-slate-950 border-slate-950 text-white" : "border-slate-300 bg-white group-hover:border-slate-500"
+                  // Updated to Brand Orange
+                  isActive ? "bg-[var(--color-brand-orange)] border-[var(--color-brand-orange)] text-white" : "border-slate-300 bg-white group-hover:border-slate-500"
                 )}
               >
                 <input 
@@ -105,7 +105,8 @@ function FilterGroup({ title, items, activeItems, onToggle }: { title: string, i
               </div>
               <span className={clsx(
                 "text-xs font-bold transition-colors uppercase tracking-widest line-clamp-1", 
-                isActive ? "text-slate-950" : "text-slate-500 group-hover:text-slate-800"
+                // Updated active text color
+                isActive ? "text-[var(--color-brand-orange)]" : "text-slate-500 group-hover:text-slate-800"
               )}>
                 {item}
               </span>

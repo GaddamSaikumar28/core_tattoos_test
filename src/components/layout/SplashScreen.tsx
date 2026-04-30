@@ -88,7 +88,6 @@ export default function SplashScreen({ logoUrl, leftImageUrl, rightImageUrl }: S
   if (!isMounted) {
     return <div suppressHydrationWarning className="fixed inset-0 z-[100] bg-[var(--color-white)]" />;
   }
-
   return (
     <AnimatePresence>
       {showIntro && (

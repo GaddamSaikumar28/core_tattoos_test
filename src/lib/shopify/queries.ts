@@ -370,20 +370,20 @@ export const updateCartBuyerIdentityMutation = /* GraphQL */ `
 `;
 
 
-export const getCollectionProductsQuery = /* GraphQL */ `
-  query getCollectionProducts($handle: String!, $first: Int!) {
-    collection(handle: $handle) {
-      products(first: $first) {
-        edges {
-          node {
-            ...product
-          }
-        }
-      }
-    }
-  }
-  ${productFragment}
-`;
+// export const getCollectionProductsQuery = /* GraphQL */ `
+//   query getCollectionProducts($handle: String!, $first: Int!) {
+//     collection(handle: $handle) {
+//       products(first: $first) {
+//         edges {
+//           node {
+//             ...product
+//           }
+//         }
+//       }
+//     }
+//   }
+//   ${productFragment}
+// `;
 
 
 // Add to queries.ts
@@ -989,4 +989,54 @@ export const getBlogsQuery = /* GraphQL */ `
       }
     }
   }
+`;
+
+export const getMenuQuery = /* GraphQL */ `
+  query getMenu($handle: String!) {
+    menu(handle: $handle) {
+      id
+      title
+      items {
+        id
+        title
+        url
+        type
+        items {
+          id
+          title
+          url
+          type
+          items {
+            id
+            title
+            url
+            type
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const getCollectionProductsQuery = /* GraphQL */ `
+  query getCollectionProducts(
+    $handle: String!
+    $first: Int!
+    $after: String
+  ) {
+    collection(handle: $handle) {
+      products(first: $first, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          node {
+            ...product
+          }
+        }
+      }
+    }
+  }
+  ${productFragment}
 `;

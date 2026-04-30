@@ -8,13 +8,7 @@ import clsx from 'clsx';
 import { FilterSidebar, ActiveFilters, FilterOptions } from '@/src/components/shared/FilterSidebar';
 import { ProductCard } from '@/src/components/shared/ProductLayout';
 import SharedHeroBanner from '@/src/components/layout/SharedHeroBanner';
-import { getProducts, FormattedProduct } from '@/src/lib/shopify'; 
-
-const STATIC_FILTER_OPTIONS = {
-  styles: ['Traditional', 'Fine Line', 'Blackwork', 'Geometric', 'Dotwork', 'Japanese', 'Realism', 'Minimalist'],
-  sizes: ['Tiny (1x1)', 'Small (2x2)', 'Medium (4x4)', 'Large (6x8)', 'Sleeve (10x6)'],
-  placements: ['Forearm', 'Calf', 'Chest', 'Neck', 'Wrist', 'Spine', 'Any']
-};
+import { getProducts, getCollectionProducts, getMenu, FormattedProduct } from '@/src/lib/shopify'; 
 
 export default function NewArrivalsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -26,214 +20,274 @@ export default function NewArrivalsPage() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [pageInfo, setPageInfo] = useState({ hasNextPage: false, endCursor: null as string | null });
 
-  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({
-    collections: [], // Not used on this specific page
+  // 1. STATE INITIALIZATION
+  const [collectionMap, setCollectionMap] = useState<Record<string, string>>({});
+  
+  const [dynamicFilters, setDynamicFilters] = useState<FilterOptions>({
+    collections: [],
     styles: [],
     sizes: [],
     placements: []
   });
 
-  const [availableFilters] = useState<FilterOptions>({
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({
     collections: [], 
-    styles: STATIC_FILTER_OPTIONS.styles,
-    sizes: STATIC_FILTER_OPTIONS.sizes,
-    placements: STATIC_FILTER_OPTIONS.placements
+    styles: [],
+    sizes: [],
+    placements: []
   });
 
-  // Fetch New Arrivals from Shopify
-  const fetchProducts = useCallback(async (cursor?: string | null, isLoadMore = false) => {
-    if (isLoadMore) setIsLoadingMore(true);
+  // 2. FETCH ALL DYNAMIC DATA (Collections, Styles, Sizes, Placements)
+  useEffect(() => {
+    async function loadFilterData() {
+      try {
+        const menuData = await getMenu('menu-custom');
+        
+        // --- A. Process Collections ---
+        const collectionsMenu = menuData?.items?.find((item: any) => 
+          item.title.toLowerCase() === 'collection' || item.title.toLowerCase() === 'collections'
+        );
+
+        const flatCategories: string[] = [];
+        const urlMapping: Record<string, string> = {};
+        
+        const processMenuItem = (item: any) => {
+          if (item.items && item.items.length > 0) {
+            item.items.forEach(processMenuItem);
+          } else {
+            flatCategories.push(item.title);
+            if (item.url) {
+              const urlParts = item.url.split('/').filter(Boolean);
+              const handle = urlParts[urlParts.length - 1];
+              if (handle) {
+                const cleanHandle = handle.split('?')[0].split('#')[0];
+                urlMapping[item.title] = cleanHandle;
+              }
+            }
+          }
+        };
+
+        if (collectionsMenu && collectionsMenu.items) {
+          collectionsMenu.items.forEach(processMenuItem);
+        }
+
+        const hiddenCollections = ["Home page"];
+        const validCollections = flatCategories.filter(title => !hiddenCollections.includes(title));
+
+        // --- B. Process Secondary Filters ---
+        const findMenuItems = (title: string) => {
+          const section = menuData?.items?.find((item: any) => 
+            item.title.toLowerCase() === title.toLowerCase() || 
+            item.title.toLowerCase().includes(title.toLowerCase())
+          );
+          return section?.items?.map((i: any) => i.title) || [];
+        };
+
+        // Update State
+        setCollectionMap(urlMapping);
+        setDynamicFilters({
+          collections: validCollections,
+          styles: findMenuItems('styles'),
+          sizes: findMenuItems('sizes'),
+          placements: findMenuItems('placements')
+        });
+
+      } catch (err) {
+        console.error("Failed to load filter data", err);
+      }
+    }
+    loadFilterData();
+  }, []);
+
+  // 3. HYBRID PRODUCT FETCHING LOGIC
+  const fetchProducts = useCallback(async (cursor: string | null = null) => {
+    if (cursor) setIsLoadingMore(true);
     else setIsLoading(true);
 
     try {
-      // 1. Base Query: Restrict to the 'new-arrivals' collection
-      let queryParts = [`collection:'new-arrivals'`]; 
+      const hasSecondaryFilters = 
+        activeFilters.styles.length > 0 || 
+        activeFilters.sizes.length > 0 || 
+        activeFilters.placements.length > 0;
 
-      // 2. Add Sidebar Filters
-      if (activeFilters.styles.length > 0) {
-        queryParts.push(`(${activeFilters.styles.map(s => `tag:'${s}'`).join(' OR ')})`);
-      }
-      if (activeFilters.sizes.length > 0) {
-        queryParts.push(`(${activeFilters.sizes.map(s => `tag:'${s}'`).join(' OR ')})`);
-      }
-      if (activeFilters.placements.length > 0) {
-        queryParts.push(`(${activeFilters.placements.map(p => `tag:'${p}'`).join(' OR ')})`);
-      }
+      // 🚀 LOGIC HUB: Determine Base Collection
+      // If user selected a collection in the sidebar, use its mapped handle. 
+      // Otherwise, default strictly to 'new-arrivals'.
+      const selectedCollection = activeFilters.collections[0];
+      const baseHandle = (selectedCollection && collectionMap[selectedCollection]) 
+        ? collectionMap[selectedCollection] 
+        : 'new-arrival';
 
-      const finalQuery = queryParts.join(' AND ');
+      let result;
 
-      // Use CREATED_AT sortKey to ensure newest products show first
-      const response = await getProducts({ 
-        first: itemsPerPage, 
-        after: cursor ?? undefined,
-        query: finalQuery,
-        sortKey: 'CREATED_AT',
-        reverse: true // Reverses so newest is at the top
-      });
-
-      if (isLoadMore) {
-        setProducts(prev => [...prev, ...response.formattedData]);
+      if (!hasSecondaryFilters) {
+        // SCENARIO A: Strict Collection Fetch
+        result = await getCollectionProducts({
+          handle: baseHandle, 
+          first: itemsPerPage,
+          after: cursor || undefined
+        });
       } else {
-        setProducts(response.formattedData);
-      }
-      setPageInfo(response.pageInfo);
+        // SCENARIO B: Filtered Search Query within the target collection
+        const queryParts = [`collection:'${baseHandle}'`];
+        const buildGroup = (items: string[]) => items.map(i => `(tag:'${i}' OR "${i}")`).join(' OR ');
 
+        if (activeFilters.styles.length > 0) queryParts.push(`(${buildGroup(activeFilters.styles)})`);
+        if (activeFilters.sizes.length > 0) queryParts.push(`(${buildGroup(activeFilters.sizes)})`);
+        if (activeFilters.placements.length > 0) queryParts.push(`(${buildGroup(activeFilters.placements)})`);
+
+        result = await getProducts({
+          query: queryParts.join(' AND '),
+          first: itemsPerPage,
+          after: cursor || undefined,
+          sortKey: 'CREATED_AT',
+          reverse: true
+        });
+      }
+
+      if (cursor) {
+        setProducts(prev => [...prev, ...result.formattedData]);
+      } else {
+        setProducts(result.formattedData);
+        if (!cursor) window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      setPageInfo(result.pageInfo);
     } catch (error) {
-      console.error("Failed to fetch new arrivals:", error);
-      if (!isLoadMore) setProducts([]);
+      console.error("Failed to fetch products", error);
+      if (!cursor) setProducts([]);
     } finally {
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, [itemsPerPage, activeFilters]);
+  }, [activeFilters, itemsPerPage, collectionMap]);
 
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    fetchProducts(null);
+  }, [activeFilters, fetchProducts]);
 
-  const handleToggleFilter = (category: keyof FilterOptions | 'RESET', value?: string) => {
-    if (category === 'RESET') {
+  // 4. TOGGLE LOGIC
+  const handleToggleFilter = (group: keyof ActiveFilters | 'RESET', value?: string) => {
+    if (group === 'RESET') {
       setActiveFilters({ collections: [], styles: [], sizes: [], placements: [] });
       return;
     }
     if (!value) return;
 
     setActiveFilters(prev => {
-      const current = prev[category as keyof ActiveFilters];
-      const updated = current.includes(value)
-        ? current.filter(item => item !== value)
-        : [...current, value];
-      return { ...prev, [category]: updated };
+      // Collections should behave like radio buttons (only one active at a time usually)
+      if (group === 'collections') {
+        const isSelected = prev.collections.includes(value);
+        return { ...prev, collections: isSelected ? [] : [value] };
+      }
+
+      // Checkboxes for everything else
+      const current = prev[group] || [];
+      const isSelected = current.includes(value);
+      return {
+        ...prev,
+        [group]: isSelected ? current.filter(i => i !== value) : [...current, value]
+      };
     });
   };
 
-  const handleLoadMore = () => {
-    if (pageInfo.hasNextPage && pageInfo.endCursor) {
-      fetchProducts(pageInfo.endCursor, true);
-    }
-  };
-
   const activeFiltersCount = 
+    activeFilters.collections.length + 
     activeFilters.styles.length + 
     activeFilters.sizes.length + 
     activeFilters.placements.length;
 
   return (
-    <div className="bg-white min-h-screen mt-18 md:mt-0 pb-20">
-      
-      {/* ========================================================= */}
-      {/* PREMIUM HERO BANNER                                       */}
-      {/* ========================================================= */}
+    <div className="bg-slate-50 min-h-screen mt-20">
       <SharedHeroBanner 
         title="NEW ARRIVALS"
         image="/assets/images/temporary_tattoos.webp"
-        mobileImage="/assets/images/temporary_tattoos.webp"
-        useMobileImage={true}
-        textColor="#FE8204"
+        textColor="var(--color-brand-orange)"
       />
 
-      {/* ========================================================= */}
-      {/* MAIN CONTENT AREA                                         */}
-      {/* ========================================================= */}
-      <main className="container max-w-[1400px] mx-auto px-4 mt-12 md:mt-20">
-        
-        {/* Desktop Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 pb-4 border-b border-gray-100 gap-4">
-          <div>
-            <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">The Latest Drops</h3>
-            <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">
-              {isLoading ? 'Loading...' : `${products.length} Fresh Designs`}
-            </p>
-          </div>
+      <main className="container max-w-[1400px] mx-auto px-4 py-12">
+        <div className="flex flex-col lg:flex-row gap-12">
           
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setFilterDrawerOpen(true)} 
-              className="lg:hidden flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-[#FE8204] transition-colors"
-            >
-              <SlidersHorizontal className="w-4 h-4" /> Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}
-            </button>
-            <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 p-1 rounded-xl">
-              <button onClick={() => setViewMode('grid')} className={clsx("p-2 rounded-lg transition-all", viewMode === 'grid' ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-900")}><LayoutGrid className="w-4 h-4" /></button>
-              <button onClick={() => setViewMode('list')} className={clsx("p-2 rounded-lg transition-all", viewMode === 'list' ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-900")}><List className="w-4 h-4" /></button>
+          {/* DESKTOP SIDEBAR */}
+          <aside className="hidden lg:block w-64 shrink-0">
+            <div className="sticky top-28 space-y-8 max-h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar pb-4 pr-6 border-r-2 border-slate-100">
+              <div className="flex justify-between items-center mb-8 pb-4 border-b-2 border-slate-950">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Filters</span>
+                {activeFiltersCount > 0 && (
+                  <button onClick={() => handleToggleFilter('RESET')} className="text-[10px] font-bold text-[var(--color-brand-orange)] uppercase hover:underline">
+                    Clear
+                  </button>
+                )}
+              </div>
+              <FilterSidebar filters={dynamicFilters} activeFilters={activeFilters} onToggle={handleToggleFilter} />
             </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col lg:flex-row gap-10">
-          
-          {/* ========================================================= */}
-          {/* DESKTOP SIDEBAR                                           */}
-          {/* ========================================================= */}
-          <aside className="hidden lg:block w-[260px] shrink-0 sticky top-32 h-fit">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-[13px] font-black uppercase tracking-widest text-gray-900">Filters</h2>
-              {activeFiltersCount > 0 && (
-                <button onClick={() => handleToggleFilter('RESET')} className="text-[10px] font-bold uppercase tracking-widest text-[#FE8204] hover:underline">
-                  Clear All
-                </button>
-              )}
-            </div>
-            <FilterSidebar filters={availableFilters} activeFilters={activeFilters} onToggle={handleToggleFilter} />
           </aside>
 
-          {/* ========================================================= */}
-          {/* PRODUCT GRID                                              */}
-          {/* ========================================================= */}
-          <div className="flex-1 min-w-0">
-            {isLoading ? (
-              <div className="w-full py-32 flex flex-col items-center justify-center">
-                <Loader2 className="w-10 h-10 animate-spin text-[#FE8204] mb-4" />
-                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Loading Fresh Drops...</p>
+          {/* PRODUCT LISTINGS */}
+          <div className="flex-grow relative min-h-[500px]">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 pb-6 border-b border-slate-200 gap-4">
+              <div>
+                <h2 className="text-3xl font-black uppercase tracking-tight text-slate-900">
+                  {activeFilters.collections.length > 0 ? activeFilters.collections[0] : 'The Latest Drops'}
+                </h2>
+                {!isLoading && (
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">
+                    {products.length} Fresh Designs Found
+                  </p>
+                )}
               </div>
-            ) : (!isLoading && products.length > 0) ? (
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setFilterDrawerOpen(true)} 
+                  className="lg:hidden flex items-center gap-2 px-4 py-2 bg-slate-950 text-white text-[10px] font-black uppercase tracking-widest rounded-xl"
+                >
+                  <SlidersHorizontal className="w-3 h-3" /> Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}
+                </button>
+                <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-xl shadow-sm">
+                  <button onClick={() => setViewMode('grid')} className={clsx("p-2 rounded-lg transition-all", viewMode === 'grid' ? "bg-slate-100 text-[var(--color-brand-orange)]" : "text-slate-400")}><LayoutGrid className="w-4 h-4" /></button>
+                  <button onClick={() => setViewMode('list')} className={clsx("p-2 rounded-lg transition-all", viewMode === 'list' ? "bg-slate-100 text-[var(--color-brand-orange)]" : "text-slate-400")}><List className="w-4 h-4" /></button>
+                </div>
+              </div>
+            </div>
+
+            {isLoading && (
+               <div className="absolute inset-0 flex items-center justify-center bg-slate-50/50 backdrop-blur-sm z-10">
+                  <Loader2 className="w-10 h-10 text-[var(--color-brand-orange)] animate-spin" />
+               </div>
+            )}
+
+            {!isLoading && products.length > 0 ? (
               <div className="flex flex-col items-center">
-                
-                {/* BLACK BACKGROUND WRAPPER FOR CARDS */}
                 <div className={clsx(
-                  "w-full p-4 sm:p-6 lg:p-8 rounded-3xl border bg-black border-zinc-800 shadow-[inset_0_1px_3px_rgba(0,0,0,0.5)]",
+                  "w-full p-4 sm:p-8 rounded-[2rem] border bg-black border-zinc-800 shadow-[inset_0_1px_4px_rgba(0,0,0,0.8)]",
                   "grid gap-6 sm:gap-8",
                   viewMode === 'grid' ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-1"
                 )}>
-                  {products.map((product, index) => (
-                    // Added index prop for scroll animation styling
-                    <ProductCard 
-                      key={`${product.id}-${index}`} 
-                      item={product} 
-                      viewMode={viewMode} 
-                      page="new-arrivals" 
-                      index={index} 
-                    />
+                  {products.map((item, idx) => (
+                    <ProductCard key={item.id} item={item} viewMode={viewMode} page="new-arrivals" index={idx} />
                   ))}
                 </div>
 
-                {/* LOAD MORE BUTTON */}
                 {pageInfo.hasNextPage && (
-                   <div className="mt-12">
-                     <button 
-                       onClick={handleLoadMore}
-                       disabled={isLoadingMore}
-                       className="px-10 py-4 rounded-xl text-sm font-bold uppercase tracking-widest text-slate-900 border-2 border-slate-900 hover:bg-slate-900 hover:text-white transition-all disabled:opacity-50 flex items-center gap-2"
-                     >
-                        {isLoadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                        {isLoadingMore ? 'Loading...' : 'Show More'}
-                     </button>
-                   </div>
+                  <div className="mt-12">
+                    <button 
+                      onClick={() => fetchProducts(pageInfo.endCursor)} 
+                      disabled={isLoadingMore} 
+                      className="px-10 py-4 border-2 border-slate-900 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-900 hover:text-white transition-all disabled:opacity-50 flex items-center gap-3"
+                    >
+                      {isLoadingMore && <Loader2 className="w-4 h-4 animate-spin" />}
+                      {isLoadingMore ? 'Loading...' : 'Show More'}
+                    </button>
+                  </div>
                 )}
               </div>
-            ) : (
-              /* EMPTY STATE */
-              <div className="py-24 text-center bg-gray-50 border border-dashed border-gray-200 rounded-3xl flex flex-col items-center justify-center">
-                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
-                  <RefreshCcw className="w-8 h-8 text-gray-300" />
+            ) : !isLoading && (
+              <div className="py-24 text-center border-2 border-dashed border-slate-200 rounded-[2rem] bg-white">
+                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <RefreshCcw className="w-8 h-8 text-slate-300" />
                 </div>
-                <p className="text-gray-900 font-black text-xl mb-2">No matches found</p>
-                <p className="text-gray-500 font-medium text-sm mb-6 max-w-sm mx-auto">Try clearing your filters to see the newest designs.</p>
-                <button 
-                  onClick={() => handleToggleFilter('RESET')} 
-                  className="px-6 py-3 bg-gray-900 text-white text-[13px] font-black uppercase tracking-widest rounded-xl hover:bg-[#FE8204] transition-colors shadow-md"
-                >
-                  Clear Filters
+                <p className="font-black text-slate-900 uppercase tracking-widest">No matching designs</p>
+                <button onClick={() => handleToggleFilter('RESET')} className="mt-4 text-[var(--color-brand-orange)] text-[10px] font-black uppercase tracking-widest hover:underline">
+                  Reset All Filters
                 </button>
               </div>
             )}
@@ -241,38 +295,27 @@ export default function NewArrivalsPage() {
         </div>
       </main>
 
-      {/* ========================================================= */}
-      {/* MOBILE FILTER DRAWER                                      */}
-      {/* ========================================================= */}
+      {/* MOBILE DRAWER */}
       {isFilterDrawerOpen && (
-        <div className="fixed inset-0 z-[60] flex justify-end lg:hidden">
-          <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm" 
-            onClick={() => setFilterDrawerOpen(false)} 
-          />
-          <div className="relative w-[85%] max-w-sm bg-white h-full flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <h2 className="text-sm font-black uppercase tracking-widest text-gray-900">Filters</h2>
-              <button onClick={() => setFilterDrawerOpen(false)} className="p-2 bg-gray-50 text-gray-500 hover:text-gray-900 rounded-full transition-colors">
-                <X className="w-5 h-5" strokeWidth={2} />
-              </button>
+        <div className="fixed inset-0 z-[70] flex justify-end lg:hidden">
+          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setFilterDrawerOpen(false)} />
+          <div className="relative w-80 bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="flex justify-between items-center p-6 border-b-2 border-slate-100">
+               <h2 className="text-[10px] font-black uppercase tracking-[0.2em]">Filters</h2>
+               <button onClick={() => setFilterDrawerOpen(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                 <X className="w-5 h-5" />
+               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-6 no-scrollbar">
-              <FilterSidebar filters={availableFilters} activeFilters={activeFilters} onToggle={handleToggleFilter} />
+              <FilterSidebar filters={dynamicFilters} activeFilters={activeFilters} onToggle={handleToggleFilter} />
             </div>
-            <div className="p-6 border-t border-gray-100 bg-gray-50 flex gap-3">
-              <button 
-                onClick={() => handleToggleFilter('RESET')}
-                className="flex-1 py-4 border border-gray-200 text-gray-900 text-[13px] font-black uppercase tracking-widest rounded-xl bg-white hover:bg-gray-50 transition-colors"
-              >
-                Reset
-              </button>
-              <button 
+            <div className="p-6 border-t border-slate-100 bg-slate-50">
+               <button 
                 onClick={() => setFilterDrawerOpen(false)}
-                className="flex-[2] py-4 bg-gray-900 text-white text-[13px] font-black uppercase tracking-widest rounded-xl hover:bg-[#FE8204] shadow-xl transition-all"
-              >
-                Apply ({products.length})
-              </button>
+                className="w-full py-4 bg-slate-950 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl"
+               >
+                 Apply Filters
+               </button>
             </div>
           </div>
         </div>

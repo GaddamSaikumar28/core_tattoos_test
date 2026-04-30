@@ -6,21 +6,38 @@ import { motion } from "framer-motion";
 import { ArrowUp, ArrowRight } from "lucide-react";
 import Image from "next/image";
 import { useAuth } from "@/src/context/AuthContext";
-import { toast } from "sonner"; // Added sonner for toast notifications
+import { toast } from "sonner";
+import { getMenu } from "@/src/lib/shopify"; // Assuming getMenu is exported here
+
+// --- Dynamic Types for Shopify Integration ---
+export interface FooterLinkItem {
+  name: string;
+  href: string;
+}
+
+export interface FooterMenuColumn {
+  title: string;
+  links: FooterLinkItem[];
+}
+
+export interface SocialLinks {
+  instagram?: string;
+  facebook?: string;
+  twitter?: string;
+  youtube?: string;
+  tiktok?: string;
+}
 
 // --- Props Interface ---
 interface FooterProps {
-  logoUrl: string;
-  socialLinks: {
-    instagram: string;
-    facebook: string;
-    twitter: string;
-    youtube: string;
-  };
+  logoUrl?: string;
+  socialLinks?: SocialLinks;
+  footerMenus?: FooterMenuColumn[]; 
+  policyLinks?: FooterLinkItem[];
 }
 
-// --- Data Structures ---
-const FOOTER_LINKS = [
+// --- Fallback Data (Used if Shopify data hasn't loaded yet) ---
+const FALLBACK_FOOTER_MENUS: FooterMenuColumn[] = [
   {
     title: "Shop",
     links: [
@@ -43,10 +60,17 @@ const FOOTER_LINKS = [
     links: [
       { name: "Tracking", href: "/tracking" },
       { name: "Shipping", href: "/shipping" },
-      { name: "Help & FAQ", href: "/faq" },
+      { name: "Help & FAQ", href: "/help" },
       { name: "Returns", href: "/returns" },
     ],
   },
+];
+
+const FALLBACK_POLICY_LINKS: FooterLinkItem[] = [
+  { name: "Terms of Service", href: "/terms-of-service" },
+  { name: "Privacy Policy", href: "/privacy-policy" },
+  { name: "Refund Policy", href: "/refund-policy" },
+  { name: "Shipping Policy", href: "/shipping-policy" },
 ];
 
 const PAYMENT_METHODS = [
@@ -56,10 +80,222 @@ const PAYMENT_METHODS = [
   { name: "Apple Pay", src: "/assets/icons/payments/apple-pay.svg" },
   { name: "Google Pay", src: "/assets/icons/payments/google-pay.svg" },
   { name: "AMEX", src: "/assets/icons/payments/amex.svg" },
-  { name: "Discouver", src: "/assets/icons/payments/discover.svg" },
+  { name: "Discover", src: "/assets/icons/payments/discover.svg" },
 ];
 
-export default function Footer({ logoUrl, socialLinks }: FooterProps) {
+export default function Footer({ 
+  logoUrl = "/assets/images/logo.png", 
+  socialLinks = {}, 
+  footerMenus = FALLBACK_FOOTER_MENUS,
+  policyLinks = FALLBACK_POLICY_LINKS
+}: FooterProps) {
+  
+  // --- Dynamic Menu State ---
+  const [dynamicMenus, setDynamicMenus] = useState<FooterMenuColumn[]>(footerMenus);
+
+  // --- Fetch Menus from Shopify ---
+  // useEffect(() => {
+  //   async function fetchFooterNav() {
+  //     try {
+  //       // Fetch all 3 specific menus concurrently for better performance
+  //       const [shopMenu, aboutMenu, careMenu] = await Promise.all([
+  //         getMenu('footer'),
+  //         getMenu('footer-menu-about'),
+  //         getMenu('footer-menu-customer-care')
+  //       ]);
+
+  //       const formattedMenus: FooterMenuColumn[] = [];
+
+  //       // 1. Process Shop Menu
+  //       if (shopMenu?.items) {
+  //         formattedMenus.push({
+  //           title: shopMenu.title || 'Shop',
+  //           links: shopMenu.items.map((item: any) => ({
+  //             name: item.title,
+  //             href: item.url?.replace(/^https?:\/\/[^\/]+/, '') || '#',
+  //           }))
+  //         });
+  //       }
+
+  //       // 2. Process About Menu
+  //       if (aboutMenu?.items) {
+  //         formattedMenus.push({
+  //           title: aboutMenu.title || 'About',
+  //           links: aboutMenu.items.map((item: any) => ({
+  //             name: item.title,
+  //             href: item.url?.replace(/^https?:\/\/[^\/]+/, '') || '#',
+  //           }))
+  //         });
+  //       }
+
+  //       // 3. Process Customer Care Menu
+  //       if (careMenu?.items) {
+  //         formattedMenus.push({
+  //           title: careMenu.title || 'Customer Care',
+  //           links: careMenu.items.map((item: any) => ({
+  //             name: item.title,
+  //             href: item.url?.replace(/^https?:\/\/[^\/]+/, '') || '#',
+  //           }))
+  //         });
+  //       }
+
+  //       // Only update state if we successfully fetched data
+  //       if (formattedMenus.length > 0) {
+  //         setDynamicMenus(formattedMenus);
+  //       }
+
+  //     } catch (error) {
+  //       console.error("Failed to load footer menus", error);
+  //     }
+  //   }
+
+  //   fetchFooterNav();
+  // }, []);
+// --- Fetch Menus from Shopify ---
+  useEffect(() => {
+    async function fetchFooterNav() {
+      try {
+        const [shopMenu, aboutMenu, careMenu] = await Promise.all([
+          getMenu('footer'),
+          getMenu('footer-menu-about'),
+          getMenu('footer-menu-customer-care')
+        ]);
+
+        const formattedMenus: FooterMenuColumn[] = [];
+
+        // 🚀 THE HEADLESS URL PARSER
+        const formatDynamicUrl = (url: string, title: string) => {
+          if (!url) return '#';
+          
+          // 1. Remove the absolute Shopify domain (e.g., https://checkout.justtattoos.com)
+          let path = url.replace(/^https?:\/\/[^\/]+/, '');
+          
+          // 2. Map your existing custom Next.js Pages (Bypasses Shopify's rigid /pages/ prefix)
+          if (path.includes('/pages/about-us')) return '/about';
+          if (path.includes('/pages/how-it-works')) return '/how-it-works';
+          if (path.includes('/pages/contact')) return '/contact';
+          if (path.includes('/pages/shipping')) return '/shipping';
+          if (path.includes('/pages/returns') || path.includes('/refund')) return '/returns';
+          if (path.includes('/pages/traking') || path.includes('/pages/tracking')) return '/tracking';
+          
+          // (In your JSON, Help & FAQ was mapped to the homepage '/')
+          if (path.includes('/pages/faq') || path.includes('/faq') || path === '/') return '/help'; 
+
+          // 3. Dynamic Collections Routing (Matches your page.tsx logic!)
+          if (path.includes('/collections/') && !path.includes('/collections/all')) {
+            return `/collections?category=${encodeURIComponent(title)}`;
+          }
+          if (path.includes('/collections')) return '/collections';
+
+          // 4. THE DYNAMIC FALLBACK (For Blogs, New Policies, New Pages)
+          // If the client adds a blog, Shopify sends "/blogs/news" -> This returns "/blogs/news"
+          // If they add a random custom page, it returns "/pages/holiday-campaign"
+          return path;
+        };
+
+        // 1. Process Shop Menu
+        if (shopMenu?.items) {
+          formattedMenus.push({
+            title: 'Shop',
+            links: shopMenu.items.map((item: any) => ({
+              name: item.title,
+              href: formatDynamicUrl(item.url, item.title), 
+            }))
+          });
+        }
+
+        // 2. Process About Menu
+        if (aboutMenu?.items) {
+          formattedMenus.push({
+            title: 'About',
+            links: aboutMenu.items.map((item: any) => ({
+              name: item.title,
+              href: formatDynamicUrl(item.url, item.title), 
+            }))
+          });
+        }
+
+        // 3. Process Customer Care Menu
+        if (careMenu?.items) {
+          formattedMenus.push({
+            title: 'Customer Care',
+            links: careMenu.items.map((item: any) => ({
+              name: item.title,
+              href: formatDynamicUrl(item.url, item.title), 
+            }))
+          });
+        }
+
+        if (formattedMenus.length > 0) {
+          setDynamicMenus(formattedMenus);
+        }
+
+      } catch (error) {
+        console.error("Failed to load footer menus", error);
+      }
+    }
+
+    fetchFooterNav();
+  }, []);
+  // useEffect(() => {
+  //   async function fetchFooterNav() {
+  //     try {
+  //       // Fetch all 3 specific menus concurrently for better performance
+  //       const [shopMenu, aboutMenu, careMenu] = await Promise.all([
+  //         getMenu('footer'),
+  //         getMenu('footer-menu-about'),
+  //         getMenu('footer-menu-customer-care')
+  //       ]);
+
+  //       console.log("Fetched Menus:", { shopMenu, aboutMenu, careMenu }); // Debugging log
+  //       const formattedMenus: FooterMenuColumn[] = [];
+
+  //       // 1. Process Shop Menu (Forcing the "Shop" title)
+  //       if (shopMenu?.items) {
+  //         formattedMenus.push({
+  //           title: 'Shop', // Kept old-fashioned way
+  //           links: shopMenu.items.map((item: any) => ({
+  //             name: item.title,
+  //             href: item.url?.replace(/^https?:\/\/[^\/]+/, '') || '#',
+  //           }))
+  //         });
+  //       }
+
+  //       // 2. Process About Menu (Forcing the "About" title)
+  //       if (aboutMenu?.items) {
+  //         formattedMenus.push({
+  //           title: 'About', // Kept old-fashioned way
+  //           links: aboutMenu.items.map((item: any) => ({
+  //             name: item.title,
+  //             href: item.url?.replace(/^https?:\/\/[^\/]+/, '') || '#',
+  //           }))
+  //         });
+  //       }
+
+  //       // 3. Process Customer Care Menu (Forcing the "Customer Care" title)
+  //       if (careMenu?.items) {
+  //         formattedMenus.push({
+  //           title: 'Customer Care', // Kept old-fashioned way
+  //           links: careMenu.items.map((item: any) => ({
+  //             name: item.title,
+  //             href: item.url?.replace(/^https?:\/\/[^\/]+/, '') || '#',
+  //           }))
+  //         });
+  //       }
+
+  //       // Only update state if we successfully fetched data
+  //       if (formattedMenus.length > 0) {
+  //         setDynamicMenus(formattedMenus);
+  //       }
+
+  //     } catch (error) {
+  //       console.error("Failed to load footer menus", error);
+  //     }
+  //   }
+
+  //   fetchFooterNav();
+  // }, []);
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -116,12 +352,13 @@ export default function Footer({ logoUrl, socialLinks }: FooterProps) {
     }
   };
 
+  // Map SVGs dynamically based on the socialLinks prop provided
   const SOCIAL_ICONS = [
     { name: "Instagram", href: socialLinks.instagram, path: "M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" },
     { name: "Twitter", href: socialLinks.twitter, path: "M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" },
     { name: "Facebook", href: socialLinks.facebook, path: "M22.675 0H1.325C.593 0 0 .593 0 1.325v21.351C0 23.407.593 24 1.325 24H12.82v-9.294H9.692v-3.622h3.128V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12V24h6.116c.73 0 1.323-.593 1.323-1.325V1.325C24 .593 23.407 0 22.675 0z" },
     { name: "YouTube", href: socialLinks.youtube, path: "M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" },
-  ];
+  ].filter(icon => icon.href); 
 
   return (
     <footer className="relative w-full bg-[var(--color-secondary)] text-[var(--color-white)] pt-20 pb-6 overflow-hidden selection:bg-[var(--color-brand-orange)] selection:text-white">
@@ -192,12 +429,12 @@ export default function Footer({ logoUrl, socialLinks }: FooterProps) {
             )}
           </div>
 
-          {/* Navigation Columns */}
+          {/* DYNAMIC Navigation Columns - Rendered from Shopify Data */}
           <nav 
             className="lg:col-span-7 grid grid-cols-2 md:grid-cols-3 gap-12"
             aria-label="Footer Navigation"
           >
-            {FOOTER_LINKS.map((section) => (
+            {dynamicMenus.map((section) => (
               <div key={section.title} className="flex flex-col">
                 <h3 className="text-[var(--color-white)] text-sm md:text-base font-bold uppercase tracking-widest mb-6">
                   {section.title}
@@ -238,7 +475,6 @@ export default function Footer({ logoUrl, socialLinks }: FooterProps) {
             </span>
           </div>
 
-         
           <div className="flex bg-white rounded-2xl border border-gray-100 p-4 flex-wrap justify-center items-center gap-4 md:gap-6 shadow-sm">
             {PAYMENT_METHODS.map((payment) => (
               <div 
@@ -283,14 +519,15 @@ export default function Footer({ logoUrl, socialLinks }: FooterProps) {
             ))}
           </div>
 
-          {/* Copyright & Links */}
+          {/* Copyright & Policy Links */}
           <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 text-[12px] text-gray-500">
             <p>© {new Date().getFullYear()} Core Tattoos. All rights reserved.</p>
-            <div className="flex gap-6">
-              <Link href="/terms-of-service" className="hover:text-white transition-colors">Terms of Service</Link>
-              <Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link>
-              <Link href="/refund-policy" className="hover:text-white transition-colors">Refund Policy</Link>
-              <Link href="/shipping-policy" className="hover:text-white transition-colors">Shipping Policy</Link>
+            <div className="flex flex-wrap gap-6 justify-center">
+              {policyLinks.map((policy) => (
+                <Link key={policy.name} href={policy.href} className="hover:text-white transition-colors">
+                  {policy.name}
+                </Link>
+              ))}
             </div>
           </div>
 

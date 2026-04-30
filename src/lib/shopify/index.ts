@@ -161,7 +161,7 @@ export async function getProducts({
       reverse: reverse || false,
       sortKey: sortKey || 'CREATED_AT',
       ...(query && { query })
-    }
+    },
   });
 
   const productsData = res.body?.data?.products;
@@ -1313,4 +1313,44 @@ export async function getBlogs() {
   
   // Return a clean array of blog nodes
   return res.body?.data?.blogs?.edges?.map((edge: any) => edge.node) || [];
+}
+
+import { getMenuQuery } from './queries';
+
+export async function getMenu(handle: string) {
+  const res = await shopifyFetch<any>({
+    query: getMenuQuery,
+    variables: { handle },
+    tags: ['menu', handle],
+    cache: 'no-store',
+  });
+  console.log(`Fetched menu in index file"${handle}":`, res.body?.data?.menu);
+  return res.body?.data?.menu;
+}
+
+export async function getCollectionProducts({
+  handle,
+  first = 12,
+  after
+}: {
+  handle: string;
+  first?: number;
+  after?: string;
+}) {
+  const res = await shopifyFetch<any>({
+    query: getCollectionProductsQuery,
+    variables: { handle, first, after },
+    cache: 'no-store'
+  });
+
+  const productsData = res.body?.data?.collection?.products;
+
+  if (!productsData?.edges) {
+    return { formattedData: [], pageInfo: { hasNextPage: false, endCursor: null } };
+  }
+
+  return {
+    formattedData: await mapShopifyProductsForProduction(productsData),
+    pageInfo: productsData.pageInfo,
+  };
 }

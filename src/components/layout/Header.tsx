@@ -25,7 +25,14 @@ import { cn } from "@/src/lib/utils";
 import { useCart } from "@/src/context/CartContext";
 import { getCollectionNames, searchShopifyProducts } from "@/src/lib/shopify";
 import { useAuth } from "@/src/context/AuthContext";
-
+import { getMenu } from "@/src/lib/shopify"; // Adjust path if index.ts is elsewhere
+import { useSearchParams } from "next/navigation";
+interface MenuItem {
+  id: string;
+  title: string;
+  url: string;
+  items: MenuItem[];
+}
 interface HeaderProps {
   logoUrl?: string;
 }
@@ -115,7 +122,7 @@ function useDebounce<T>(value: T, delay: number): T {
 export default function Header({ logoUrl = '/assets/icons/DesktopLogo.svg' }: HeaderProps) {
   const pathname = usePathname();
   const { cartCount, setCartOpen } = useCart();
-
+const searchParams = useSearchParams();
   // UI States
   const [isScrolled, setIsScrolled] = useState(false);
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
@@ -139,6 +146,8 @@ export default function Header({ logoUrl = '/assets/icons/DesktopLogo.svg' }: He
   const [isLoadingCollections, setIsLoadingCollections] = useState(true);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+ // const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   // --- API Integrations ---
   useEffect(() => {
@@ -211,6 +220,32 @@ export default function Header({ logoUrl = '/assets/icons/DesktopLogo.svg' }: He
     };
     
   }, [debouncedSearchQuery]);
+
+   useEffect(() => {
+    async function fetchNav() {
+      try {
+        // 'main-menu' is Shopify's default handle for the header navigation
+        const menuData = await getMenu('menu-custom');
+        if (menuData?.items) {
+          setMenuItems(menuData.items);
+        }
+        console.log("Fetched navigation menu:", menuData);
+      } catch (error) {
+        console.error("Failed to load navigation", error);
+      }
+    }
+    fetchNav();
+  }, []);
+
+  const getRelativeUrl = useCallback((url: string) => {
+    if (!url) return "#";
+    try {
+      const parsed = new URL(url);
+      return parsed.pathname + parsed.search;
+    } catch (e) {
+      return url.startsWith('/') ? url : `/${url}`;
+    }
+  }, []);
 
   // --- Event Handlers ---
   const closeSearch = useCallback(() => {
@@ -287,6 +322,41 @@ export default function Header({ logoUrl = '/assets/icons/DesktopLogo.svg' }: He
   }, [isSearchOpen, closeSearch]);
 
   const isActive = (path: string) => pathname?.includes(path);
+    const generateHref = (menuItem: any) => {
+      if (!menuItem.url) return '#';
+      
+      const title = menuItem.title.toLowerCase();
+      // 1. Strip the Shopify absolute domain so we only deal with relative paths
+      let path = menuItem.url.replace(/^https?:\/\/[^\/]+/, '');
+
+      // 2. FORCE CUSTOM NEXT.JS ROUTES FIRST
+      // This ensures your specific page.tsx files get hit instead of generic Shopify pages
+      if (title.includes('new arrival')) return '/new-arrivals';
+      if (title === 'sale' || path.includes('/pages/sale')) return '/sale';
+      
+      // Map the (info) route group pages based on your screenshot
+      if (title.includes('about') || path.includes('/about-us')) return '/about';
+      if (title.includes('faq') || title.includes('help')) return '/help';
+      if (title === 'how it works' || path.includes('how-it-works')) return '/how-it-works';
+      if (title.includes('contact')) return '/contact';
+
+      // 3. HANDLE COLLECTIONS AND FILTERS
+      // We only do this if it didn't match a custom route above!
+      if (menuItem.type === "COLLECTION") {
+        return `/collections?category=${encodeURIComponent(menuItem.title)}`;
+      }
+      if (menuItem.type === "COLLECTIONS" || title === "collection") {
+        return "/collections";
+      }
+
+      // 4. HANDLE EMPTY DROPDOWN TRIGGERS
+      // (e.g., your parent "How It Works" menu item has url "https://checkout...#")
+      if (path === '#' || path === '/#') return '#';
+
+      // 5. DYNAMIC FALLBACK
+      // If the client adds a completely new page or blog, just pass the clean path through.
+      return path;
+    };
 
   return (
     <>
@@ -323,240 +393,262 @@ export default function Header({ logoUrl = '/assets/icons/DesktopLogo.svg' }: He
               </Link>
             </div>
 
-            <nav
-              className="flex h-full items-center justify-center gap-2"
-              onMouseLeave={handleMouseLeave}
+{/* DYNAMIC DESKTOP NAVIGATION (Restored Premium Styling & Connected Routing) */}
+<nav
+  className="hidden md:flex h-full items-center justify-center gap-2"
+  onMouseLeave={handleMouseLeave}
+>
+  {menuItems.map((item) => {
+
+    // Check if "Sale" to apply red styling
+    const isSale = item.title.toLowerCase() === "sale";
+    
+    // Check if this menu has deeper 3rd-level links (e.g., Collections -> Body Part -> Ankle)
+    const hasDeepLinks = item.items?.some(
+      (subItem) => subItem.items && subItem.items.length > 0
+    );
+
+    // HELPER: Map Shopify Collection links to our robust Next.js filter parameters
+    // const generateHref = (menuItem: any) => {
+    //   if (menuItem.type === "COLLECTION") {
+    //     return `/collections?category=${encodeURIComponent(menuItem.title)}`;
+    //   }
+    //   if (menuItem.type === "COLLECTIONS" || menuItem.title.toLowerCase() === "collection") {
+    //     return "/collections";
+    //   }
+    //   return getRelativeUrl(menuItem.url);
+    // };
+
+    // const generateHref = (menuItem: any) => {
+    //   if (!menuItem.url) return '#';
+      
+    //   const title = menuItem.title.toLowerCase();
+    //   // 1. Strip the Shopify absolute domain so we only deal with relative paths
+    //   let path = menuItem.url.replace(/^https?:\/\/[^\/]+/, '');
+
+    //   // 2. FORCE CUSTOM NEXT.JS ROUTES FIRST
+    //   // This ensures your specific page.tsx files get hit instead of generic Shopify pages
+    //   if (title.includes('new arrival')) return '/new-arrivals';
+    //   if (title === 'sale' || path.includes('/pages/sale')) return '/sale';
+      
+    //   // Map the (info) route group pages based on your screenshot
+    //   if (title.includes('about') || path.includes('/about-us')) return '/about';
+    //   if (title.includes('faq') || title.includes('help')) return '/help';
+    //   if (title === 'how it works' || path.includes('how-it-works')) return '/how-it-works';
+    //   if (title.includes('contact')) return '/contact';
+
+    //   // 3. HANDLE COLLECTIONS AND FILTERS
+    //   // We only do this if it didn't match a custom route above!
+    //   if (menuItem.type === "COLLECTION") {
+    //     return `/collections?category=${encodeURIComponent(menuItem.title)}`;
+    //   }
+    //   if (menuItem.type === "COLLECTIONS" || title === "collection") {
+    //     return "/collections";
+    //   }
+
+    //   // 4. HANDLE EMPTY DROPDOWN TRIGGERS
+    //   // (e.g., your parent "How It Works" menu item has url "https://checkout...#")
+    //   if (path === '#' || path === '/#') return '#';
+
+    //   // 5. DYNAMIC FALLBACK
+    //   // If the client adds a completely new page or blog, just pass the clean path through.
+    //   return path;
+    // };
+
+    // Grab the current active category from the URL to highlight active sub-links
+    const currentCategory = searchParams?.get("category");
+
+    return (
+      <div
+        key={item.id}
+        className="relative h-full flex items-center px-4 cursor-pointer"
+        onMouseEnter={() => handleMouseEnter(item.id)}
+      >
+        {/* Hover Pill Background */}
+        {hoveredNav === item.id && (
+          <motion.div
+            layoutId="nav-pill"
+            className="absolute inset-y-5 inset-x-0 bg-gray-100/80 rounded-full z-0"
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          />
+        )}
+
+        {/* Top Level Nav Link */}
+        {item.items && item.items.length > 0 ? (
+          <span
+            className={cn(
+              "relative z-10 font-bold text-[14px] tracking-wider transition-colors flex items-center gap-1.5 uppercase",
+              activeDropdown === item.id || isActive(getRelativeUrl(item.url))
+                ? "text-[var(--color-brand-orange)]"
+                : "text-gray-900"
+            )}
+          >
+            {item.title}
+            <ChevronDown
+              className={cn(
+                "w-4 h-4 transition-transform duration-300",
+                activeDropdown === item.id && "rotate-180"
+              )}
+            />
+          </span>
+        ) : (
+          <Link
+            href={generateHref(item)}
+            onClick={() => setActiveDropdown(null)}
+            className={cn(
+              "relative z-10 font-bold text-[14px] tracking-wider transition-colors flex items-center gap-1.5 uppercase",
+              isActive(getRelativeUrl(item.url))
+                ? isSale
+                  ? "text-red-600"
+                  : "text-[var(--color-brand-orange)]"
+                : isSale
+                ? "text-red-500"
+                : "text-gray-900"
+            )}
+          >
+            {item.title}
+          </Link>
+        )}
+
+        {/* Mega Menu Dropdown */}
+        <AnimatePresence>
+          {activeDropdown === item.id && item.items && item.items.length > 0 && (
+            <motion.div
+              variants={dropdownVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className={cn(
+                "absolute top-[calc(100%-8px)] left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] border border-gray-100 overflow-hidden z-50 origin-top flex flex-col lg:flex-row cursor-default",
+                hasDeepLinks ? "w-[90vw] max-w-[1000px]" : "w-[90vw] max-w-[600px]"
+              )}
             >
-              {/* NEW ARRIVALS */}
-              <div
-                className="relative h-full flex items-center px-4 cursor-pointer"
-                onMouseEnter={() => handleMouseEnter("new-arrivals")}
-              >
-                {hoveredNav === "new-arrivals" && (
-                  <motion.div
-                    layoutId="nav-pill"
-                    className="absolute inset-y-5 inset-x-0 bg-gray-100/80 rounded-full z-0"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-                <Link
-                  href="/new-arrivals"
-                  onClick={() => setActiveDropdown(null)}
-                  className={cn(
-                    "relative z-10 font-bold text-[14px] tracking-wider transition-colors flex items-center gap-1.5",
-                    isActive("/new-arrivals")
-                      ? "text-[var(--color-brand-orange)]"
-                      : "text-gray-900",
-                  )}
-                >
-                  NEW ARRIVALS
-                </Link>
-              </div>
-
-              {/* COLLECTION DROPDOWN */}
-              <div
-                className="relative h-full flex items-center px-4 cursor-pointer"
-                onMouseEnter={() => handleMouseEnter("collection")}
-              >
-                {hoveredNav === "collection" && (
-                  <motion.div
-                    layoutId="nav-pill"
-                    className="absolute inset-y-5 inset-x-0 bg-gray-100/80 rounded-full z-0"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-                <Link
-                  href="/collections"
-                  onClick={() => setActiveDropdown(null)}
-                  className={cn(
-                    "relative z-10 font-bold text-[14px] tracking-wider transition-colors flex items-center gap-1.5",
-                    activeDropdown === "collection" || isActive("/collections")
-                      ? "text-[var(--color-brand-orange)]"
-                      : "text-gray-900",
-                  )}
-                >
-                  COLLECTION
-                  <ChevronDown
-                    className={cn(
-                      "w-4 h-4 transition-transform duration-300",
-                      activeDropdown === "collection" && "rotate-180",
-                    )}
-                  />
-                </Link>
-
-                <AnimatePresence>
-                  {activeDropdown === "collection" && (
-                    <motion.div
-                      variants={dropdownVariants}
-                      initial="hidden"
-                      animate="visible"
-                      exit="exit"
-                      className="absolute top-[calc(100%-8px)] left-1/2 -translate-x-1/2 w-[90vw] max-w-[1000px] bg-white rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] border border-gray-100 overflow-hidden z-50 origin-top flex cursor-default"
+              <div className="flex-1 flex flex-col h-full">
+                <div className={cn("p-8 pr-4", !hasDeepLinks && "p-6")}>
+                  <div className="mb-6 border-b border-gray-100 pb-2 flex items-center justify-between">
+                    <h3 className="text-[var(--color-brand-orange)] text-[13px] font-bold tracking-widest uppercase">
+                      Shop by {item.title}
+                    </h3>
+                    {/* Convenience link to view all */}
+                    <Link
+                      href={generateHref(item)}
+                      onClick={() => setActiveDropdown(null)}
+                      className="text-[11px] font-bold text-gray-500 hover:text-gray-900 uppercase tracking-wider"
                     >
-                      <div className="flex-1 p-8 pr-4">
-                        <div className="mb-4 border-b border-gray-100 pb-2">
-                          <h3 className="text-[var(--color-brand-orange)] text-[13px] font-bold tracking-widest uppercase">
-                            Shop by Collection
-                          </h3>
-                        </div>
+                      View All →
+                    </Link>
+                  </div>
 
-                        {isLoadingCollections ? (
-                          <div className="flex items-center gap-2 text-sm font-semibold text-gray-500 py-10">
-                            <Loader2 className="w-4 h-4 animate-spin" /> Loading
-                            collections...
-                          </div>
-                        ) : collections.length > 0 ? (
-                          <div
-                            className="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 max-h-[50vh] overflow-y-auto pr-4 
-                            [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-gray-50 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-300 transition-colors"
+                  {hasDeepLinks ? (
+                    /* --- MULTI-LEVEL GRID (e.g. Collections -> Styles -> Animal) --- */
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-8 max-h-[50vh] overflow-y-auto pr-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-gray-50 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-300 transition-colors">
+                      {item.items.map((subItem) => (
+                        <div key={subItem.id} className="flex flex-col space-y-3">
+                          {/* Level 2 Heading */}
+                          <Link
+                            href={generateHref(subItem)}
+                            onClick={() => setActiveDropdown(null)}
+                            className={cn(
+                              "text-[14px] font-bold border-b border-gray-50 pb-1 transition-colors",
+                              currentCategory === subItem.title 
+                                ? "text-[var(--color-brand-orange)] border-[var(--color-brand-orange)]/20" 
+                                : "text-gray-900 hover:text-[var(--color-brand-orange)]"
+                            )}
                           >
-                            {collections.map((collection) => (
-                              <Link
-                                key={collection.handle}
-                                href={`/collections?category=${collection.handle}`}
-                                className="text-[14px] font-medium text-gray-600 hover:text-[var(--color-brand-orange)] hover:translate-x-1 transition-all duration-300 block py-1"
-                                onClick={() => setActiveDropdown(null)}
-                              >
-                                {collection.title}
-                              </Link>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-gray-500 py-10">
-                            No collections found.
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="hidden lg:flex w-[35%] bg-gray-50 items-center justify-center relative p-8">
-                        <div className="relative w-full max-w-[220px] aspect-[3/4]">
-                          <div className="absolute inset-0 bg-white border border-gray-200 rounded-xl shadow-lg rotate-6 translate-x-6 origin-bottom-right"></div>
-                          <div className="absolute inset-0 bg-white border border-gray-200 rounded-xl shadow-lg -rotate-3 -translate-x-3 origin-bottom-left"></div>
-                          <div className="absolute inset-0 bg-gray-900 rounded-xl shadow-xl flex items-center justify-center border-4 border-white overflow-hidden z-10">
-                            <Image
-                              src="/assets/images/Card1.png"
-                              alt="Featured Tattoo Art"
-                              fill
-                              sizes="(max-width: 768px) 220px, 25vw"
-                              className="object-cover"
-                            />
-                          </div>
+                            {subItem.title}
+                          </Link>
+                          {/* Level 3 Links */}
+                          {subItem.items && subItem.items.length > 0 && (
+                            <div className="flex flex-col space-y-2 pl-1">
+                              {subItem.items.map((subSubItem) => {
+                                const isCurrentActive = currentCategory === subSubItem.title;
+                                return (
+                                  <Link
+                                    key={subSubItem.id}
+                                    href={generateHref(subSubItem)}
+                                    onClick={() => setActiveDropdown(null)}
+                                    className={cn(
+                                      "text-[13px] font-medium transition-all duration-300 block py-0.5",
+                                      isCurrentActive
+                                        ? "text-[var(--color-brand-orange)] translate-x-1"
+                                        : "text-gray-500 hover:text-[var(--color-brand-orange)] hover:translate-x-1"
+                                    )}
+                                  >
+                                    {subSubItem.title}
+                                  </Link>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* HOW IT WORKS DROPDOWN (Premium Design) */}
-              <div
-                className="relative h-full flex items-center px-4 cursor-pointer"
-                onMouseEnter={() => handleMouseEnter("how-it-works")}
-              >
-                {hoveredNav === "how-it-works" && (
-                  <motion.div
-                    layoutId="nav-pill"
-                    className="absolute inset-y-5 inset-x-0 bg-gray-100/80 rounded-full z-0"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-                <span
-                  className={cn(
-                    "relative z-10 font-bold text-[14px] tracking-wider transition-colors flex items-center gap-1.5",
-                    activeDropdown === "how-it-works" ||
-                      isActive("/how-it-works")
-                      ? "text-[var(--color-brand-orange)]"
-                      : "text-gray-900",
-                  )}
-                >
-                  HOW IT WORKS
-                  <ChevronDown
-                    className={cn(
-                      "w-4 h-4 transition-transform duration-300",
-                      activeDropdown === "how-it-works" && "rotate-180",
-                    )}
-                  />
-                </span>
-
-                <AnimatePresence>
-                  {activeDropdown === "how-it-works" && (
-                    <motion.div
-                      variants={dropdownVariants}
-                      initial="hidden"
-                      animate="visible"
-                      exit="exit"
-                      className="absolute top-[calc(100%-8px)] left-1/2 -translate-x-1/2 w-[90vw] max-w-[600px] bg-white rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] border border-gray-100 overflow-hidden z-50 origin-top flex flex-col cursor-default"
-                    >
-                      <div className="grid grid-cols-2 gap-2 p-6">
-                        {HOW_IT_WORKS_DATA.map((item) => {
-                          const Icon = item.icon;
-                          return (
-                            <Link
-                              key={item.title}
-                              href={item.href}
-                              className="group p-4 rounded-xl hover:bg-orange-50/50 transition-all duration-300 border border-transparent hover:border-orange-100 flex items-start gap-4"
-                              onClick={() => setActiveDropdown(null)}
-                            >
-                              <div className="p-2.5 bg-gray-50 text-gray-600 rounded-lg group-hover:bg-white group-hover:text-[var(--color-brand-orange)] group-hover:shadow-sm transition-all shrink-0">
-                                <Icon className="w-5 h-5" strokeWidth={1.8} />
-                              </div>
-                              <div>
-                                <h4 className="text-[14px] font-bold text-gray-900 group-hover:text-[var(--color-brand-orange)] transition-colors flex items-center gap-1">
-                                  {item.title}
-                                </h4>
-                                <p className="text-[12px] text-gray-500 mt-1 leading-relaxed">
-                                  {item.description}
-                                </p>
-                              </div>
-                            </Link>
-                          );
-                        })}
-                      </div>
-
-                      <div className="bg-gray-50 px-8 py-4 border-t border-gray-100 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Mail className="w-5 h-5 text-gray-400" />
-                          <span className="text-[13px] font-medium text-gray-600">
-                            Still have questions? We're here to help.
-                          </span>
-                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    /* --- SINGLE-LEVEL GRID (e.g. How it Works -> Help Center) --- */
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+                      {item.items.map((subItem) => (
                         <Link
-                          href="/contact"
+                          key={subItem.id}
+                          href={generateHref(subItem)}
                           onClick={() => setActiveDropdown(null)}
-                          className="text-[13px] font-bold text-[var(--color-brand-orange)] hover:text-orange-600 hover:underline underline-offset-4 transition-all"
+                          className="group p-4 rounded-xl hover:bg-orange-50/50 transition-all duration-300 border border-transparent hover:border-orange-100 flex items-center gap-4"
                         >
-                          Contact Support →
+                          <div>
+                            <h4 className="text-[14px] font-bold text-gray-900 group-hover:text-[var(--color-brand-orange)] transition-colors flex items-center gap-1">
+                              {subItem.title}
+                            </h4>
+                          </div>
                         </Link>
-                      </div>
-                    </motion.div>
+                      ))}
+                    </div>
                   )}
-                </AnimatePresence>
+                </div>
+
+                {/* Optional Footer Banner */}
+                {!hasDeepLinks && item.title.toLowerCase().includes("how") && (
+                  <div className="bg-gray-50 mt-auto px-8 py-4 border-t border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Mail className="w-5 h-5 text-gray-400" />
+                      <span className="text-[13px] font-medium text-gray-600">
+                        Still have questions? We're here to help.
+                      </span>
+                    </div>
+                    <Link
+                      href="/contact"
+                      onClick={() => setActiveDropdown(null)}
+                      className="text-[13px] font-bold text-[var(--color-brand-orange)] hover:text-orange-600 hover:underline underline-offset-4 transition-all"
+                    >
+                      Contact Support →
+                    </Link>
+                  </div>
+                )}
               </div>
 
-              {/* SALE */}
-              <div
-                className="relative h-full flex items-center px-4 cursor-pointer"
-                onMouseEnter={() => handleMouseEnter("sale")}
-              >
-                {hoveredNav === "sale" && (
-                  <motion.div
-                    layoutId="nav-pill"
-                    className="absolute inset-y-5 inset-x-0 bg-gray-100/80 rounded-full z-0"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-                <Link
-                  href="/sale"
-                  onClick={() => setActiveDropdown(null)}
-                  className={cn(
-                    "relative z-10 font-bold text-[14px] tracking-wider transition-colors flex items-center gap-1.5",
-                    isActive("/sale") ? "text-red-600" : "text-red-500",
-                  )}
-                >
-                  SALE
-                </Link>
-              </div>
-            </nav>
+              {/* Featured Art */}
+              {hasDeepLinks && (
+                <div className="hidden lg:flex w-[35%] bg-gray-50 items-center justify-center relative p-8">
+                  <div className="relative w-full max-w-[220px] aspect-[3/4]">
+                    <div className="absolute inset-0 bg-white border border-gray-200 rounded-xl shadow-lg rotate-6 translate-x-6 origin-bottom-right"></div>
+                    <div className="absolute inset-0 bg-white border border-gray-200 rounded-xl shadow-lg -rotate-3 -translate-x-3 origin-bottom-left"></div>
+                    <div className="absolute inset-0 bg-gray-900 rounded-xl shadow-xl flex items-center justify-center border-4 border-white overflow-hidden z-10">
+                      <Image
+                        src="/assets/images/Card1.png"
+                        alt="Featured Nav Image"
+                        fill
+                        sizes="(max-width: 768px) 220px, 25vw"
+                        className="object-cover"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  })}
+</nav>
 
             {/* Right Side Icons */}
             <div className="flex-1 flex items-center justify-end gap-3 lg:gap-5">
@@ -919,156 +1011,95 @@ export default function Header({ logoUrl = '/assets/icons/DesktopLogo.svg' }: He
 
               {/* SCROLLABLE LINKS AREA */}
               <div className="flex-1 overflow-y-auto no-scrollbar pb-10">
+                {/* DYNAMIC MOBILE LINKS AREA */}
+              <div className="flex-1 overflow-y-auto no-scrollbar pb-10">
                 <div className="flex flex-col px-6 pt-6">
-                  {/* NEW ARRIVALS */}
-                  <Link
-                    href="/new-arrivals"
-                    className="py-4 text-[13px] font-black tracking-[0.15em] text-gray-900 border-b border-gray-100 flex items-center justify-between group"
-                    onClick={() => setIsMobileDrawerOpen(false)}
-                  >
-                    NEW ARRIVALS
-                    <span className="text-[var(--color-brand-orange)] opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all">
-                      →
-                    </span>
-                  </Link>
+                  {menuItems.map((item) => {
+                    const isSale = item.title.toLowerCase() === "sale";
+                    const hasDeepLinks = item.items && item.items.length > 0;
 
-                  <div className="border-b border-gray-100">
-                    {/* Header Container */}
-                    <div className="w-full py-4 flex items-center justify-between group">
-                      {/* Clickable Link for the text */}
+                    if (hasDeepLinks) {
+                      return (
+                        <div key={item.id} className="border-b border-gray-100">
+                          <div className="w-full py-4 flex items-center justify-between group">
+                            <Link
+                              href={generateHref(item)}
+                              className="text-[13px] font-black tracking-[0.15em] text-gray-900 flex-1 text-left hover:opacity-70 transition-opacity uppercase"
+                              onClick={() => setIsMobileDrawerOpen(false)}
+                            >
+                              {item.title}
+                            </Link>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setMobileExpanded(mobileExpanded === item.id ? null : item.id);
+                              }}
+                              className="p-2 -mr-2 flex items-center justify-center cursor-pointer"
+                              aria-label={`Toggle ${item.title} menu`}
+                            >
+                              <ChevronDown className={cn("w-4 h-4 transition-transform duration-300 text-gray-400 group-hover:text-gray-900", mobileExpanded === item.id && "rotate-180")} />
+                            </button>
+                          </div>
+
+                          <AnimatePresence>
+                            {mobileExpanded === item.id && (
+                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                <div className="bg-gray-50 rounded-2xl p-4 mb-4 flex flex-col gap-1">
+                                  {item.items.map((subItem: any) => (
+                                    <div key={subItem.id} className="flex flex-col">
+                                      <Link
+                                        href={generateHref(subItem)}
+                                        className="text-gray-600 text-[14px] font-bold hover:bg-white hover:text-[var(--color-brand-orange)] hover:shadow-sm transition-all py-2.5 px-4 rounded-xl flex items-center justify-between"
+                                        onClick={() => setIsMobileDrawerOpen(false)}
+                                      >
+                                        {subItem.title}
+                                      </Link>
+                                      
+                                      {/* Third Level Deep Links (e.g. Body Part -> Ankle) */}
+                                      {subItem.items && subItem.items.length > 0 && (
+                                        <div className="flex flex-col pl-4 ml-4 border-l-2 border-gray-200/50 space-y-1 mt-1 mb-2">
+                                          {subItem.items.map((subSubItem: any) => (
+                                            <Link
+                                              key={subSubItem.id}
+                                              href={generateHref(subSubItem)}
+                                              className="text-gray-500 text-[13px] font-medium hover:text-[var(--color-brand-orange)] py-1.5 px-2 rounded-lg transition-colors"
+                                              onClick={() => setIsMobileDrawerOpen(false)}
+                                            >
+                                              {subSubItem.title}
+                                            </Link>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      );
+                    }
+
+                    // Single Item Link (e.g. New Arrivals, Sale)
+                    return (
                       <Link
-                        href="/collections"
-                        className="text-[13px] font-black tracking-[0.15em] text-gray-900 flex-1 text-left hover:opacity-70 transition-opacity"
+                        key={item.id}
+                        href={generateHref(item)}
+                        className={cn(
+                          "py-4 text-[13px] font-black tracking-[0.15em] border-b border-gray-100 flex items-center justify-between group uppercase",
+                          isSale ? "text-red-500" : "text-gray-900"
+                        )}
                         onClick={() => setIsMobileDrawerOpen(false)}
                       >
-                        COLLECTION
+                        {item.title}
+                        <span className={cn("opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all", isSale ? "text-red-500" : "text-[var(--color-brand-orange)]")}>
+                          →
+                        </span>
                       </Link>
-
-                      {/* Clickable Button for the accordion toggle */}
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault(); // Prevents any unexpected bubbling
-                          setMobileExpanded(
-                            mobileExpanded === "collection"
-                              ? null
-                              : "collection",
-                          );
-                        }}
-                        className="p-2 -mr-2 flex items-center justify-center cursor-pointer"
-                        aria-label="Toggle collections menu"
-                        aria-expanded={mobileExpanded === "collection"}
-                      >
-                        <ChevronDown
-                          className={cn(
-                            "w-4 h-4 transition-transform duration-300 text-gray-400 group-hover:text-gray-900",
-                            mobileExpanded === "collection" && "rotate-180",
-                          )}
-                        />
-                      </button>
-                    </div>
-
-                    {/* Accordion Body */}
-                    <AnimatePresence>
-                      {mobileExpanded === "collection" && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="bg-gray-50 rounded-2xl p-4 mb-4 flex flex-col gap-1">
-                            {isLoadingCollections ? (
-                              <div className="text-[13px] font-medium text-gray-400 py-2 text-center flex items-center justify-center gap-2">
-                                <Loader2 className="w-4 h-4 animate-spin" />{" "}
-                                Loading...
-                              </div>
-                            ) : collections.length > 0 ? (
-                              collections.map((collection) => (
-                                <Link
-                                  key={collection.handle}
-                                  href={`/collections?category=$${collection.handle}`}
-                                  className="text-gray-600 text-[14px] font-medium hover:bg-white hover:text-[var(--color-brand-orange)] hover:shadow-sm transition-all py-2.5 px-4 rounded-xl"
-                                  onClick={() => setIsMobileDrawerOpen(false)}
-                                >
-                                  {collection.title}
-                                </Link>
-                              ))
-                            ) : (
-                              <div className="text-[13px] text-gray-400 py-2 text-center">
-                                No collections found.
-                              </div>
-                            )}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-
-                  {/* MOBILE HOW IT WORKS ACCORDION */}
-                  <div className="border-b border-gray-100">
-                    <button
-                      onClick={() =>
-                        setMobileExpanded(
-                          mobileExpanded === "how-it-works"
-                            ? null
-                            : "how-it-works",
-                        )
-                      }
-                      className="w-full py-4 flex items-center justify-between text-[13px] font-black tracking-[0.15em] text-gray-900 group"
-                    >
-                      HOW IT WORKS
-                      <ChevronDown
-                        className={cn(
-                          "w-4 h-4 transition-transform duration-300 text-gray-400 group-hover:text-gray-900",
-                          mobileExpanded === "how-it-works" && "rotate-180",
-                        )}
-                      />
-                    </button>
-                    <AnimatePresence>
-                      {mobileExpanded === "how-it-works" && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="bg-gray-50 rounded-2xl p-4 mb-4 flex flex-col gap-1">
-                            {HOW_IT_WORKS_DATA.map((item) => {
-                              const Icon = item.icon;
-                              return (
-                                <Link
-                                  key={item.title}
-                                  href={item.href}
-                                  className="flex items-center gap-3 py-2.5 px-4 rounded-xl text-gray-600 hover:bg-white hover:text-[var(--color-brand-orange)] hover:shadow-sm transition-all group"
-                                  onClick={() => setIsMobileDrawerOpen(false)}
-                                >
-                                  <div className="p-1.5 bg-white rounded-md text-gray-400 group-hover:text-[var(--color-brand-orange)] shadow-sm">
-                                    <Icon className="w-4 h-4" strokeWidth={2} />
-                                  </div>
-                                  <span className="text-[14px] font-medium">
-                                    {item.title}
-                                  </span>
-                                </Link>
-                              );
-                            })}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-
-                  {/* SALE */}
-                  <Link
-                    href="/sale"
-                    className="py-4 text-[13px] font-black tracking-[0.15em] text-red-500 flex items-center justify-between group"
-                    onClick={() => setIsMobileDrawerOpen(false)}
-                  >
-                    SALE
-                    <span className="text-red-500 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all">
-                      →
-                    </span>
-                  </Link>
+                    );
+                  })}
                 </div>
+              </div>
               </div>
 
               {/* STICKY FOOTER (Auth & Contact) */}

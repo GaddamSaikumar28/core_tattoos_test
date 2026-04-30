@@ -7,13 +7,7 @@ import clsx from 'clsx';
 
 import { FilterSidebar, ActiveFilters, FilterOptions } from '@/src/components/shared/FilterSidebar';
 import { ProductCard } from '@/src/components/shared/ProductLayout';
-import { getProducts, getCollectionNames, FormattedProduct } from '@/src/lib/shopify'; 
-
-const STATIC_FILTER_OPTIONS = {
-  styles: ['Traditional', 'Fine Line', 'Blackwork', 'Geometric', 'Dotwork', 'Japanese', 'Realism', 'Minimalist'],
-  sizes: ['Tiny (1x1)', 'Small (2x2)', 'Medium (4x4)', 'Large (6x8)', 'Sleeve (10x6)'],
-  placements: ['Forearm', 'Calf', 'Chest', 'Neck', 'Wrist', 'Spine', 'Any']
-};
+import { getProducts, getMenu, FormattedProduct, getCollectionProducts } from '@/src/lib/shopify'; 
 
 function ShopAllContent() {
   const router = useRouter();
@@ -29,10 +23,17 @@ function ShopAllContent() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   const [pageInfo, setPageInfo] = useState({ hasNextPage: false, endCursor: null as string | null });
+  
+  // 1. DYNAMIC FILTERS STATE
   const [dynamicFilters, setDynamicFilters] = useState<FilterOptions>({
     collections: [],
-    ...STATIC_FILTER_OPTIONS
+    styles: [],
+    sizes: [],
+    placements: []
   });
+
+  // 🚀 FIX: State to secretly map "UI Titles" to "URL Handles" for the query
+  const [collectionMap, setCollectionMap] = useState<Record<string, string>>({});
 
   const categoryFromUrl = searchParams.get('category');
 
@@ -43,22 +44,62 @@ function ShopAllContent() {
     placements: []
   });
 
-  // Fetch collections dynamically on mount
+  // 2. FETCH ALL DYNAMIC DATA ON MOUNT
   useEffect(() => {
-    async function loadCollections() {
+    async function loadFilterData() {
       try {
-        const collections = await getCollectionNames();
-        setDynamicFilters(prev => ({
-          ...prev,
-          collections: collections.map(c => c.title)
-        }));
+        const menuData = await getMenu('menu-custom');
+        
+        const collectionsMenu = menuData?.items?.find((item: any) => 
+          item.title.toLowerCase() === 'collection' || item.title.toLowerCase() === 'collections'
+        );
+
+        const flatCategories: string[] = [];
+        const urlMapping: Record<string, string> = {};
+        
+        // 🚀 FIX: Extract the deep sub-items AND map their title to their URL Handle
+        const processMenuItem = (item: any) => {
+          if (item.items && item.items.length > 0) {
+            item.items.forEach(processMenuItem);
+          } else {
+            flatCategories.push(item.title);
+            
+            // Extract the handle from the URL (e.g. ".../collections/spine" -> "spine")
+            if (item.url) {
+              const urlParts = item.url.split('/').filter(Boolean);
+              const handle = urlParts[urlParts.length - 1];
+              if (handle) {
+                // Clean off any accidental query params or hashes
+                const cleanHandle = handle.split('?')[0].split('#')[0];
+                urlMapping[item.title] = cleanHandle;
+              }
+            }
+          }
+        };
+
+        if (collectionsMenu && collectionsMenu.items) {
+          collectionsMenu.items.forEach(processMenuItem);
+        }
+
+        const hiddenCollections = ["Home page"];
+        const validCollections = flatCategories.filter(title => !hiddenCollections.includes(title));
+
+        setCollectionMap(urlMapping); // Save the mapping for the query builder
+        setDynamicFilters({
+          collections: validCollections,
+          styles: [], 
+          sizes: [],  
+          placements: [] 
+        });
+
       } catch (err) {
-        console.error("Failed to load collections", err);
+        console.error("Failed to load filter data", err);
       }
     }
-    loadCollections();
+    loadFilterData();
   }, []);
 
+  // Screen resize handler for pagination
   useEffect(() => {
     const handleResize = () => setItemsPerPage(window.innerWidth < 1024 ? 9 : 12);
     handleResize();
@@ -70,70 +111,101 @@ function ShopAllContent() {
   const buildShopifyQuery = useCallback(() => {
     const queryParts: string[] = [];
     
-    // Helper function to build robust fallback queries
-    // This searches for the exact Tag first, then falls back to a general keyword search
-    // to catch collection names that might be indexed in the product's text/metadata.
     const buildQueryGroup = (items: string[]) => {
       return items.map(item => `(tag:'${item}' OR "${item}")`).join(' OR ');
     };
 
-    // 1. CATEGORY / COLLECTION
+    // 🚀 FIX: Build collection query using BOTH the Title and the URL Handle!
     if (activeFilters.collections.length > 0) {
-      queryParts.push(`(${buildQueryGroup(activeFilters.collections)})`);
+      const collectionQueries = activeFilters.collections.map(item => {
+        const handle = collectionMap[item];
+        
+        if (handle) {
+          // If the menu title is "Bharath" but the URL handle is "nature",
+          // This will brilliantly search for BOTH to guarantee we get the products
+          return `(tag:'${handle}' OR tag:'${item}' OR "${handle}" OR "${item}")`;
+        }
+        
+        return `(tag:'${item}' OR "${item}")`;
+      }).join(' OR ');
+      
+      queryParts.push(`(${collectionQueries})`);
     }
     
-    // 2. STYLES
-    if (activeFilters.styles.length > 0) {
+    if (activeFilters.styles?.length > 0) {
       queryParts.push(`(${buildQueryGroup(activeFilters.styles)})`);
     }
 
-    // 3. PLACEMENTS
-    if (activeFilters.placements.length > 0) {
+    if (activeFilters.placements?.length > 0) {
       queryParts.push(`(${buildQueryGroup(activeFilters.placements)})`);
     }
 
-    // 4. SIZES
-    if (activeFilters.sizes.length > 0) {
+    if (activeFilters.sizes?.length > 0) {
       queryParts.push(`(${buildQueryGroup(activeFilters.sizes)})`);
     }
     
-    // CRITICAL: If no filters are selected, return undefined to fetch ALL products.
     if (queryParts.length === 0) {
       return undefined;
     }
     
-    // Combine all active groups with AND (e.g., Size is Large AND Placement is Sleeve)
+    console.log("Generated Shopify Query:", queryParts.join(' AND ')); // Debug log to verify the generated query
     return queryParts.join(' AND ');
-  }, [activeFilters]);
 
-  const fetchProducts = useCallback(async (cursor: string | null = null) => {
-    if (cursor) setIsLoadingMore(true);
-    else setIsLoading(true);
+  }, [activeFilters, collectionMap]); // <-- Added collectionMap as a dependency
+const fetchProducts = useCallback(async (cursor: string | null = null) => {
+  if (cursor) setIsLoadingMore(true);
+  else setIsLoading(true);
 
-    try {
+  try {
+    const selectedCollection = activeFilters.collections[0];
+    const handle = collectionMap[selectedCollection];
+    
+    // 1. Check if we are in "Shop All" mode (no collection selected)
+    const isShopAll = activeFilters.collections.length === 0;
+
+    // 2. Check if we are in "Pure Collection" mode (one collection, no secondary filters)
+    const isPureCollection = 
+      activeFilters.collections.length === 1 && 
+      activeFilters.styles.length === 0 && 
+      activeFilters.sizes.length === 0 &&
+      activeFilters.placements.length === 0;
+
+    let result;
+
+  
+    if (!isShopAll && isPureCollection && handle) {
+      console.log(`Fetching strictly from collection: ${handle}`);
+      result = await getCollectionProducts({
+        handle: handle,
+        first: itemsPerPage,
+        after: cursor || undefined
+      });
+    } else {
+      console.log("Fetching via general search query (Shop All or Filtered)");
       const queryStr = buildShopifyQuery();
-      const result = await getProducts({
+      result = await getProducts({
         query: queryStr,
         first: itemsPerPage,
         after: cursor || undefined
       });
-
-      if (cursor) {
-        setProducts(prev => [...prev, ...result.formattedData]);
-      } else {
-        setProducts(result.formattedData);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-      setPageInfo(result.pageInfo);
-    } catch (error) {
-      console.error("Failed to fetch products", error);
-    } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
     }
-  }, [buildShopifyQuery, itemsPerPage]);
 
-  // Re-fetch from start when filters change
+    if (cursor) {
+      setProducts(prev => [...prev, ...result.formattedData]);
+    } else {
+      setProducts(result.formattedData);
+      // Only scroll to top on fresh filter/category changes, not "Show More"
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    setPageInfo(result.pageInfo);
+  } catch (error) {
+    console.error("Failed to fetch products", error);
+  } finally {
+    setIsLoading(false);
+    setIsLoadingMore(false);
+  }
+}, [buildShopifyQuery, itemsPerPage, activeFilters, collectionMap]);
+  
   useEffect(() => {
     fetchProducts(null);
   }, [activeFilters, fetchProducts]);
@@ -165,12 +237,12 @@ function ShopAllContent() {
     if (!value) return;
 
     setActiveFilters(prev => {
-      const currentGroup = prev[group as keyof ActiveFilters];
+      const currentGroup = prev[group as keyof ActiveFilters] || [];
       const isSelected = currentGroup.includes(value);
       return {
         ...prev,
         [group]: isSelected 
-          ? currentGroup.filter(item => item !== value) 
+          ? currentGroup.filter((item: string) => item !== value) 
           : [...currentGroup, value]
       };
     });
@@ -192,7 +264,7 @@ function ShopAllContent() {
         <div className="p-6 h-full flex flex-col">
           <div className="flex items-center justify-between mb-8 pb-4 border-b-2 border-slate-100 shrink-0">
             <h2 className="text-[12px] font-black uppercase tracking-[0.2em]">Filters</h2>
-            <button onClick={() => setFilterDrawerOpen(false)} className="p-2 hover:bg-slate-100 rounded-full">
+            <button onClick={() => setFilterDrawerOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -202,53 +274,45 @@ function ShopAllContent() {
         </div>
       </div>
 
-      <nav className="sticky top-0 z-40 bg-white border-b-2 border-slate-100">
-  <div className="container max-w-[1400px] mx-auto px-4 py-4 flex items-center justify-between gap-4">
-    
-    {/* UPDATED CONTAINER: 
-        Added specific browser targets to completely hide the scrollbar UI 
-        while keeping the scroll behavior intact. Removed desktop bottom padding.
-    */}
-    <div className="flex gap-3 overflow-x-auto pb-1 lg:pb-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-      
-      <button
-        onClick={() => handleCategoryPillClick('Shop All')}
-        className={clsx(
-          "px-5 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap border-2",
-          activeFilters.collections.length === 0 
-            ? "bg-slate-950 text-white border-slate-950" 
-            : "bg-white text-slate-500 border-slate-200 hover:border-slate-950 hover:text-slate-950"
-        )}
-      >
-        Shop All
-      </button>
-      
-      {/* Display Top 4 Collections as Pills for quick access */}
-      {dynamicFilters.collections.filter((cat) => cat !== "Body Part" && cat !== "Home page").filter((ele) =>{return (ele != "Home page")}).map((cat) => (
-        <button
-          key={cat}
-          onClick={() => handleCategoryPillClick(cat)}
-          className={clsx(
-            "px-5 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap border-2",
-            activeFilters.collections.includes(cat)
-              ? "bg-slate-950 text-white border-slate-950" 
-              : "bg-white text-slate-500 border-slate-200 hover:border-slate-950 hover:text-slate-950"
-          )}
-        >
-          {cat}
-        </button>
-      ))}
-    </div>
+      <nav className="sticky top-0 z-40 bg-white mt-5 border-b-2 border-slate-100">
+        <div className="container max-w-[1400px] mx-auto px-4 py-4 flex items-center justify-between gap-4">
+          <div className="flex gap-3 overflow-x-auto pb-1 lg:pb-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <button
+              onClick={() => handleCategoryPillClick('Shop All')}
+              className={clsx(
+                "px-5 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap border-2 rounded-md",
+                activeFilters.collections.length === 0 
+                  ? "bg-slate-950 text-white border-slate-950" 
+                  : "bg-white text-slate-500 border-slate-200 hover:border-slate-950 hover:text-slate-950"
+              )}
+            >
+              Shop All
+            </button>
+            
+            {dynamicFilters.collections.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => handleCategoryPillClick(cat)}
+                className={clsx(
+                  "px-5 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap border-2 rounded-md",
+                  activeFilters.collections.includes(cat)
+                    ? "bg-[var(--color-brand-orange)] text-white border-[var(--color-brand-orange)]" 
+                    : "bg-white text-slate-500 border-slate-200 hover:border-slate-950 hover:text-slate-950"
+                )}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
 
-    {/* Filter Button */}
-    <button 
-      onClick={() => setFilterDrawerOpen(true)} 
-      className="lg:hidden shrink-0 p-2.5 bg-white border-2 border-slate-200 hover:border-slate-950 text-slate-950 transition-colors"
-    >
-      <SlidersHorizontal className="w-4 h-4" />
-    </button>
-  </div>
-</nav>
+          <button 
+            onClick={() => setFilterDrawerOpen(true)} 
+            className="lg:hidden shrink-0 p-2.5 bg-white border-2 border-slate-200 hover:border-slate-950 rounded-md text-slate-950 transition-colors"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+          </button>
+        </div>
+      </nav>
 
       {/* MAIN CONTENT AREA */}
       <main className="container max-w-[1400px] mx-auto px-4 py-12">
@@ -265,8 +329,7 @@ function ShopAllContent() {
           </aside>
 
           {/* PRODUCT LISTINGS */}
-          <div className="flex-grow relative min-h-[500px]">
-            {/* HEADER SECTION */}
+          <div className="flex-gro relative min-h-[500px]">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4 pb-6 border-b border-gray-100">
               <div>
                 <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight capitalize">
@@ -282,31 +345,29 @@ function ShopAllContent() {
               <div className="flex items-center self-start sm:self-auto gap-1 bg-gray-50/80 border border-gray-200 p-1 rounded-xl shadow-sm">
                 <button 
                   onClick={() => setViewMode('grid')} 
-                  className={clsx("p-2.5 rounded-lg transition-all", viewMode === 'grid' ? "bg-white text-[#fe8204] shadow-sm" : "text-gray-400 hover:text-gray-800")}
+                  className={clsx("p-2.5 rounded-lg transition-all", viewMode === 'grid' ? "bg-white text-[var(--color-brand-orange)] shadow-sm" : "text-gray-400 hover:text-gray-800")}
                 >
                   <LayoutGrid className="w-4 h-4" />
                 </button>
                 <button 
                   onClick={() => setViewMode('list')} 
-                  className={clsx("p-2.5 rounded-lg transition-all", viewMode === 'list' ? "bg-white text-[#fe8204] shadow-sm" : "text-gray-400 hover:text-gray-800")}
+                  className={clsx("p-2.5 rounded-lg transition-all", viewMode === 'list' ? "bg-white text-[var(--color-brand-orange)] shadow-sm" : "text-gray-400 hover:text-gray-800")}
                 >
                   <List className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            {/* INITIAL LOADING STATE OVERLAY */}
-            {isLoading ? (
+            {isLoading && (
                <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-[2px] z-10 rounded-3xl">
-                  <Loader2 className="w-10 h-10 text-[#fe8204] animate-spin" />
+                  <Loader2 className="w-10 h-10 text-[var(--color-brand-orange)] animate-spin" />
                </div>
-            ) : null}
+            )}
 
-            {/* PRODUCTS LAYOUT  bg-gradient-to-br from-gray-50 via-white to-[#fe8204]/5 */}
             {!isLoading && products.length > 0 ? (
               <div className="flex flex-col items-center">
                 <div className={clsx(
-                  "w-full p-4 sm:p-6 lg:p-8 rounded-3xl  border bg-black border-gray-100 shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)]",
+                  "w-full p-4 sm:p-6 lg:p-8 rounded-3xl border border-gray-100 bg-black shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)]",
                   "grid gap-6 sm:gap-8",
                   viewMode === 'grid' ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-1"
                 )}>
@@ -315,7 +376,6 @@ function ShopAllContent() {
                   ))}
                 </div>
 
-                {/* SHOW MORE BUTTON */}
                 {pageInfo.hasNextPage && (
                    <div className="mt-12">
                      <button
@@ -323,7 +383,7 @@ function ShopAllContent() {
                         disabled={isLoadingMore}
                         className="px-10 py-4 rounded-xl font-bold text-sm uppercase tracking-widest text-slate-900 border-2 border-slate-900 hover:bg-slate-900 hover:text-white transition-all disabled:opacity-50 flex items-center gap-2"
                      >
-                        {isLoadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        {isLoadingMore && <Loader2 className="w-4 h-4 animate-spin" />}
                         {isLoadingMore ? 'Loading...' : 'Show More'}
                      </button>
                    </div>
@@ -338,7 +398,7 @@ function ShopAllContent() {
                 <p className="text-gray-500 text-sm mb-6 max-w-sm mx-auto">We couldn't find anything matching your current filters. Try adjusting them to see more results.</p>
                 <button 
                   onClick={() => toggleFilter('RESET')} 
-                  className="px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-[#fe8204] transition-colors shadow-md"
+                  className="px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-[var(--color-brand-orange)] transition-colors shadow-md"
                 >
                   Clear All Filters
                 </button>
@@ -354,13 +414,11 @@ function ShopAllContent() {
 
 export default function ShopAll() {
   return (
-    // The Suspense boundary catches Next.js's static rendering process
-    // and displays this fallback UI until the client-side loads the search params.
     <Suspense 
       fallback={
         <div className="min-h-screen bg-slate-50 flex items-center justify-center mt-20">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-10 h-10 text-[#fe8204] animate-spin" />
+            <Loader2 className="w-10 h-10 text-[var(--color-brand-orange)] animate-spin" />
             <span className="text-[12px] font-black uppercase tracking-[0.2em] text-slate-950">
               Loading Collection...
             </span>

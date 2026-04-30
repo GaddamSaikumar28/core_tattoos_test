@@ -6,15 +6,9 @@ import clsx from 'clsx';
 
 // Components
 import { FilterSidebar, ActiveFilters, FilterOptions } from '@/src/components/shared/FilterSidebar';
-import { getProducts, FormattedProduct } from '@/src/lib/shopify'; 
+import { getProducts, getCollectionProducts, getMenu, FormattedProduct } from '@/src/lib/shopify'; 
 import { ProductCard } from '@/src/components/shared/ProductLayout';
 import SharedHeroBanner from '@/src/components/layout/SharedHeroBanner';
-
-const STATIC_FILTER_OPTIONS = {
-  styles: ['Traditional', 'Fine Line', 'Blackwork', 'Geometric', 'Dotwork', 'Japanese', 'Realism', 'Minimalist'],
-  sizes: ['Tiny (1x1)', 'Small (2x2)', 'Medium (4x4)', 'Large (6x8)', 'Sleeve (10x6)'],
-  placements: ['Forearm', 'Calf', 'Chest', 'Neck', 'Wrist', 'Spine', 'Any']
-};
 
 export default function SalePage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -26,90 +20,196 @@ export default function SalePage() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [pageInfo, setPageInfo] = useState({ hasNextPage: false, endCursor: null as string | null });
 
-  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({
-    collections: [], // Not used here
+  // 1. STATE INITIALIZATION
+  const [collectionMap, setCollectionMap] = useState<Record<string, string>>({});
+
+  const [dynamicFilters, setDynamicFilters] = useState<FilterOptions>({
+    collections: [],
     styles: [],
     sizes: [],
     placements: []
   });
 
-  const [availableFilters] = useState<FilterOptions>({
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({
     collections: [], 
-    styles: STATIC_FILTER_OPTIONS.styles,
-    sizes: STATIC_FILTER_OPTIONS.sizes,
-    placements: STATIC_FILTER_OPTIONS.placements
+    styles: [],
+    sizes: [],
+    placements: []
   });
 
-  const fetchProducts = useCallback(async (cursor?: string | null, isLoadMore = false) => {
-    if (isLoadMore) setIsLoadingMore(true);
+  // 2. FETCH ALL DYNAMIC DATA
+  useEffect(() => {
+    async function loadFilterData() {
+      try {
+        const menuData = await getMenu('menu-custom');
+        
+        // --- A. Process Collections ---
+        const collectionsMenu = menuData?.items?.find((item: any) => 
+          item.title.toLowerCase() === 'collection' || item.title.toLowerCase() === 'collections'
+        );
+
+        const flatCategories: string[] = [];
+        const urlMapping: Record<string, string> = {};
+        
+        const processMenuItem = (item: any) => {
+          if (item.items && item.items.length > 0) {
+            item.items.forEach(processMenuItem);
+          } else {
+            flatCategories.push(item.title);
+            if (item.url) {
+              const urlParts = item.url.split('/').filter(Boolean);
+              const handle = urlParts[urlParts.length - 1];
+              if (handle) {
+                const cleanHandle = handle.split('?')[0].split('#')[0];
+                urlMapping[item.title] = cleanHandle;
+              }
+            }
+          }
+        };
+
+        if (collectionsMenu && collectionsMenu.items) {
+          collectionsMenu.items.forEach(processMenuItem);
+        }
+
+        const hiddenCollections = ["Home page"];
+        const validCollections = flatCategories.filter(title => !hiddenCollections.includes(title));
+
+        // --- B. Process Secondary Filters ---
+        const findMenuItems = (title: string) => {
+          const section = menuData?.items?.find((item: any) => 
+            item.title.toLowerCase() === title.toLowerCase() || 
+            item.title.toLowerCase().includes(title.toLowerCase())
+          );
+          return section?.items?.map((i: any) => i.title) || [];
+        };
+
+        setCollectionMap(urlMapping);
+        setDynamicFilters({
+          collections: validCollections,
+          styles: findMenuItems('styles'),
+          sizes: findMenuItems('sizes'),
+          placements: findMenuItems('placements')
+        });
+
+      } catch (err) {
+        console.error("Failed to load filter data", err);
+      }
+    }
+    loadFilterData();
+  }, []);
+
+  // 3. HYBRID PRODUCT FETCHING WITH FALLBACK LOGIC
+  const fetchProducts = useCallback(async (cursor: string | null = null) => {
+    if (cursor) setIsLoadingMore(true);
     else setIsLoading(true);
 
     try {
-      // 1. Base Query: MUST belong to the automated 'sale' collection
-      let queryParts = [`collection:sale`]; 
+      const hasFilters = 
+        activeFilters.collections.length > 0 ||
+        activeFilters.styles.length > 0 || 
+        activeFilters.sizes.length > 0 || 
+        activeFilters.placements.length > 0;
 
-      // 2. Add Sidebar Filters
-      if (activeFilters.styles.length > 0) {
-        queryParts.push(`(${activeFilters.styles.map(s => `tag:'${s}'`).join(' OR ')})`);
-      }
-      if (activeFilters.sizes.length > 0) {
-        queryParts.push(`(${activeFilters.sizes.map(s => `tag:'${s}'`).join(' OR ')})`);
-      }
-      if (activeFilters.placements.length > 0) {
-        queryParts.push(`(${activeFilters.placements.map(p => `tag:'${p}'`).join(' OR ')})`);
-      }
+      let result;
 
-      const finalQuery = queryParts.join(' AND ');
+      if (!hasFilters) {
+        // SCENARIO A: Strict 'Sale' Collection Fetch
+        result = await getCollectionProducts({
+          handle: 'sale', 
+          first: itemsPerPage,
+          after: cursor || undefined
+        });
 
-      const response = await getProducts({ 
-        first: itemsPerPage, 
-        after: cursor ?? undefined,
-        query: finalQuery 
-      });
+        // 🚨 FALLBACK: If 'sale' is empty or doesn't exist, fetch general products
+        if (result.formattedData.length === 0 && !cursor) {
+            console.warn("Sale collection is empty. Falling back to all products.");
+            result = await getProducts({ first: itemsPerPage });
+        }
 
-      if (isLoadMore) {
-        setProducts(prev => [...prev, ...response.formattedData]);
       } else {
-        setProducts(response.formattedData);
-      }
-      setPageInfo(response.pageInfo);
+        // SCENARIO B: Filtered Search Query within 'Sale'
+        const queryParts = [`collection:'sale'`];
+        const buildGroup = (items: string[]) => items.map(i => `(tag:'${i}' OR "${i}")`).join(' OR ');
 
+        // If a collection is selected, intersect it with the sale query
+        if (activeFilters.collections.length > 0) {
+            const selectedCol = activeFilters.collections[0];
+            const handle = collectionMap[selectedCol];
+            if (handle) {
+                queryParts.push(`(tag:'${handle}' OR tag:'${selectedCol}' OR "${handle}")`);
+            }
+        }
+
+        if (activeFilters.styles.length > 0) queryParts.push(`(${buildGroup(activeFilters.styles)})`);
+        if (activeFilters.sizes.length > 0) queryParts.push(`(${buildGroup(activeFilters.sizes)})`);
+        if (activeFilters.placements.length > 0) queryParts.push(`(${buildGroup(activeFilters.placements)})`);
+
+        result = await getProducts({
+          query: queryParts.join(' AND '),
+          first: itemsPerPage,
+          after: cursor || undefined,
+          sortKey: 'CREATED_AT',
+          reverse: true
+        });
+
+        // 🚨 FALLBACK: If the filtered sale query returns nothing, try fetching just the filters without the 'sale' restriction
+        if (result.formattedData.length === 0 && !cursor) {
+            console.warn("Filtered sale query is empty. Falling back to general filtered products.");
+            const fallbackQuery = queryParts.filter(part => part !== `collection:'sale'`).join(' AND ');
+            result = await getProducts({
+                query: fallbackQuery || undefined,
+                first: itemsPerPage
+            });
+        }
+      }
+
+      if (cursor) {
+        setProducts(prev => [...prev, ...result.formattedData]);
+      } else {
+        setProducts(result.formattedData);
+        if (!cursor) window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      setPageInfo(result.pageInfo);
     } catch (error) {
-      console.error("Failed to fetch sale products:", error);
-      if (!isLoadMore) setProducts([]);
+      console.error("Failed to fetch products", error);
+      if (!cursor) setProducts([]);
     } finally {
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, [itemsPerPage, activeFilters]);
+  }, [activeFilters, itemsPerPage, collectionMap]);
 
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    fetchProducts(null);
+  }, [activeFilters, fetchProducts]);
 
-  const handleToggleFilter = (category: keyof FilterOptions | 'RESET', value?: string) => {
-    if (category === 'RESET') {
+  // 4. TOGGLE LOGIC
+  const handleToggleFilter = (group: keyof ActiveFilters | 'RESET', value?: string) => {
+    if (group === 'RESET') {
       setActiveFilters({ collections: [], styles: [], sizes: [], placements: [] });
       return;
     }
     if (!value) return;
 
     setActiveFilters(prev => {
-      const current = prev[category as keyof ActiveFilters];
-      const updated = current.includes(value)
-        ? current.filter(item => item !== value)
-        : [...current, value];
-      return { ...prev, [category]: updated };
+      // Collections should behave like radio buttons
+      if (group === 'collections') {
+        const isSelected = prev.collections.includes(value);
+        return { ...prev, collections: isSelected ? [] : [value] };
+      }
+
+      // Everything else allows multi-select
+      const current = prev[group] || [];
+      const isSelected = current.includes(value);
+      return {
+        ...prev,
+        [group]: isSelected ? current.filter(i => i !== value) : [...current, value]
+      };
     });
   };
 
-  const handleLoadMore = () => {
-    if (pageInfo.hasNextPage && pageInfo.endCursor) {
-      fetchProducts(pageInfo.endCursor, true);
-    }
-  };
-
   const activeFiltersCount = 
+    activeFilters.collections.length + 
     activeFilters.styles.length + 
     activeFilters.sizes.length + 
     activeFilters.placements.length;
@@ -117,19 +217,15 @@ export default function SalePage() {
   return (
     <div className="bg-white min-h-screen mt-18 md:mt-0 pb-20">
       
-      {/* ========================================================= */}
-      {/* PREMIUM HERO BANNER                                       */}
-      {/* ========================================================= */}
+      {/* PREMIUM HERO BANNER */}
       <SharedHeroBanner
-        image="/assets/images/SaleBanner.png" // Update with your actual image path
-        mobileImage="/assets/images/SaleMobileBackground.png" // Update with your actual image path
+        image="/assets/images/SaleBanner.png" 
+        mobileImage="/assets/images/SaleMobileBackground.png" 
         title="FLASH SALE"
-        textColor="#FF3366" // Using a striking color for sale
+        textColor="#FF3366" 
       />
 
-      {/* ========================================================= */}
-      {/* MAIN CONTENT AREA                                         */}
-      {/* ========================================================= */}
+      {/* MAIN CONTENT AREA */}
       <div className="container max-w-[1400px] mx-auto px-4 mt-12 md:mt-20">
         
         {/* Desktop Toolbar */}
@@ -137,7 +233,7 @@ export default function SalePage() {
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setFilterDrawerOpen(true)} 
-              className="lg:hidden flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-[var(--color-brand-orange)] transition-colors"
+              className="lg:hidden flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-[#FF3366] transition-colors"
             >
               <SlidersHorizontal className="w-4 h-4" /> Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}
             </button>
@@ -149,13 +245,13 @@ export default function SalePage() {
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setViewMode('grid')} 
-              className={clsx("p-2 rounded-xl transition-all", viewMode === 'grid' ? "bg-gray-100 text-gray-900" : "text-gray-400 hover:text-gray-900")}
+              className={clsx("p-2 rounded-xl transition-all", viewMode === 'grid' ? "bg-gray-100 text-[#FF3366]" : "text-gray-400 hover:text-gray-900")}
             >
               <LayoutGrid className="w-5 h-5" />
             </button>
             <button 
               onClick={() => setViewMode('list')} 
-              className={clsx("p-2 rounded-xl transition-all", viewMode === 'list' ? "bg-gray-100 text-gray-900" : "text-gray-400 hover:text-gray-900")}
+              className={clsx("p-2 rounded-xl transition-all", viewMode === 'list' ? "bg-gray-100 text-[#FF3366]" : "text-gray-400 hover:text-gray-900")}
             >
               <List className="w-5 h-5" />
             </button>
@@ -164,37 +260,32 @@ export default function SalePage() {
 
         <div className="flex flex-col lg:flex-row gap-10">
           
-          {/* ========================================================= */}
-          {/* DESKTOP SIDEBAR                                           */}
-          {/* ========================================================= */}
+          {/* DESKTOP SIDEBAR */}
           <div className="hidden lg:block w-[260px] shrink-0 sticky top-32 h-fit">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-[13px] font-black uppercase tracking-widest text-gray-900">Filters</h2>
               {activeFiltersCount > 0 && (
-                <button onClick={() => handleToggleFilter('RESET')} className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-brand-orange)] hover:underline">
+                <button onClick={() => handleToggleFilter('RESET')} className="text-[10px] font-bold uppercase tracking-widest text-[#FF3366] hover:underline">
                   Clear All
                 </button>
               )}
             </div>
             <FilterSidebar 
-              filters={availableFilters} 
+              filters={dynamicFilters} 
               activeFilters={activeFilters} 
               onToggle={handleToggleFilter} 
             />
           </div>
 
-          {/* ========================================================= */}
-          {/* PRODUCT GRID                                              */}
-          {/* ========================================================= */}
+          {/* PRODUCT GRID */}
           <div className="flex-1 min-w-0">
             {isLoading ? (
               <div className="w-full py-32 flex flex-col items-center justify-center">
-                <Loader2 className="w-10 h-10 animate-spin text-[var(--color-brand-orange)] mb-4" />
+                <Loader2 className="w-10 h-10 animate-spin text-[#FF3366] mb-4" />
                 <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Loading Sale Items...</p>
               </div>
             ) : (!isLoading && products.length > 0) ? (
               <div className="flex flex-col items-center">
-                {/* BLACK BACKGROUND WRAPPER FOR CARDS */}
                 <div className={clsx(
                   "w-full p-4 sm:p-6 lg:p-8 rounded-3xl border bg-black border-zinc-800 shadow-[inset_0_1px_3px_rgba(0,0,0,0.5)]",
                   "grid gap-6 sm:gap-8",
@@ -211,11 +302,10 @@ export default function SalePage() {
                   ))}
                 </div>
 
-                {/* SHOW MORE BUTTON */}
                 {pageInfo.hasNextPage && (
                    <div className="mt-12">
                      <button
-                        onClick={handleLoadMore}
+                        onClick={() => fetchProducts(pageInfo.endCursor)}
                         disabled={isLoadingMore}
                         className="px-10 py-4 rounded-xl font-bold text-sm uppercase tracking-widest text-slate-900 border-2 border-slate-900 hover:bg-slate-900 hover:text-white transition-all disabled:opacity-50 flex items-center gap-2"
                      >
@@ -234,7 +324,7 @@ export default function SalePage() {
                 <p className="text-gray-500 text-sm mb-6 max-w-sm mx-auto">We couldn't find anything matching your current filters. Try adjusting them to see more results.</p>
                 <button 
                   onClick={() => handleToggleFilter('RESET')} 
-                  className="px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-[var(--color-brand-orange)] transition-colors shadow-md"
+                  className="px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-[#FF3366] transition-colors shadow-md"
                 >
                   Clear All Filters
                 </button>
@@ -244,9 +334,7 @@ export default function SalePage() {
         </div>
       </div>
 
-      {/* ========================================================= */}
-      {/* MOBILE FILTER DRAWER                                      */}
-      {/* ========================================================= */}
+      {/* MOBILE FILTER DRAWER */}
       {isFilterDrawerOpen && (
         <div className="fixed inset-0 z-50 flex justify-end lg:hidden">
           <div 
@@ -262,7 +350,7 @@ export default function SalePage() {
             </div>
             <div className="flex-1 overflow-y-auto p-6 no-scrollbar">
               <FilterSidebar 
-                filters={availableFilters} 
+                filters={dynamicFilters} 
                 activeFilters={activeFilters} 
                 onToggle={handleToggleFilter} 
               />
@@ -276,7 +364,7 @@ export default function SalePage() {
               </button>
               <button 
                 onClick={() => setFilterDrawerOpen(false)}
-                className="flex-[2] py-4 bg-gray-900 text-white text-[13px] font-black uppercase tracking-widest rounded-xl hover:bg-[var(--color-brand-orange)] shadow-xl transition-all"
+                className="flex-[2] py-4 bg-gray-900 text-white text-[13px] font-black uppercase tracking-widest rounded-xl hover:bg-[#FF3366] shadow-xl transition-all"
               >
                 Apply ({products.length})
               </button>
