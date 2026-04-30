@@ -1,286 +1,203 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { SlidersHorizontal, LayoutGrid, List, X, RefreshCcw, Loader2 } from 'lucide-react';
-import clsx from 'clsx';
+import React, { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+// 1. Updated Import: Pulling in the specific new arrivals function
+import { getHomePageNewArrivals, FormattedProduct } from '@/src/lib/shopify'; // Adjust path if necessary
+import { useCart } from '@/src/context/CartContext'; // Adjust path if necessary
 
-// Components
-import { FilterSidebar, ActiveFilters, FilterOptions } from '@/src/components/shared/FilterSidebar';
-import { ProductCard } from '@/src/components/shared/ProductLayout';
-import SharedHeroBanner from '@/src/components/layout/SharedHeroBanner';
-import { getProducts, getCollectionProducts, FormattedProduct } from '@/src/lib/shopify'; 
-
-const STATIC_FILTER_OPTIONS = {
-  styles: ['Traditional', 'Fine Line', 'Blackwork', 'Geometric', 'Dotwork', 'Japanese', 'Realism', 'Minimalist'],
-  sizes: ['Tiny (1x1)', 'Small (2x2)', 'Medium (4x4)', 'Large (6x8)', 'Sleeve (10x6)'],
-  placements: ['Forearm', 'Calf', 'Chest', 'Neck', 'Wrist', 'Spine', 'Any']
-};
-
-export default function NewArrivalsPage() {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
-  const [itemsPerPage] = useState(12);
-
-  const [products, setProducts] = useState<FormattedProduct[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [pageInfo, setPageInfo] = useState({ hasNextPage: false, endCursor: null as string | null });
-
-  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({
-    collections: [], 
-    styles: [],
-    sizes: [],
-    placements: []
-  });
-
-  const [availableFilters] = useState<FilterOptions>({
-    collections: [], 
-    styles: STATIC_FILTER_OPTIONS.styles,
-    sizes: STATIC_FILTER_OPTIONS.sizes,
-    placements: STATIC_FILTER_OPTIONS.placements
-  });
-
-  const fetchProducts = useCallback(async (cursor?: string | null, isLoadMore = false) => {
-    if (isLoadMore) setIsLoadingMore(true);
-    else setIsLoading(true);
-
-    try {
-      // 🚀 NEW LOGIC: Check if we have sidebar filters active
-      const hasActiveFilters = 
-        activeFilters.styles.length > 0 || 
-        activeFilters.sizes.length > 0 || 
-        activeFilters.placements.length > 0;
-
-      let result;
-
-      if (!hasActiveFilters) {
-        // 1. PURE COLLECTION MODE: Fetch exactly what's in the 'new-arrivals' collection
-        // This solves the issue of getting random products that just have "new" in the title
-        result = await getCollectionProducts({
-          handle: 'new-arrivals',
-          first: itemsPerPage,
-          after: cursor ?? undefined
-        });
-      } else {
-        // 2. FILTERED MODE: Use the search query to combine collection + tags
-        let queryParts = [`collection:'new-arrivals'`]; 
-
-        if (activeFilters.styles.length > 0) {
-          queryParts.push(`(${activeFilters.styles.map(s => `tag:'${s}'`).join(' OR ')})`);
-        }
-        if (activeFilters.sizes.length > 0) {
-          queryParts.push(`(${activeFilters.sizes.map(s => `tag:'${s}'`).join(' OR ')})`);
-        }
-        if (activeFilters.placements.length > 0) {
-          queryParts.push(`(${activeFilters.placements.map(p => `tag:'${p}'`).join(' OR ')})`);
-        }
-
-        result = await getProducts({ 
-          first: itemsPerPage, 
-          after: cursor ?? undefined,
-          query: queryParts.join(' AND '),
-          sortKey: 'CREATED_AT',
-          reverse: true 
-        });
-      }
-
-      if (isLoadMore) {
-        setProducts(prev => [...prev, ...result.formattedData]);
-      } else {
-        setProducts(result.formattedData);
-        if (!isLoadMore) window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-      setPageInfo(result.pageInfo);
-
-    } catch (error) {
-      console.error("Failed to fetch new arrivals:", error);
-      if (!isLoadMore) setProducts([]);
-    } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
-    }
-  }, [itemsPerPage, activeFilters]);
+// Custom hook to trigger animations when elements scroll into view
+const useScrollReveal = (options = { threshold: 0.15 }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsVisible(true);
+        observer.unobserve(entry.target);
+      }
+    }, options);
 
-  const handleToggleFilter = (category: keyof FilterOptions | 'RESET', value?: string) => {
-    if (category === 'RESET') {
-      setActiveFilters({ collections: [], styles: [], sizes: [], placements: [] });
-      return;
-    }
-    if (!value) return;
+    if (ref.current) observer.observe(ref.current);
+    return () => {
+      if (ref.current) observer.unobserve(ref.current);
+    };
+  }, [options]);
 
-    setActiveFilters(prev => {
-      const current = prev[category as keyof ActiveFilters];
-      const updated = current.includes(value)
-        ? current.filter(item => item !== value)
-        : [...current, value];
-      return { ...prev, [category]: updated };
-    });
-  };
+  return [ref, isVisible] as const;
+};
 
-  const handleLoadMore = () => {
-    if (pageInfo.hasNextPage && pageInfo.endCursor) {
-      fetchProducts(pageInfo.endCursor, true);
-    }
-  };
+// Extracted ProductCard to manage individual scroll reveal refs
+const ProductCard = ({ product, index }: { product: FormattedProduct; index: number }) => {
+  const [ref, isVisible] = useScrollReveal({ threshold: 0.1 });
+  const { addToCart, isAddingToCart } = useCart();
+  
+  const variantId = product.checkout.defaultVariantId;
+  const hasOldPrice = product.checkout.compareAtPrice && product.checkout.compareAtPrice > product.checkout.price;
 
-  const activeFiltersCount = 
-    activeFilters.styles.length + 
-    activeFilters.sizes.length + 
-    activeFilters.placements.length;
+  // Determine if the card is even (0, 2) or odd (1, 3)
+  const isEven = index % 2 === 0;
+
+  // Mobile: Even slides from left, Odd slides from right.
+  // Desktop (md:): ALL cards override to slide from the left.
+  const hiddenTransformClasses = isEven 
+    ? '-translate-x-[100%] rotate-[15deg]' 
+    : 'translate-x-[100%] -rotate-[15deg] md:-translate-x-[100%] md:rotate-[15deg]';
+    
+  // Adjust the transform origin
+  const originClass = isEven
+    ? 'origin-bottom-left'
+    : 'origin-bottom-right md:origin-bottom-left';
 
   return (
-    <div className="bg-slate-50 min-h-screen mt-20 md:mt-20 pb-20">
-      
-      <SharedHeroBanner 
-        title="NEW ARRIVALS"
-        image="/assets/images/temporary_tattoos.webp"
-        mobileImage="/assets/images/temporary_tattoos.webp"
-        useMobileImage={true}
-        textColor="var(--color-brand-orange)"
-      />
-
-      <main className="container max-w-[1400px] mx-auto px-4 mt-12 md:mt-20">
+    <div 
+      ref={ref}
+      className={`group flex flex-col gap-6  h-full transition-all duration-[1500ms] ease-[cubic-bezier(0.25,1,0.5,1)] ${originClass} ${
+        isVisible 
+          ? 'opacity-100 translate-x-0 rotate-0' 
+          : `opacity-0 ${hiddenTransformClasses}` 
+      }`}
+    >
+      {/* Image Container */}
+      <div className="relative w-full aspect-[4/5] overflow-hidden bg-zinc-900 rounded-lg">
+        {/* Tags / Badges Overlay */}
+        <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
+              <div 
+                key={0} 
+                className="bg-black backdrop-blur-md text-white text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-full border shadow-lg">
+                  New Arrival
+              </div>
+        </div>
         
-        {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 pb-6 border-b border-gray-200 gap-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight capitalize">
-              The Latest Drops
-            </h1>
-            {!isLoading && (
-              <p className="text-sm font-medium text-gray-500 mt-2">
-                Showing <span className="text-gray-900 font-bold">{products.length}</span> Results
-              </p>
-            )}
+        {product.media.featuredImage ? (
+          <Image
+            src={product.media.featuredImage}
+            alt={product.title}
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+            className={`object-cover transition-transform duration-[1500ms] ease-[cubic-bezier(0.25,1,0.5,1)] ${
+              isVisible ? 'scale-100 group-hover:scale-110 group-hover:opacity-80' : 'scale-[1.3]'
+            }`}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-zinc-600 uppercase text-xs tracking-widest">
+            No Image
           </div>
+        )}
+      </div>
+
+      {/* Product Details */}
+      <div className="flex flex-col gap-3 flex-grow mt-2 px-1 ">
+        <div className="flex justify-between items-start gap-4">
+          <h3 className="text-base md:text-lg font-semibold tracking-wide uppercase leading-snug text-gray-100">
+            {product.title}
+          </h3>
           
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setFilterDrawerOpen(true)} 
-              className="lg:hidden flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-slate-200 text-slate-950 text-sm font-bold rounded-xl hover:border-slate-950 transition-colors"
-            >
-              <SlidersHorizontal className="w-4 h-4" /> Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}
-            </button>
-            <div className="flex items-center gap-1 bg-gray-100/50 border border-gray-200 p-1 rounded-xl">
-              <button 
-                onClick={() => setViewMode('grid')} 
-                className={clsx("p-2 rounded-lg transition-all", viewMode === 'grid' ? "bg-white text-[var(--color-brand-orange)] shadow-sm" : "text-gray-400 hover:text-gray-800")}
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => setViewMode('list')} 
-                className={clsx("p-2 rounded-lg transition-all", viewMode === 'list' ? "bg-white text-[var(--color-brand-orange)] shadow-sm" : "text-gray-400 hover:text-gray-800")}
-              >
-                <List className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col lg:flex-row gap-12">
-          
-          {/* DESKTOP SIDEBAR */}
-          <aside className="hidden lg:block w-64 shrink-0">
-            <div className="sticky top-28 space-y-8 max-h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar pb-4 pr-6 border-r-2 border-slate-100">
-               <div className="flex items-center justify-between mb-8 pb-4 border-b-2 border-slate-950">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-950">
-                  Filters
-                </span>
-                {activeFiltersCount > 0 && (
-                  <button onClick={() => handleToggleFilter('RESET')} className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-brand-orange)] hover:underline">
-                    Clear
-                  </button>
-                )}
-              </div>
-              <FilterSidebar filters={availableFilters} activeFilters={activeFilters} onToggle={handleToggleFilter} />
-            </div>
-          </aside>
-
-          {/* PRODUCT LISTINGS */}
-          <div className="flex-grow relative min-h-[500px]">
-            {isLoading ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-[2px] z-10 rounded-3xl">
-                <Loader2 className="w-10 h-10 text-[var(--color-brand-orange)] animate-spin" />
-              </div>
-            ) : products.length > 0 ? (
-              <div className="flex flex-col items-center">
-                <div className={clsx(
-                  "w-full p-4 sm:p-6 lg:p-8 rounded-3xl border border-gray-100 bg-white shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)]",
-                  "grid gap-6 sm:gap-8",
-                  viewMode === 'grid' ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-1"
-                )}>
-                  {products.map((product, index) => (
-                    <ProductCard 
-                      key={`${product.id}-${index}`} 
-                      item={product} 
-                      viewMode={viewMode} 
-                      page="new-arrivals" 
-                      index={index} 
-                    />
-                  ))}
-                </div>
-
-                {pageInfo.hasNextPage && (
-                   <div className="mt-12">
-                     <button 
-                       onClick={handleLoadMore}
-                       disabled={isLoadingMore}
-                       className="px-10 py-4 rounded-xl text-sm font-bold uppercase tracking-widest text-slate-900 border-2 border-slate-900 hover:bg-slate-900 hover:text-white transition-all disabled:opacity-50 flex items-center gap-2"
-                     >
-                        {isLoadingMore && <Loader2 className="w-4 h-4 animate-spin" />}
-                        {isLoadingMore ? 'Loading...' : 'Show More'}
-                     </button>
-                   </div>
-                )}
-              </div>
-            ) : (
-              <div className="py-24 text-center bg-gray-50/50 border border-dashed border-gray-300 rounded-3xl flex flex-col items-center justify-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <RefreshCcw className="w-8 h-8 text-gray-400" />
-                </div>
-                <p className="text-gray-900 font-bold text-lg mb-2">No products found</p>
-                <button 
-                  onClick={() => handleToggleFilter('RESET')} 
-                  className="px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-[var(--color-brand-orange)] transition-colors shadow-md"
-                >
-                  Clear All Filters
-                </button>
-              </div>
+          {/* Pricing block */}
+          <div className="flex flex-col items-end shrink-0">
+            <span className="text-[var(--color-brand-orange)] font-black text-xl md:text-2xl tracking-tight">
+              ${product.checkout.price.toFixed(2)}
+            </span>
+            {hasOldPrice && (
+              <span className="text-white text-15px line-through text-sm md:text-base font-medium mt-0.5">
+                ${product.checkout.compareAtPrice?.toFixed(2)}
+              </span>
             )}
           </div>
         </div>
-      </main>
 
-      {/* MOBILE DRAWER (Reuse layout from Shop All) */}
-      {isFilterDrawerOpen && (
-        <>
-          <div className="fixed inset-0 z-[60] bg-slate-950/40 backdrop-blur-sm lg:hidden" onClick={() => setFilterDrawerOpen(false)} />
-          <div className="fixed right-0 top-0 h-full w-[300px] bg-white z-[70] shadow-2xl lg:hidden border-l-2 border-slate-950 flex flex-col">
-            <div className="p-6 flex items-center justify-between border-b-2 border-slate-100 shrink-0">
-              <h2 className="text-[12px] font-black uppercase tracking-[0.2em]">Filters</h2>
-              <button onClick={() => setFilterDrawerOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-6 no-scrollbar">
-              <FilterSidebar filters={availableFilters} activeFilters={activeFilters} onToggle={handleToggleFilter} />
-            </div>
-            <div className="p-6 border-t-2 border-slate-100 bg-slate-50 flex flex-col gap-3">
-               <button 
-                onClick={() => setFilterDrawerOpen(false)}
-                className="w-full py-4 bg-slate-950 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-[var(--color-brand-orange)] transition-colors shadow-lg"
-              >
-                Apply Filters
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+        {/* Add to Cart Button */}
+        <button 
+          disabled={!variantId || !product.inventory.availableForSale || isAddingToCart}
+          onClick={(e) => {
+            e.preventDefault();
+            if (variantId) addToCart(variantId, 1);
+          }}
+          className="w-full rounded-full bg-transparent border border-white/20 text-white px-4 py-3 text-xs font-semibold tracking-widest hover:border-[var(--color-brand-orange)] hover:bg-[var(--color-brand-orange)] hover:text-black transition-all duration-300 uppercase mt-4 disabled:opacity-50 disabled:cursor-not-allowed mt-auto"
+        >
+          {product.inventory.availableForSale ? "Add to Cart" : "Sold Out"}
+        </button>
+      </div>
     </div>
+  );
+};
+
+
+export default function NewArrivals() {
+  const [products, setProducts] = useState<FormattedProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Header animation hook
+  const [headerRef, headerVisible] = useScrollReveal({ threshold: 0.1 });
+
+  useEffect(() => {
+    async function fetchNewArrivals() {
+      try {
+        setIsLoading(true);
+        // 2. Updated Fetch Logic: Call the new dedicated collection fetcher
+        const newArrivalsData = await getHomePageNewArrivals(4);
+        setProducts(newArrivalsData);
+      } catch (error) {
+        console.error("Failed to fetch new arrivals:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchNewArrivals();
+  }, []);
+
+  return (
+    <section className="bg-black text-white py-24 px-6 md:px-12 lg:px-24 w-full overflow-hidden  selection:bg-[var(--color-brand-orange)] selection:text-black">
+      <div className="max-w-[1400px] mx-auto flex flex-col gap-16 md:gap-24">
+        
+        {/* Header Section */}
+        <div 
+          ref={headerRef}
+          className={`flex flex-col md:flex-row justify-between items-start md:items-end gap-8 border-b border-white/10 pb-8 transition-all duration-[1200ms] ease-out ${
+            headerVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-12'
+          }`}
+        >
+          <div className="flex flex-col gap-4 max-w-xl">
+            <h2 className="text-4xl md:text-5xl lg:text-7xl text-[var(--color-brand-orange)] font-black uppercase tracking-tighter leading-none">
+              New<br />Arrivals
+            </h2>
+            <p className="text-sm md:text-base text-gray-400 leading-relaxed font-light">
+              Get the look without the commitment. Discover stunning, lifelike temporary body art that applies in seconds and lasts for days.
+            </p>
+          </div>
+          
+          <div>
+            <Link 
+              href="/new-arrivals"
+              className="group flex items-center gap-3 text-[var(--color-brand-orange)] uppercase tracking-widest text-xs font-bold hover:text-white transition-colors duration-300"
+            >
+              View All New Arrivals
+              <span className="bg-[var(--color-brand-orange)] text-black w-8 h-8 rounded-full flex justify-center items-center group-hover:bg-white group-hover:translate-x-2 transition-all duration-300">
+              →
+              </span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-y-16 gap-x-8">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="w-full aspect-[4/5] bg-white/5 animate-pulse rounded-sm" />
+            ))}
+          </div>
+        ) : (
+          /* Product Grid */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-y-16 gap-x-8">
+            {products.map((product, index) => (
+              <ProductCard key={product.id} product={product} index={index} />
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
