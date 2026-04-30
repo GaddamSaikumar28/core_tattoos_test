@@ -329,7 +329,7 @@ const fetchProducts = useCallback(async (cursor: string | null = null) => {
           </aside>
 
           {/* PRODUCT LISTINGS */}
-          <div className="flex-gro relative min-h-[500px]">
+          <div className="flex-1 min-w-0 relative min-h-[500px]">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4 pb-6 border-b border-gray-100">
               <div>
                 <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight capitalize">
