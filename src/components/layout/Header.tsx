@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense} from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -119,7 +119,7 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-export default function Header({ logoUrl = '/assets/icons/DesktopLogo.svg' }: HeaderProps) {
+function HeaderContent({ logoUrl = '/assets/icons/DesktopLogo.svg' }: HeaderProps) {
   const pathname = usePathname();
   const { cartCount, setCartOpen } = useCart();
 const searchParams = useSearchParams();
@@ -1164,5 +1164,14 @@ const searchParams = useSearchParams();
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+export default function Header(props: HeaderProps) {
+  return (
+    // You can provide a basic skeleton or empty div as a fallback to prevent layout shift
+    <Suspense fallback={<div className="h-16 md:h-20 w-full bg-white border-b border-gray-100 fixed top-0 z-50" />}>
+      <HeaderContent {...props} />
+    </Suspense>
   );
 }
