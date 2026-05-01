@@ -921,7 +921,7 @@ const searchParams = useSearchParams();
                             {searchResults.map((product) => (
                               <Link
                                 key={product.id}
-                                href={`/collections/${product.handle}`}
+                                href={`/products/${product.handle}`}
                                 onClick={closeSearch}
                                 className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 group"
                               >
