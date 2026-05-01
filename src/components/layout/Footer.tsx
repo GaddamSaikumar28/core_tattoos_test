@@ -186,7 +186,7 @@ export default function Footer({
             return `/collections?category=${encodeURIComponent(title)}`;
           }
           if (path.includes('/collections')) return '/collections';
-
+          if (path.includes('/blogs')) return '/blogs';
           // 4. THE DYNAMIC FALLBACK (For Blogs, New Policies, New Pages)
           // If the client adds a blog, Shopify sends "/blogs/news" -> This returns "/blogs/news"
           // If they add a random custom page, it returns "/pages/holiday-campaign"
