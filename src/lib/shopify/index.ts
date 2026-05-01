@@ -1311,7 +1311,7 @@ export async function getBlogs() {
   const res = await shopifyFetch<any>({
     query: getBlogsQuery,
     tags: ['blogs'],
-    cache: 'no-store',
+    //cache: 'no-store',
   });
   
   // Return a clean array of blog nodes
