@@ -926,7 +926,7 @@ export const getBlogArticlesQuery = /* GraphQL */ `
         title
         description
       }
-      articles(first: 20, sortKey: PUBLISHED_AT, reverse: true) {
+      articles(first: 20) {
         edges {
           node {
             id

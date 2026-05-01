@@ -1289,8 +1289,10 @@ export async function getBlogArticles(blogHandle: string = 'news') {
   const res = await shopifyFetch<any>({
     query: getBlogArticlesQuery,
     variables: { blogHandle },
+    cache: 'no-store',
     tags: ['blog', blogHandle],
   });
+  console.log('Shopify Response: of blog handles', JSON.stringify(res.body?.data, null, 2));
   return res.body?.data?.blog;
 }
 
@@ -1309,9 +1311,11 @@ export async function getBlogs() {
   const res = await shopifyFetch<any>({
     query: getBlogsQuery,
     tags: ['blogs'],
+    cache: 'no-store',
   });
   
   // Return a clean array of blog nodes
+  console.log("Fetched blogs:", JSON.stringify(res.body?.data?.blogs, null, 2));
   return res.body?.data?.blogs?.edges?.map((edge: any) => edge.node) || [];
 }
 

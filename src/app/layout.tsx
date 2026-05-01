@@ -15,7 +15,7 @@ import { AuthProvider } from "../context/AuthContext";
 import Script from "next/script";
 import { getGlobalSettingsData } from "@/src/lib/shopify";
 import CartDrawerWrapper from "../components/cart/CartDrawerWrapper";
-
+import MetaPixel from "../components/shared/MetaPixel";
 // --- SEO ADDITION: Import Google Analytics ---
 import { GoogleAnalytics } from "@next/third-parties/google";
 
@@ -181,7 +181,7 @@ export default async function RootLayout({
             alt=""
           />
         </noscript>
-
+        <MetaPixel />
         <CartProvider>
           <AuthProvider>
             <SplashScreen
