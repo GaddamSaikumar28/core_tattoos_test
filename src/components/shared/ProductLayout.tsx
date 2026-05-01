@@ -36,9 +36,10 @@ interface ProductCardProps {
   viewMode: "grid" | "list";
   page: string;
   index: number;
+  priority?: boolean;
 }
 
-export function ProductCard({ item, viewMode, page, index }: ProductCardProps) {
+export function ProductCard({ item, viewMode, page, index , priority = false }: ProductCardProps) {
   const [ref, isVisible] = useScrollReveal({ threshold: 0.1 });
 
   const isList = viewMode === "list";
@@ -64,8 +65,8 @@ export function ProductCard({ item, viewMode, page, index }: ProductCardProps) {
   const hoverImage = item.media.hoverImage || image;
 
   const slug = encodeURIComponent(item.slug.toLowerCase().replace(/\s+/g, "-"));
-  const productUrl = `/${page}/${slug}`;
-
+  //const productUrl = `/${page}/${slug}`;
+  const productUrl = `/products/${item.handle}`;
   const displayBadge = item.styling.badges?.[0];
 
   const handleQuantityChange = (type: "increase" | "decrease") => {
@@ -97,6 +98,10 @@ export function ProductCard({ item, viewMode, page, index }: ProductCardProps) {
   const originClass = isEven
     ? "origin-bottom-left"
     : "origin-bottom-right md:origin-bottom-left";
+
+  const mainAltText = item.title 
+    ? `${item.title} high-quality temporary tattoo design`
+    : 'Realistic temporary tattoo design on white background';
 
   return (
     <div
@@ -140,16 +145,22 @@ export function ProductCard({ item, viewMode, page, index }: ProductCardProps) {
         >
           <Image
             src={image}
-            alt={item.title}
+            alt={mainAltText}
+            //alt={item.title}
             fill
-            sizes="(max-width: 768px) 100vw, 33vw"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // Optimized sizes
+            priority={priority}
+            //sizes="(max-width: 768px) 100vw, 33vw"
             className="object-cover transition-all duration-[1500ms] ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:opacity-0 group-hover:scale-110"
           />
           <Image
             src={hoverImage}
-            alt={`${item.title} alternate view`}
+            //alt={`${item.title} alternate view`}
+            alt={mainAltText}
             fill
-            sizes="(max-width: 768px) 100vw, 33vw"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            loading="lazy" // Hover images should always be lazy
+            //sizes="(max-width: 768px) 100vw, 33vw"
             className="object-cover absolute inset-0 opacity-0 scale-100 transition-all duration-[1500ms] ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:opacity-80 group-hover:scale-110"
           />
         </Link>

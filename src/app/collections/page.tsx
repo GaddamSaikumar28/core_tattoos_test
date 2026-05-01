@@ -372,7 +372,7 @@ const fetchProducts = useCallback(async (cursor: string | null = null) => {
                   viewMode === 'grid' ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-1"
                 )}>
                   {products.map((item, index) => (
-                    <ProductCard key={`${item.id}-${index}`} item={item} viewMode={viewMode} page="collections" index={index} />
+                    <ProductCard key={`${item.id}-${index}`} item={item} viewMode={viewMode} page="collections" index={index} priority={index <= 3} />
                   ))}
                 </div>
 

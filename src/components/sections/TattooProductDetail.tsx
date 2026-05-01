@@ -143,9 +143,10 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                     src={images[activeImageIndex].url} 
                     alt={images[activeImageIndex].altText || product.title}
                     fill
-                    priority
+                    priority = {true}
                     className="object-contain"
                     sizes="(max-width: 768px) 100vw, 50vw"
+
                   />
                 </motion.div>
               </AnimatePresence>
@@ -435,13 +436,13 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
       {/* ========================================================= */}
       {/* MAGNIFIER / ZOOM MODAL                                    */}
       {/* ========================================================= */}
-      <AnimatePresence>
+      {/* <AnimatePresence>
         {isZoomed && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/95 flex flex-col overflow-y-auto cursor-zoom-out"
+            className="fixed mt-20 inset-0 z-[100] bg-black/95 flex flex-col overflow-y-auto cursor-zoom-out"
             onClick={() => setIsZoomed(false)}
           >
             <button 
@@ -452,14 +453,51 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
               <X className="w-6 h-6" />
             </button>
             
-            <div className="min-h-screen w-full flex items-center justify-center p-4 py-20">
+            <div className="min-h-screen w-full flex items-center justify-center mt-50 px-10 p-4 py-20">
               <Image 
                 src={images[activeImageIndex].url} 
                 alt={images[activeImageIndex].altText || product.title}
                 width={1200}
                 height={1200}
-                className="w-auto max-w-full h-auto max-h-none object-contain rounded-xl"
+                className="w-auto max-w-full mt-20 h-auto max-h-none object-contain rounded-xl"
                 onClick={(e) => e.stopPropagation()} 
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence> */}
+      <AnimatePresence>
+        {isZoomed && (
+          <motion.div 
+            initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+            animate={{ opacity: 1, backdropFilter: "blur(8px)" }}
+            exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
+            // 1. z-[9999] ensures it sits above ANY global header.
+            // 2. Removed mt-20 and overflow-y-auto to lock it to the viewport perfectly.
+            className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-4 md:p-8 mt-20 cursor-zoom-out"
+            onClick={() => setIsZoomed(false)}
+          >
+            <button 
+              onClick={(e) => { e.stopPropagation(); setIsZoomed(false); }}
+              // Changed to absolute positioning relative to the fixed modal container
+              className="absolute top-6 right-6 md:top-8 md:right-8 z-10 w-12 h-12 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-colors"
+              aria-label="Close zoom"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            
+            {/* Container constraints dynamically adjust based on the viewport */}
+            <div className="relative flex items-center justify-center w-full h-full max-h-[85vh]">
+              <Image 
+                src={images[activeImageIndex].url} 
+                alt={images[activeImageIndex].altText || product.title}
+                width={1200}
+                height={1200}
+                // h-full and object-contain will natively scale the Next.js image to fit the container bounds
+                className="w-auto h-full max-h-full object-contain rounded-xl drop-shadow-2xl cursor-default"
+                onClick={(e) => e.stopPropagation()}
+                //priority // Recommended for LCP images inside modals
+                priority={true}
               />
             </div>
           </motion.div>
