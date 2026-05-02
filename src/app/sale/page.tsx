@@ -120,7 +120,7 @@ export default function SalePage() {
           first: itemsPerPage,
           after: cursor || undefined
         });
-        console.log("Fetched collection products for 'sale' high ", result.collectionImage);
+       // console.log("Fetched collection products for 'sale' high ", result.collectionImage);
         // UPDATE BANNER IMAGE IF IT EXISTS
         if (!cursor && result.collectionImage?.url) {
           setBannerImage(result.collectionImage.url);
@@ -172,7 +172,7 @@ export default function SalePage() {
         }
       }
 
-      console.log("Fetched products: in sale", result.formattedData);
+      //console.log("Fetched products: in sale", result.formattedData);
       if (cursor) {
         setProducts(prev => [...prev, ...result.formattedData]);
       } else {

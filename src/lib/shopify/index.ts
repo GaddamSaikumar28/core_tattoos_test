@@ -1223,7 +1223,7 @@ export async function getGlobalSettingsData() {
 import { getHomeFeatureSectionQuery } from './queries';
 
 export async function getHomeFeatureSectionData(handle: string = 'home_feature_section') {
-   console.log("in get home feature selection component");
+   //console.log("in get home feature selection component");
   const res = await shopifyFetch<any>({
     query: getHomeFeatureSectionQuery,
     tags: ['home_feature_section'],
@@ -1292,7 +1292,7 @@ export async function getBlogArticles(blogHandle: string = 'news') {
     cache: 'no-store',
     tags: ['blog', blogHandle],
   });
-  console.log('Shopify Response: of blog handles', JSON.stringify(res.body?.data, null, 2));
+ // console.log('Shopify Response: of blog handles', JSON.stringify(res.body?.data, null, 2));
   return res.body?.data?.blog;
 }
 
@@ -1315,7 +1315,7 @@ export async function getBlogs() {
   });
   
   // Return a clean array of blog nodes
-  console.log("Fetched blogs:", JSON.stringify(res.body?.data?.blogs, null, 2));
+ // console.log("Fetched blogs:", JSON.stringify(res.body?.data?.blogs, null, 2));
   return res.body?.data?.blogs?.edges?.map((edge: any) => edge.node) || [];
 }
 
@@ -1328,7 +1328,7 @@ export async function getMenu(handle: string) {
     tags: ['menu', handle],
     cache: 'no-store',
   });
-  console.log(`Fetched menu in index file"${handle}":`, res.body?.data?.menu);
+  //console.log(`Fetched menu in index file"${handle}":`, res.body?.data?.menu);
   return res.body?.data?.menu;
 }
 

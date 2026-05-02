@@ -174,14 +174,14 @@ const fetchProducts = useCallback(async (cursor: string | null = null) => {
 
   
     if (!isShopAll && isPureCollection && handle) {
-      console.log(`Fetching strictly from collection: ${handle}`);
+      //console.log(`Fetching strictly from collection: ${handle}`);
       result = await getCollectionProducts({
         handle: handle,
         first: itemsPerPage,
         after: cursor || undefined
       });
     } else {
-      console.log("Fetching via general search query (Shop All or Filtered)");
+     // console.log("Fetching via general search query (Shop All or Filtered)");
       const queryStr = buildShopifyQuery();
       result = await getProducts({
         query: queryStr,

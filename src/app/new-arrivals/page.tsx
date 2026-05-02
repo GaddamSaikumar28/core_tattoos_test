@@ -212,7 +212,7 @@ export default function NewArrivalsPage() {
         });
       }
       
-      console.log("Fetched Products Result: in new arrivals", result);
+     // console.log("Fetched Products Result: in new arrivals", result);
       
       if (cursor) {
         setProducts(prev => [...prev, ...result.formattedData]);

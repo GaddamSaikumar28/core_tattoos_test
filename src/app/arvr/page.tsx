@@ -19,9 +19,9 @@ const assetsForDemo = [
     glb: "https://modelviewer.dev/shared-assets/models/Astronaut.glb",
     usdz: "https://modelviewer.dev/shared-assets/models/Astronaut.usdz"
   },
-  {
+ {
     name: "The Duck (Small Prop)",
-    glb: "https://modelviewer.dev/shared-assets/models/Duck.glb",
+    glb: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/glTF-Binary/Duck.glb",
     usdz: undefined
   }
 ];
@@ -213,7 +213,7 @@ export default function TattooPDP() {
           className="flex flex-col w-full max-w-md"
         >
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight uppercase mb-2">
-            The Sterling Wolf
+            Just Tattoos Metallic Temporary Tattoo Sleeve
           </h1>
           
           <div className="flex items-center gap-2 mb-2">
@@ -273,7 +273,7 @@ export default function TattooPDP() {
 
           {/* Asset Switcher */}
           <div className="mb-8 bg-white/5 border border-white/10 p-5 rounded-xl">
-            <div className="text-sm font-bold uppercase tracking-wider text-cyan-400 mb-3">Demo Asset Switcher</div>
+            <div className="text-sm font-bold uppercase tracking-wider text-cyan-400 mb-3">Demo Switcher of 3D models</div>
             <div className="flex flex-wrap gap-2">
               {assetsForDemo.map((asset, index) => (
                 <button
