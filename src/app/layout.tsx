@@ -16,8 +16,6 @@ import Script from "next/script";
 import { getGlobalSettingsData } from "@/src/lib/shopify";
 import CartDrawerWrapper from "../components/cart/CartDrawerWrapper";
 import MetaPixel from "../components/shared/MetaPixel";
-// --- SEO ADDITION: Import Google Analytics ---
-import { GoogleAnalytics } from "@next/third-parties/google";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -51,7 +49,8 @@ export const metadata: Metadata = {
   title: "Just Tattoos",
   description: "Authentic tattoo lifestyle and apparel.",
   verification: {
-    google: process.env.GOOGLE_SITE_VERIFICATION, // Fulfills Point 5
+    // Fulfills Google Search Console Request Exactly
+    google: "d01qN_aI17S2zOhlv4J36BQcOWOYndmIqB1twf3xkgM", 
   },
   other: {
     "facebook-domain-verification": "pxy8rtt4m4qc86h0j1nmxcs4prlwbe",
@@ -95,6 +94,9 @@ export default async function RootLayout({
     youtubeLink: "#",
   };
 
+  // Safe fallback for the site URL in the schema
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://justtattoos.com";
+
   return (
     <html
       lang="en"
@@ -110,10 +112,23 @@ export default async function RootLayout({
           crossOrigin="anonymous"
         />
         <link rel="dns-prefetch" href="https://cdn.shopify.com" />
+
+        {/* --- EXACT CLIENT GA4 TRACKING SCRIPT --- */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-98T2GW3HED"></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-98T2GW3HED');
+            `,
+          }}
+        />
       </head>
       <body className="antialiased flex flex-col min-h-screen">
         <SpeedInsights />
-        {/* --- SEO ADDITION: Global Organization & WebSite Schema (Point 11) --- */}
+        {/* --- SEO ADDITION: Global Organization & WebSite Schema --- */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -122,10 +137,10 @@ export default async function RootLayout({
               "@graph": [
                 {
                   "@type": "Organization",
-                  "@id": `${process.env.NEXT_PUBLIC_SITE_URL}/#organization`,
+                  "@id": `${siteUrl}/#organization`,
                   name: "Just Tattoos",
-                  url: process.env.NEXT_PUBLIC_SITE_URL,
-                  logo: `${process.env.NEXT_PUBLIC_SITE_URL}/assets/icons/DesktopLogo.svg`,
+                  url: siteUrl,
+                  logo: `${siteUrl}/assets/icons/DesktopLogo.svg`,
                   sameAs: [
                     globalData.facebookLink,
                     globalData.instagramLink,
@@ -135,11 +150,11 @@ export default async function RootLayout({
                 },
                 {
                   "@type": "WebSite",
-                  "@id": `${process.env.NEXT_PUBLIC_SITE_URL}/#website`,
-                  url: process.env.NEXT_PUBLIC_SITE_URL,
+                  "@id": `${siteUrl}/#website`,
+                  url: siteUrl,
                   name: "Just Tattoos",
                   publisher: {
-                    "@id": `${process.env.NEXT_PUBLIC_SITE_URL}/#organization`,
+                    "@id": `${siteUrl}/#organization`,
                   },
                 },
               ],
@@ -214,11 +229,6 @@ export default async function RootLayout({
           src="https://cdn.your-messaging-app.com/widget.js"
           strategy="lazyOnload"
         />
-
-        {/* --- SEO ADDITION: GA4 Tracking (Fulfills Point 6) --- */}
-        {process.env.NEXT_PUBLIC_GA_ID && (
-          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
-        )}
       </body>
     </html>
   );
