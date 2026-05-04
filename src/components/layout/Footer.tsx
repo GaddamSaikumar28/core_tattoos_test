@@ -42,7 +42,7 @@ const FALLBACK_FOOTER_MENUS: FooterMenuColumn[] = [
     title: "Shop",
     links: [
       { name: "Tattoos", href: "/collections" },
-      { name: "New Arrival", href: "/new-arrivals" },
+      { name: "New Arrival", href: "collections/new-arrival" },
       { name: "Sale", href: "/sale" },
     ],
   },
@@ -69,8 +69,8 @@ const FALLBACK_FOOTER_MENUS: FooterMenuColumn[] = [
 const FALLBACK_POLICY_LINKS: FooterLinkItem[] = [
   { name: "Terms of Service", href: "/terms-of-service" },
   { name: "Privacy Policy", href: "/privacy-policy" },
-  { name: "Refund Policy", href: "/refund-policy" },
-  { name: "Shipping Policy", href: "/shipping-policy" },
+  { name: "Refund Policy", href: "/returns" },
+  { name: "Shipping Policy", href: "/shipping" },
 ];
 
 const PAYMENT_METHODS = [
@@ -183,7 +183,7 @@ export default function Footer({
 
           // 3. Dynamic Collections Routing (Matches your page.tsx logic!)
           if (path.includes('/collections/') && !path.includes('/collections/all')) {
-            return `/collections?category=${encodeURIComponent(title)}`;
+            return `/collections/${encodeURIComponent(title)}`;
           }
           if (path.includes('/collections')) return '/collections';
           if (path.includes('/blogs')) return '/blogs';

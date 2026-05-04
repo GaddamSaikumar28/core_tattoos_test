@@ -1046,3 +1046,18 @@ export const getCollectionProductsQuery = /* GraphQL */ `
   }
   ${productFragment}
 `;
+
+export const getCollectionQuery = /* GraphQL */ `
+  query getCollection($handle: String!) {
+    collection(handle: $handle) {
+      id
+      handle
+      title
+      description
+      seo {
+        title
+        description
+      }
+    }
+  }
+`;

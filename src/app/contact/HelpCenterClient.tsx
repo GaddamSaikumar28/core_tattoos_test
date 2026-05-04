@@ -99,7 +99,7 @@ export default function HelpCenterClient({ data }: { data: any }) {
               <div>
                 <h3 className="font-bold text-gray-900">FAQ & Policies</h3>
                 <p className="text-sm text-gray-500 mt-1">Find answers instantly</p>
-                <a href="/policies/refund-policy" className="mt-2 text-sm font-bold text-[#fe8204] hover:text-orange-700 block">
+                <a href="/returns" className="mt-2 text-sm font-bold text-[#fe8204] hover:text-orange-700 block">
                   Read our policies &rarr;
                 </a>
               </div>

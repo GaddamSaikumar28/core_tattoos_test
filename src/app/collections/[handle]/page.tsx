@@ -1,89 +1,75 @@
 
 import { notFound } from 'next/navigation';
-import { getProduct, getProductRecommendations } from '@/src/lib/shopify';
-// import TattooProductDetail from '@/src/components/TattooProductDetail';
-// import { RelatedProducts } from '@/src/components/RelatedProducts';
-
-import TattooProductDetail from '@/src/components/sections/TattooProductDetail';
-import { RelatedProducts } from '@/src/components/sections/RelatedProducts';
 import { Metadata } from 'next';
+ import { getCollection } from '@/src/lib/shopify';
 
+// 1. Import your custom UI components
+import SalePage from '@/src/components/shared/Sale';
+import NewArrivalsPage from '@/src/components/shared/NewArrivals';
+
+// Import your default collection UI for all other categories (Floral, Animal, etc.)
+// Make sure you have this component pointing to your old `collectionspage.tsx`
+// import DefaultCollectionPage from '@/src/components/shared/DefaultCollection'; 
+import DefaultCollection from '@/src/components/shared/DefaultCollection';
 type Props = {
-  // In Next.js 15+, params is a Promise
   params: Promise<{ handle: string }>;
 };
 
 // =========================================================
-// 1. DYNAMIC SEO METADATA GENERATION
+// 2. STRICT SEO METADATA & CANONICAL ENFORCEMENT
 // =========================================================
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const resolvedParams = await params;
-  const slug = resolvedParams.handle;
+  const { handle } = await params; // Next.js 15 requires awaiting params
+  
+  // Fetch collection details specifically for the SEO meta tags
+  const collection = await getCollection(handle);
 
-  const product = await getProduct(slug);
-
-  if (!product) {
-    return { 
-      title: 'Product Not Found | Just Tattoos',
-      description: 'The requested tattoo could not be found.'
-    };
+  if (!collection) {
+    return { title: 'Collection Not Found | Just Tattoos' };
   }
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
+  const canonicalUrl = `${siteUrl}/collections/${handle}`;
+
   return {
-    title: `${product.title} | Just Tattoos`,
-    description: product.description || `Shop our premium ${product.styling.tattooColorType} temporary tattoo: ${product.title}.`,
-    openGraph: {
-      title: `${product.title} | Just Tattoos`,
-      description: product.description || `Shop our premium temporary tattoo.`,
-      images: product.media.featuredImage ? [
-        {
-          url: product.media.featuredImage,
-          width: 800,
-          height: 800,
-          alt: product.title,
-        }
-      ] : [],
+    title: collection.seo?.title || `${collection.title} | Just Tattoos`,
+    description: collection.seo?.description || collection.description || `Shop the ${collection.title} collection at Just Tattoos.`,
+    alternates: {
+      canonical: canonicalUrl, // Fixes Issue 06 from the SEO Audit
     },
-    twitter: {
-      card: 'summary_large_image',
-      title: product.title,
-      description: product.description,
-      images: product.media.featuredImage ? [product.media.featuredImage] : [],
+    openGraph: {
+      title: collection.seo?.title || collection.title,
+      description: collection.seo?.description || collection.description,
+      url: canonicalUrl,
+      type: 'website',
     }
   };
 }
 
 // =========================================================
-// 2. MAIN SERVER COMPONENT
+// 3. MAIN SWITCHBOARD COMPONENT
 // =========================================================
-export default async function ProductDetailPage({ params }: Props) {
-  const resolvedParams = await params;
-  const slug = resolvedParams.handle;
+export default async function CollectionSwitchboardPage({ params }: Props) {
+  const { handle } = await params;
 
-  // 1. Fetch the main product data from Shopify
-  const product = await getProduct(slug);
+  // We can fetch the collection here just to verify it actually exists in Shopify
+  const collection = await getCollection(handle);
+  if (!collection) return notFound();
 
-  // 2. Handle 404 securely if the user types a random URL
-  if (!product) {
-    notFound();
+  // --- SWITCHBOARD LOGIC ---
+
+  // 1. If URL is /collections/sale, load the Sale UI
+  if (handle === 'sale') {
+    return <SalePage />;
   }
 
-  // 3. Fetch Shopify's AI-driven related products using the product ID
-  const relatedProducts = await getProductRecommendations(product.id);
+  // 2. If URL is /collections/new-arrivals, load the New Arrivals UI
+  if (handle === 'new-arrival') {
+    return <NewArrivalsPage />;
+  }
 
-  return (
-    <div className="bg-white min-h-screen">
-      {/* The UI component we built that handles the image gallery, 
-        variants, pricing, and "Add to Cart" state 
-      */}
-      <TattooProductDetail product={product} />
-
-      {/* The Related Products Carousel we built, placed seamlessly 
-        at the bottom of the page 
-      */}
-      {relatedProducts && relatedProducts.length > 0 && (
-        <RelatedProducts products={relatedProducts} />
-      )}
-    </div>
-  );
+  // 3. Fallback: If it's anything else (like /collections/floral), 
+  // it loads your standard dynamic collection template.
+  // We pass the handle so the default component knows which products to fetch.
+  return <DefaultCollection handle={handle} />; 
 }

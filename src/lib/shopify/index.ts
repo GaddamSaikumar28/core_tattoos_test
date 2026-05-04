@@ -1359,3 +1359,17 @@ export async function getCollectionProducts({
     collectionImage: collectionData?.image || null
   };
 }
+
+import { getCollectionQuery } from './queries';
+
+// 2. Paste this lightweight function
+export async function getCollection(handle: string) {
+  const res = await shopifyFetch<any>({
+    query: getCollectionQuery,
+    variables: { handle },
+    tags: ['collections', handle],
+    // Notice we DO NOT use 'no-store' here so Next.js can cache the SEO data instantly
+  });
+
+  return res.body?.data?.collection || null;
+}

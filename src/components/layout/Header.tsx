@@ -331,8 +331,10 @@ const searchParams = useSearchParams();
 
       // 2. FORCE CUSTOM NEXT.JS ROUTES FIRST
       // This ensures your specific page.tsx files get hit instead of generic Shopify pages
-      if (title.includes('new arrival')) return '/new-arrivals';
-      if (title === 'sale' || path.includes('/pages/sale')) return '/sale';
+      // if (title.includes('new arrival')) return 'collections/new-arrival';
+      // if (title === 'sale' || path.includes('/pages/sale')) return 'collections/sale';
+      if (title.includes('new-arrival') || path.includes('/pages/new-arrival') || title.includes('new arrival')) return '/collections/new-arrival';
+      if (title === 'sale' || path.includes('/pages/sale')) return '/collections/sale';
       
       // Map the (info) route group pages based on your screenshot
       if (title.includes('about') || path.includes('/about-us')) return '/about';
@@ -343,7 +345,12 @@ const searchParams = useSearchParams();
       // 3. HANDLE COLLECTIONS AND FILTERS
       // We only do this if it didn't match a custom route above!
       if (menuItem.type === "COLLECTION") {
-        return `/collections?category=${encodeURIComponent(menuItem.title)}`;
+        //return `/collections?category=${encodeURIComponent(menuItem.title)}`;
+        //return `/collections/${encodeURIComponent(menuItem.title)}`;
+        const urlParts = menuItem.url.split('/').filter(Boolean);
+        const handle = urlParts[urlParts.length - 1].split('?')[0].split('#')[0];
+      
+        return `/collections/${handle}`;
       }
       if (menuItem.type === "COLLECTIONS" || title === "collection") {
         return "/collections";

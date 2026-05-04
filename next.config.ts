@@ -16,7 +16,32 @@ const config: NextConfig = {
       },
     ],
     formats: ['image/avif', 'image/webp'],
-  }
+  },
+  async redirects() {
+    return [
+      {
+        source: '/shipping-policy',
+        destination: '/shipping',
+        permanent: true, // 301 Redirect (Passes SEO juice)
+      },
+      {
+        source: '/refund-policy',
+        destination: '/returns',
+        permanent: true,
+      },
+      {
+        source: '/sale',
+        destination: '/collections/sale',
+        permanent: true,
+      },
+      {
+        source: '/new-arrivals',
+        destination: '/collections/new-arrival',
+        permanent: true,
+      },
+      { source: '/collections/boddy-part', destination: '/collections/body-part', permanent: true }
+    ];
+  },
 };
 
 export default config;
