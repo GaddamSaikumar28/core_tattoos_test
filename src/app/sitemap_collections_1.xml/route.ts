@@ -15,7 +15,7 @@ export async function GET() {
   );
 
   // FIX: Added the 'title' property to satisfy TypeScript's CollectionName type
-  collections.push({ title: 'Sale', handle: 'sale' });
+  //collections.push({ title: 'Sale', handle: 'sale' });
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
