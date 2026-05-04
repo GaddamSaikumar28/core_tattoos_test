@@ -39,7 +39,6 @@ const config: NextConfig = {
         destination: '/collections/new-arrival',
         permanent: true,
       },
-      { source: '/collections/boddy-part', destination: '/collections/body-part', permanent: true }
     ];
   },
 };
