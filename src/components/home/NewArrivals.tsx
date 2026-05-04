@@ -171,7 +171,7 @@ export default function NewArrivals() {
           
           <div>
             <Link 
-              href="collections/new-arrival"
+              href="/collections/new-arrival"
               className="group flex items-center gap-3 text-[var(--color-brand-orange)] uppercase tracking-widest text-xs font-bold hover:text-white transition-colors duration-300"
             >
               View All New Arrivals
