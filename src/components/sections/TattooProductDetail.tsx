@@ -43,11 +43,23 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
   
   // Utilize the pre-calculated discount percentage or fallback
   const discount = product.checkout.discountPercentage || (isOnSale ? Math.round(((compareAtPrice - price) / compareAtPrice) * 100) : 0);
-
+  console.log(product," in the product detail page of tattoos.");
   // Media (Using mapped gallery array)
-  const images = product.media?.gallery?.length > 0 
-    ? product.media.gallery 
-    : [{ url: product.media?.featuredImage || '/assets/images/placeholder-tattoo.png', altText: product.title }];
+  console.log(product,"in the product detail page")
+  const rawGallery = product.media?.gallery || [];
+  const featuredUrl = product.media?.featuredImage;
+
+  // 1. Filter out the featured image from the rest of the gallery to prevent duplicates
+  const filteredGallery = rawGallery.filter((img: any) => img.url !== featuredUrl);
+
+  // 2. Build the new array: Featured Image first, followed by the rest
+  const images = [
+    ...(featuredUrl ? [{ url: featuredUrl, altText: product.title }] : []),
+    ...filteredGallery
+  ];
+  //const images = product.media?.gallery?.length > 0 
+   // ? product.media.gallery 
+   // : [{ url: product.media?.featuredImage || '/assets/images/placeholder-tattoo.png', altText: product.title }];
 
   // Lock body scroll when Zoom Modal is open
   useEffect(() => {

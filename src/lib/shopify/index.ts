@@ -162,6 +162,7 @@ export async function getProducts({
       sortKey: sortKey || 'CREATED_AT',
       ...(query && { query })
     },
+    cache: 'no-store',
   });
 
   const productsData = res.body?.data?.products;
@@ -180,7 +181,8 @@ export async function getCollectionNames(): Promise<CollectionName[]> {
   const res = await shopifyFetch<any>({
     query: getCollectionNamesQuery,
     tags: ['collections'],
-    variables: { first: 250 }
+    variables: { first: 250 },
+    cache: 'no-store',
   });
 
   if (!res.body?.data?.collections?.edges) return [];
@@ -428,7 +430,8 @@ export async function getProduct(handle: string): Promise<FormattedProduct | nul
   const res = await shopifyFetch<any>({
     query: getProductByHandleQuery,
     tags: ['products', handle],
-    variables: { handle }
+    variables: { handle },
+    cache: 'no-store',
   });
 
   if (!res.body?.data?.product) return null;
@@ -443,8 +446,10 @@ export async function getProductRecommendations(productId: string): Promise<Form
   const res = await shopifyFetch<any>({
     query: getProductRecommendationsQuery,
     tags: ['products', 'recommendations', productId],
-    variables: { productId }
+    variables: { productId },
+        cache: 'no-store'
   });
+  
 
   if (!res.body?.data?.productRecommendations) return [];
 
@@ -592,7 +597,8 @@ export async function getHomePageNewArrivals(limit: number = 4): Promise<Formatt
       variables: {
         handle: collectionHandle,
         first: limit,
-      }
+      },
+      cache: 'no-store',
     });
 
     // The data shape for a collection query nests the products array
@@ -627,7 +633,8 @@ export async function getHomePageCollections(limit: number = 15): Promise<Format
       variables: {
         handle: collectionHandle,
         first: limit,
-      }
+      },
+      cache: 'no-store',
     });
 
     // Extract the nested products array from the collection response
@@ -662,7 +669,8 @@ export async function getHomePageHeroCollections(limit: number = 15): Promise<Fo
       variables: {
         handle: collectionHandle,
         first: limit,
-      }
+      },
+       cache: 'no-store',
     });
 
     // Extract the nested products array from the collection response
@@ -1341,6 +1349,7 @@ export async function getCollectionProducts({
   first?: number;
   after?: string;
 }) {
+
   const res = await shopifyFetch<any>({
     query: getCollectionProductsQuery,
     variables: { handle, first, after },
@@ -1368,6 +1377,7 @@ export async function getCollection(handle: string) {
     query: getCollectionQuery,
     variables: { handle },
     tags: ['collections', handle],
+    cache: 'no-store',
     // Notice we DO NOT use 'no-store' here so Next.js can cache the SEO data instantly
   });
 
