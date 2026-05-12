@@ -7,6 +7,7 @@ type BreadcrumbItem = {
   url: string;
 };
 
+
 export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
   //const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.justtattoos.com";
