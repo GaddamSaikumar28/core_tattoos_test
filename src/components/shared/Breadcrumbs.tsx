@@ -8,8 +8,8 @@ type BreadcrumbItem = {
 };
 
 export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
-
+  //const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.justtattoos.com";
   // 1. Generate the JSON-LD Schema perfectly formatted for Google
   const breadcrumbSchema = {
     '@context': 'https://schema.org',

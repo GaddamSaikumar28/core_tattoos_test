@@ -385,7 +385,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const blog = await getBlogArticles(blogHandle);
   if (!blog) return { title: 'Blog Not Found' };
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
+  // const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.justtattoos.com";
   const canonicalUrl = `${siteUrl}/blogs/${blogHandle}`;
 
   return {

@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { getCollectionNames } from '@/src/lib/shopify';
 
 export async function GET() {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
-  
+  //const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.justtattoos.com';
   const collectionsRes = await getCollectionNames();
   
   // Hard-block the typoes and hidden collections

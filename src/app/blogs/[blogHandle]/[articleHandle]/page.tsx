@@ -453,7 +453,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const article = await getArticle(blogHandle, articleHandle);
   if (!article) return { title: 'Article Not Found' };
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
+  // const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.justtattoos.com';
   const canonicalUrl = `${siteUrl}/blogs/${blogHandle}/${articleHandle}`;
 
   return {
@@ -479,7 +480,8 @@ export default async function SingleArticlePage({ params }: Props) {
   
   if (!article) return notFound();
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
+  //const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.justtattoos.com";
   const articleUrl = `${siteUrl}/blogs/${blogHandle}/${articleHandle}`;
 
   const blogPostingSchema = {

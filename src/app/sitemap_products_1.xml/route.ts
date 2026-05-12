@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { getProducts } from '@/src/lib/shopify';
 
 export async function GET() {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
-  
+  //const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.justtattoos.com';
   const productsRes = await getProducts({ first: 250 });
   const products = productsRes?.formattedData || [];
 

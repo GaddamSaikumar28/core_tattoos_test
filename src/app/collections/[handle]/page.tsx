@@ -92,7 +92,8 @@ type Props = {
 // =========================================================
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { handle } = await params;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
+  //const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.justtattoos.com";
   const canonicalUrl = `${siteUrl}/collections/${handle}`;
 
   // 🚀 FIX: Hardcoded SEO fallbacks for our custom pages so they NEVER 404

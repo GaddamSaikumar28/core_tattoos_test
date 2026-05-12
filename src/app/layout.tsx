@@ -43,9 +43,10 @@ const almarena = localFont({
 
 // --- SEO ADDITION: metadataBase and verification added ---
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://justtattoos.com",
-  ),
+  // metadataBase: new URL(
+  //   process.env.NEXT_PUBLIC_SITE_URL || "https://justtattoos.com",
+  // ),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://www.justtattoos.com"),
   title: "Just Tattoos",
   description: "Authentic tattoo lifestyle and apparel.",
   verification: {
@@ -95,7 +96,8 @@ export default async function RootLayout({
   };
 
   // Safe fallback for the site URL in the schema
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://justtattoos.com";
+  // const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://justtattoos.com";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.justtattoos.com";
 
   return (
     <html

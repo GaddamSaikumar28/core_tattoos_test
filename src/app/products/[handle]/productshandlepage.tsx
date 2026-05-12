@@ -18,7 +18,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: 'Product Not Found | Just Tattoos' };
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.justtattoos.com";
+  //const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
   const canonicalUrl = `${siteUrl}/products/${product.handle}`;
   const plainTextDescription = product.description.replace(/<[^>]+>/g, '').substring(0, 155) + '...';
 
@@ -41,30 +42,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-// =========================================================
-// 2. UNIFIED PRODUCT RENDERER
-// =========================================================
-// export default async function GlobalProductPage({ params }: Props) {
-//   const resolvedParams = await params;
-//   const product = await getProduct(resolvedParams.handle);
-
-//   if (!product) notFound();
-
-//   const relatedProducts = await getProductRecommendations(product.id);
-
-//   return (
-//     <div className="bg-white min-h-screen">
-//       {/* TattooProductDetail inherently handles pricing. 
-//         If a user clicked from /sale, it will STILL show the sale price natively!
-//       */}
-//       <TattooProductDetail product={product} />
-
-//       {relatedProducts && relatedProducts.length > 0 && (
-//         <RelatedProducts products={relatedProducts} />
-//       )}
-//     </div>
-//   );
-// }
 
 
 export default async function GlobalProductPage({ params }: Props) {
@@ -74,8 +51,8 @@ export default async function GlobalProductPage({ params }: Props) {
   if (!product) notFound();
 
   const relatedProducts = await getProductRecommendations(product.id);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
-
+  //const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://justtattoos.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.justtattoos.com";
   // --- 1. Construct the Strict Product JSON-LD (Point 10) ---
   const productJsonLd = {
     '@context': 'https://schema.org',
