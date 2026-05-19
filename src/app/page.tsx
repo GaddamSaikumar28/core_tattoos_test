@@ -69,6 +69,7 @@ function HeroSkeleton() {
     </div>
   );
 }
+export const dynamic = 'force-dynamic';
 
 export default function HomePage() {
 
