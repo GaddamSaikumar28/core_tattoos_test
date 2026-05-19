@@ -181,7 +181,7 @@ export async function getProducts({
       sortKey: sortKey || 'CREATED_AT',
       ...(query && { query })
     },
-    cache: 'no-store',
+    //cache: 'no-store',
   });
 
   const productsData = res.body?.data?.products;
@@ -201,7 +201,7 @@ export async function getCollectionNames(): Promise<CollectionName[]> {
     query: getCollectionNamesQuery,
     tags: ['collections'],
     variables: { first: 250 },
-    cache: 'no-store',
+    //cache: 'no-store',
   });
 
   if (!res.body?.data?.collections?.edges) return [];
@@ -227,7 +227,7 @@ export async function searchShopifyProducts(searchQuery: string): Promise<Search
     const res = await shopifyFetch<any>({
       // query: searchProductsQuery,
       // // We don't want to highly cache search queries as they are highly variable
-      // cache: 'no-store', 
+      // //cache: 'no-store', 
       // variables
       query: searchProductsQuery,
       // 2. PERFORMANCE: 'no-store' hits the API every keystroke. 
@@ -430,7 +430,7 @@ export async function getProduct(handle: string): Promise<FormattedProduct | nul
     query: getProductByHandleQuery,
     tags: ['products', handle],
     variables: { handle },
-    cache: 'no-store',
+    //cache: 'no-store',
   });
 
   if (!res.body?.data?.product) return null;
@@ -446,7 +446,7 @@ export async function getProductRecommendations(productId: string): Promise<Form
     query: getProductRecommendationsQuery,
     tags: ['products', 'recommendations', productId],
     variables: { productId },
-        cache: 'no-store'
+        //cache: 'no-store'
   });
   
 
@@ -503,7 +503,7 @@ export async function createCart(variantId: string, quantity: number): Promise<C
   const res = await shopifyFetch<any>({
     query: createCartMutation,
     variables: { lineItems: [{ merchandiseId: variantId, quantity }] },
-    cache: 'no-store', // Carts should never be cached
+    //cache: 'no-store', // Carts should never be cached
   });
   return reshapeCart(res.body.data.cartCreate.cart);
 }
@@ -512,7 +512,7 @@ export async function getCart(cartId: string): Promise<Cart | null> {
   const res = await shopifyFetch<any>({
     query: getCartQuery,
     variables: { cartId },
-    cache: 'no-store',
+    //cache: 'no-store',
   });
   if (!res.body.data.cart) return null; // Cart expired or deleted
   return reshapeCart(res.body.data.cart);
@@ -522,7 +522,7 @@ export async function addToCart(cartId: string, variantId: string, quantity: num
   const res = await shopifyFetch<any>({
     query: addToCartMutation,
     variables: { cartId, lines: [{ merchandiseId: variantId, quantity }] },
-    cache: 'no-store',
+    //cache: 'no-store',
   });
   return reshapeCart(res.body.data.cartLinesAdd.cart);
 }
@@ -531,7 +531,7 @@ export async function updateCartItem(cartId: string, lineId: string, quantity: n
   const res = await shopifyFetch<any>({
     query: updateCartMutation,
     variables: { cartId, lines: [{ id: lineId, quantity }] },
-    cache: 'no-store',
+    //cache: 'no-store',
   });
   return reshapeCart(res.body.data.cartLinesUpdate.cart);
 }
@@ -540,7 +540,7 @@ export async function removeFromCart(cartId: string, lineId: string): Promise<Ca
   const res = await shopifyFetch<any>({
     query: removeFromCartMutation,
     variables: { cartId, lineIds: [lineId] },
-    cache: 'no-store',
+    //cache: 'no-store',
   });
   return reshapeCart(res.body.data.cartLinesRemove.cart);
 }
@@ -579,7 +579,7 @@ export async function updateCartBuyerIdentity(cartId: string, customerAccessToke
       cartId, 
       buyerIdentity
     },
-    cache: 'no-store',
+    //cache: 'no-store',
   });
   return reshapeCart(res.body.data.cartBuyerIdentityUpdate.cart);
 }
@@ -597,7 +597,7 @@ export async function getHomePageNewArrivals(limit: number = 4): Promise<Formatt
         handle: collectionHandle,
         first: limit,
       },
-      cache: 'no-store',
+      //cache: 'no-store',
     });
 
     // The data shape for a collection query nests the products array
@@ -633,7 +633,7 @@ export async function getHomePageCollections(limit: number = 15): Promise<Format
         handle: collectionHandle,
         first: limit,
       },
-      cache: 'no-store',
+      //cache: 'no-store',
     });
 
     // Extract the nested products array from the collection response
@@ -669,7 +669,7 @@ export async function getHomePageHeroCollections(limit: number = 15): Promise<Fo
         handle: collectionHandle,
         first: limit,
       },
-       cache: 'no-store',
+       //cache: 'no-store',
     });
 
     // Extract the nested products array from the collection response
@@ -714,7 +714,7 @@ export async function createCustomer(input: any) {
   const res = await shopifyFetch<any>({
     query: customerCreateMutation,
     variables: { input },
-    cache: 'no-store'
+    //cache: 'no-store'
   });
   
   const data = res.body?.data?.customerCreate;
@@ -729,7 +729,7 @@ export async function createCustomerAccessToken(input: any) {
   const res = await shopifyFetch<any>({
     query: customerAccessTokenCreateMutation,
     variables: { input },
-    cache: 'no-store'
+    //cache: 'no-store'
   });
 
   const data = res.body?.data?.customerAccessTokenCreate;
@@ -744,7 +744,7 @@ export async function getCustomer(customerAccessToken: string) {
   const res = await shopifyFetch<any>({
     query: getCustomerQuery,
     variables: { customerAccessToken },
-    cache: 'no-store'
+    //cache: 'no-store'
   });
   return res.body?.data?.customer;
 }
@@ -754,7 +754,7 @@ export async function recoverCustomerPassword(email: string) {
   const res = await shopifyFetch<any>({
     query: customerRecoverMutation,
     variables: { email },
-    cache: 'no-store'
+    //cache: 'no-store'
   });
   const data = res.body?.data?.customerRecover;
   if (data?.customerUserErrors?.length > 0) {
@@ -768,7 +768,7 @@ export async function deleteCustomerAccessToken(customerAccessToken: string) {
   await shopifyFetch<any>({
     query: customerAccessTokenDeleteMutation,
     variables: { customerAccessToken },
-    cache: 'no-store'
+    //cache: 'no-store'
   });
   return true;
 }
@@ -782,7 +782,7 @@ export async function getCustomerOrders(customerAccessToken: string) {
   const res = await shopifyFetch<any>({
     query: getCustomerOrdersQuery,
     variables: { customerAccessToken },
-    cache: 'no-store'
+    //cache: 'no-store'
   });
   
   const orders = res.body?.data?.customer?.orders?.edges?.map((edge: any) => edge.node) || [];
@@ -797,7 +797,7 @@ export async function updateCustomerProfile(customerAccessToken: string, custome
       customerAccessToken,
       customer: customerData 
     },
-    cache: 'no-store'
+    //cache: 'no-store'
   });
 
   const data = res.body?.data?.customerUpdate;
@@ -841,7 +841,7 @@ export async function getCustomerAddresses(customerAccessToken: string) {
   const res = await shopifyFetch<any>({
     query: getCustomerAddressesQuery,
     variables: { customerAccessToken },
-    cache: 'no-store'
+    //cache: 'no-store'
   });
   
   const customer = res.body?.data?.customer;
@@ -856,7 +856,7 @@ export async function createCustomerAddress(customerAccessToken: string, address
   const res = await shopifyFetch<any>({
     query: customerAddressCreateMutation,
     variables: { customerAccessToken, address },
-    cache: 'no-store'
+    //cache: 'no-store'
   });
 
   const data = res.body?.data?.customerAddressCreate;
@@ -869,7 +869,7 @@ export async function updateCustomerAddress(customerAccessToken: string, id: str
   const res = await shopifyFetch<any>({
     query: customerAddressUpdateMutation,
     variables: { customerAccessToken, id, address },
-    cache: 'no-store'
+    //cache: 'no-store'
   });
 
   const data = res.body?.data?.customerAddressUpdate;
@@ -882,7 +882,7 @@ export async function deleteCustomerAddress(customerAccessToken: string, id: str
   const res = await shopifyFetch<any>({
     query: customerAddressDeleteMutation,
     variables: { customerAccessToken, id },
-    cache: 'no-store'
+    //cache: 'no-store'
   });
 
   const data = res.body?.data?.customerAddressDelete;
@@ -895,7 +895,7 @@ export async function setDefaultCustomerAddress(customerAccessToken: string, add
   const res = await shopifyFetch<any>({
     query: customerDefaultAddressUpdateMutation,
     variables: { customerAccessToken, addressId },
-    cache: 'no-store'
+    //cache: 'no-store'
   });
 
   const data = res.body?.data?.customerDefaultAddressUpdate;
@@ -962,7 +962,7 @@ export async function getHowItWorksPageData(handle: string = 'how-it-works') {
     query: getHowItWorksPageQuery,
     tags: ['how_it_works_page'],
     variables: { handle },
-    //cache: 'no-store' // Keeps it fresh while we test
+    ////cache: 'no-store' // Keeps it fresh while we test
   });
 
   const mo = res.body?.data?.metaobject;
@@ -1011,7 +1011,7 @@ export async function getFaqSectionData(handle: string = 'faq-section') {
     query: getFaqSectionQuery,
     tags: ['faq_section'],
     variables: { handle },
-    //cache: 'no-store' // Keeps it fresh while testing
+    ////cache: 'no-store' // Keeps it fresh while testing
   });
 
   const mo = res.body?.data?.metaobject;
@@ -1046,7 +1046,7 @@ export async function getHelpCenterPageData(handle: string = 'help-center-page')
     query: getHelpCenterPageQuery,
     tags: ['help_center_page'],
     variables: { handle },
-   // cache: 'no-store'
+   // //cache: 'no-store'
   });
 
   const mo = res.body?.data?.metaobject;
@@ -1071,7 +1071,7 @@ export async function getShippingPageData(handle: string = 'shipping-page') {
     query: getShippingPageQuery,
     tags: ['shipping_page'],
     variables: { handle },
-    //cache: 'no-store' // Keeps it fresh while testing
+    ////cache: 'no-store' // Keeps it fresh while testing
   });
 
   const mo = res.body?.data?.metaobject;
@@ -1113,7 +1113,7 @@ export async function getReturnsPageData(handle: string = 'returns-page') {
     query: getReturnsPageQuery,
     tags: ['returns_page'],
     variables: { handle },
-    //cache: 'no-store' 
+    ////cache: 'no-store' 
   });
 
   const mo = res.body?.data?.metaobject;
@@ -1203,7 +1203,7 @@ export async function getGlobalSettingsData() {
       query: getGlobalSettingsQuery,
       tags: ['header_and_footer'],
       //variables: 'global-settings',
-      //cache: 'no-store' 
+      ////cache: 'no-store' 
     });
 
     const mo = res.body?.data?.metaobject;
@@ -1235,7 +1235,7 @@ export async function getHomeFeatureSectionData(handle: string = 'home_feature_s
     query: getHomeFeatureSectionQuery,
     tags: ['home_feature_section'],
     variables: { handle },
-    //cache: 'no-store'
+    ////cache: 'no-store'
   });
   const mo = res.body?.data?.metaobject;
   if (!mo) return null;
@@ -1268,7 +1268,7 @@ export async function getHomeFreeGiftSectionData(handle: string = 'home_free_gif
     query: getHomeFreeGiftSectionQuery,
     tags: ['home_free_gift_section'],
     variables: { handle },
-   // cache: 'no-store'
+   // //cache: 'no-store'
   });
 
   const mo = res.body?.data?.metaobject;
@@ -1296,7 +1296,7 @@ export async function getBlogArticles(blogHandle: string = 'news') {
   const res = await shopifyFetch<any>({
     query: getBlogArticlesQuery,
     variables: { blogHandle },
-    cache: 'no-store',
+    ////cache: 'no-store',
     tags: ['blog', blogHandle],
   });
  // console.log('Shopify Response: of blog handles', JSON.stringify(res.body?.data, null, 2));
@@ -1318,7 +1318,7 @@ export async function getBlogs() {
   const res = await shopifyFetch<any>({
     query: getBlogsQuery,
     tags: ['blogs'],
-    //cache: 'no-store',
+    ////cache: 'no-store',
   });
   
   // Return a clean array of blog nodes
@@ -1333,7 +1333,7 @@ export async function getMenu(handle: string) {
     query: getMenuQuery,
     variables: { handle },
     tags: ['menu', handle],
-    cache: 'no-store',
+    ////cache: 'no-store',
   });
   //console.log(`Fetched menu in index file"${handle}":`, res.body?.data?.menu);
   return res.body?.data?.menu;
@@ -1352,7 +1352,7 @@ export async function getCollectionProducts({
   const res = await shopifyFetch<any>({
     query: getCollectionProductsQuery,
     variables: { handle, first, after },
-    cache: 'no-store'
+    ////cache: 'no-store'
   });
   const collectionData = res.body?.data?.collection;
   const productsData = res.body?.data?.collection?.products;
@@ -1376,7 +1376,7 @@ export async function getCollection(handle: string) {
     query: getCollectionQuery,
     variables: { handle },
     tags: ['collections', handle],
-    cache: 'no-store',
+    //cache: 'no-store',
     // Notice we DO NOT use 'no-store' here so Next.js can cache the SEO data instantly
   });
 
@@ -1391,7 +1391,7 @@ export async function getCommunityGallerySectionData(handle: string = 'community
     query: getCommunityGallerySectionQuery,
     tags: ['community_gallery_section'],
     variables: { handle },
-    // cache: 'no-store',
+    // //cache: 'no-store',
   });
 
   //console.log(res);
@@ -1434,7 +1434,7 @@ export async function getHowItWorksData(handle: string = 'how_it_works_section')
     query: getHowItWorksSectionQuery,
     tags: ['how_it_works_section'],
     variables: { handle },
-     cache: 'no-store',
+     //cache: 'no-store',
   });
 
   const mo = res.body?.data?.metaobject;
