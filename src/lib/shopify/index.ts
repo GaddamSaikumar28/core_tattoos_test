@@ -1391,7 +1391,7 @@ export async function getCommunityGallerySectionData(handle: string = 'community
     query: getCommunityGallerySectionQuery,
     tags: ['community_gallery_section'],
     variables: { handle },
-    cache: 'no-store',
+    // cache: 'no-store',
   });
 
   //console.log(res);
