@@ -162,7 +162,7 @@
 //         setProducts(prev => [...prev, ...result.formattedData]);
 //       } else {
 //         setProducts(result.formattedData);
-//         window.scrollTo({ top: 0, behavior: 'smooth' });
+//         // REMOVED window.scrollTo HERE TO STOP THE ANNOYING SCROLL JUMP ON FILTER CLICKS
 //       }
 //       setPageInfo(result.pageInfo);
 //     } catch (error) {
@@ -234,7 +234,8 @@
 //   };
 
 //   return (
-//     <div className="bg-slate-50 min-h-screen text-slate-950 selection:bg-slate-900 selection:text-white mt-20 md:mt-20">
+//     // 🚀 FIX: Added overflow-x-hidden w-full to prevent body stretching
+//     <div className="bg-slate-50 min-h-screen text-slate-950 selection:bg-slate-900 selection:text-white mt-20 md:mt-20 overflow-x-hidden w-full">
       
 //       {/* MOBILE DRAWER */}
 //       <div className={clsx(
@@ -423,6 +424,9 @@
 
 
 
+
+
+
 'use client';
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
@@ -587,7 +591,6 @@ function DefaultCollectionContent({ handle }: DefaultCollectionProps) {
         setProducts(prev => [...prev, ...result.formattedData]);
       } else {
         setProducts(result.formattedData);
-        // REMOVED window.scrollTo HERE TO STOP THE ANNOYING SCROLL JUMP ON FILTER CLICKS
       }
       setPageInfo(result.pageInfo);
     } catch (error) {
@@ -659,33 +662,33 @@ function DefaultCollectionContent({ handle }: DefaultCollectionProps) {
   };
 
   return (
-    // 🚀 FIX: Added overflow-x-hidden w-full to prevent body stretching
-    <div className="bg-slate-50 min-h-screen text-slate-950 selection:bg-slate-900 selection:text-white mt-20 md:mt-20 overflow-x-hidden w-full">
+    // Replaced light theme with dark theme (bg-zinc-950, text-white)
+    <div className="bg-zinc-950 min-h-screen text-white selection:bg-[var(--color-brand-orange)] selection:text-black mt-20 md:mt-20 overflow-x-hidden w-full">
       
       {/* MOBILE DRAWER */}
       <div className={clsx(
-        "fixed inset-0 z-[60] bg-slate-950/40 backdrop-blur-sm transition-opacity lg:hidden",
+        "fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm transition-opacity lg:hidden",
         isFilterDrawerOpen ? "opacity-100" : "opacity-0 pointer-events-none"
       )} onClick={() => setFilterDrawerOpen(false)} />
       
       <div className={clsx(
-        "fixed right-0 top-0 h-full w-[300px] bg-white z-[70] shadow-2xl transition-transform duration-500 lg:hidden border-l-2 border-slate-950",
+        "fixed right-0 top-0 h-full w-[300px] bg-zinc-950 z-[70] shadow-2xl transition-transform duration-500 lg:hidden border-l border-white/10",
         isFilterDrawerOpen ? "translate-x-0" : "translate-x-full"
       )}>
         <div className="p-6 h-full flex flex-col">
-          <div className="flex items-center justify-between mb-8 pb-4 border-b-2 border-slate-100 shrink-0">
-            <h2 className="text-[12px] font-black uppercase tracking-[0.2em]">Filters</h2>
-            <button onClick={() => setFilterDrawerOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+          <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/10 shrink-0">
+            <h2 className="text-[12px] font-black uppercase tracking-[0.2em] text-white">Filters</h2>
+            <button onClick={() => setFilterDrawerOpen(false)} className="p-2 hover:bg-zinc-900 rounded-full transition-colors text-zinc-400 hover:text-white">
               <X className="w-4 h-4" />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto no-scrollbar pb-6">
             <FilterSidebar filters={dynamicFilters} activeFilters={activeFilters} onToggle={toggleFilter} />
           </div>
-          <div className="p-6 border-t border-slate-100 bg-slate-50">
+          <div className="p-6 border-t border-white/10 bg-zinc-950">
                <button 
                 onClick={() => setFilterDrawerOpen(false)}
-                className="w-full py-4 bg-slate-950 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl"
+                className="w-full py-4 bg-[var(--color-brand-orange)] text-black text-[10px] font-black uppercase tracking-[0.2em] rounded-full hover:brightness-110 transition-all"
                >
                  Apply Filters
                </button>
@@ -694,12 +697,12 @@ function DefaultCollectionContent({ handle }: DefaultCollectionProps) {
       </div>
 
       {/* TOP HORIZONTAL NAVIGATION PILLS */}
-      <nav className="sticky top-0 z-40 bg-white mt-5 border-b-2 border-slate-100">
+      <nav className="sticky top-0 z-40 bg-zinc-950/90 backdrop-blur-md mt-5 border-b border-white/5">
         <div className="container max-w-[1400px] mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <div className="flex gap-3 overflow-x-auto pb-1 lg:pb-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             <button
               onClick={() => handleCategoryPillClick('Shop All')}
-              className="px-5 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap border-2 rounded-md bg-white text-slate-500 border-slate-200 hover:border-slate-950 hover:text-slate-950"
+              className="px-5 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap border rounded-full bg-transparent text-zinc-400 border-white/10 hover:border-white/30 hover:text-white"
             >
               Shop All
             </button>
@@ -709,10 +712,10 @@ function DefaultCollectionContent({ handle }: DefaultCollectionProps) {
                 key={cat}
                 onClick={() => handleCategoryPillClick(cat)}
                 className={clsx(
-                  "px-5 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap border-2 rounded-md",
+                  "px-5 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap border rounded-full",
                   activeFilters.collections.includes(cat)
-                    ? "bg-[var(--color-brand-orange)] text-white border-[var(--color-brand-orange)]" 
-                    : "bg-white text-slate-500 border-slate-200 hover:border-slate-950 hover:text-slate-950"
+                    ? "bg-[var(--color-brand-orange)] text-black border-[var(--color-brand-orange)]" 
+                    : "bg-transparent text-zinc-400 border-white/10 hover:border-white/30 hover:text-white"
                 )}
               >
                 {cat}
@@ -722,7 +725,7 @@ function DefaultCollectionContent({ handle }: DefaultCollectionProps) {
 
           <button 
             onClick={() => setFilterDrawerOpen(true)} 
-            className="lg:hidden shrink-0 p-2.5 bg-white border-2 border-slate-200 hover:border-slate-950 rounded-md text-slate-950 transition-colors"
+            className="lg:hidden shrink-0 p-2.5 bg-transparent border border-white/10 hover:border-white/30 rounded-full text-zinc-400 hover:text-white transition-colors"
           >
             <SlidersHorizontal className="w-4 h-4" />
           </button>
@@ -731,15 +734,15 @@ function DefaultCollectionContent({ handle }: DefaultCollectionProps) {
 
       {/* MAIN CONTENT AREA */}
       <main className="container max-w-[1400px] mx-auto px-4 py-12">
-        <div className="flex flex-col lg:flex-row gap-12">
+        <div className="flex flex-col lg:flex-row gap-10">
           
           {/* DESKTOP SIDEBAR */}
-          <aside className="hidden lg:block w-64 shrink-0">
-            <div className="sticky top-28 space-y-8 max-h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar pb-4 pr-6 border-r-2 border-slate-100">
-              <div className="flex justify-between items-center mb-8 pb-4 border-b-2 border-slate-950">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Filters</span>
+          <aside className="hidden lg:block w-56 shrink-0">
+            <div className="sticky top-28 space-y-8 max-h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar pb-4 pr-4">
+              <div className="flex justify-between items-center mb-6 pb-4 border-b border-zinc-800/60">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Filters</span>
                 {(activeFilters.styles.length > 0 || activeFilters.sizes.length > 0 || activeFilters.placements.length > 0) && (
-                  <button onClick={() => toggleFilter('RESET')} className="text-[10px] font-bold text-[var(--color-brand-orange)] uppercase hover:underline">
+                  <button onClick={() => toggleFilter('RESET')} className="text-[10px] font-bold text-[var(--color-brand-orange)] uppercase hover:text-white transition-colors">
                     Clear
                   </button>
                 )}
@@ -750,28 +753,28 @@ function DefaultCollectionContent({ handle }: DefaultCollectionProps) {
 
           {/* PRODUCT LISTINGS */}
           <div className="flex-1 min-w-0 relative min-h-[500px]">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4 pb-6 border-b border-gray-100">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4 pb-6 border-b border-zinc-800/60">
               <div>
-                <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight capitalize">
+                <h1 className="text-3xl md:text-4xl font-heading text-white tracking-tight capitalize">
                    {currentCollectionTitle || handle.replace(/-/g, ' ')}
                 </h1>
                 {!isLoading && (
-                  <p className="text-sm font-medium text-gray-500 mt-2">
-                    Showing <span className="text-gray-900 font-bold">{products.length}</span> Results
+                  <p className="text-sm font-medium text-zinc-500 mt-2">
+                    Showing <span className="text-white font-bold">{products.length}</span> Results
                   </p>
                 )}
               </div>
               
-              <div className="flex items-center self-start sm:self-auto gap-1 bg-gray-50/80 border border-gray-200 p-1 rounded-xl shadow-sm">
+              <div className="flex items-center self-start sm:self-auto gap-1 bg-zinc-900/50 border border-white/10 p-1 rounded-xl shadow-sm">
                 <button 
                   onClick={() => setViewMode('grid')} 
-                  className={clsx("p-2.5 rounded-lg transition-all", viewMode === 'grid' ? "bg-white text-[var(--color-brand-orange)] shadow-sm" : "text-gray-400 hover:text-gray-800")}
+                  className={clsx("p-2.5 rounded-lg transition-all", viewMode === 'grid' ? "bg-zinc-800 text-[var(--color-brand-orange)] shadow-sm" : "text-zinc-500 hover:text-zinc-300")}
                 >
                   <LayoutGrid className="w-4 h-4" />
                 </button>
                 <button 
                   onClick={() => setViewMode('list')} 
-                  className={clsx("p-2.5 rounded-lg transition-all", viewMode === 'list' ? "bg-white text-[var(--color-brand-orange)] shadow-sm" : "text-gray-400 hover:text-gray-800")}
+                  className={clsx("p-2.5 rounded-lg transition-all", viewMode === 'list' ? "bg-zinc-800 text-[var(--color-brand-orange)] shadow-sm" : "text-zinc-500 hover:text-zinc-300")}
                 >
                   <List className="w-4 h-4" />
                 </button>
@@ -779,15 +782,16 @@ function DefaultCollectionContent({ handle }: DefaultCollectionProps) {
             </div>
 
             {isLoading && (
-               <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-[2px] z-10 rounded-3xl">
+               <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/50 backdrop-blur-[2px] z-10 rounded-3xl">
                   <Loader2 className="w-10 h-10 text-[var(--color-brand-orange)] animate-spin" />
                </div>
             )}
 
             {!isLoading && products.length > 0 ? (
               <div className="flex flex-col items-center">
+                {/* Simplified the container to match Shop All grid styling without the heavy light-theme border */}
                 <div className={clsx(
-                  "w-full p-4 sm:p-6 lg:p-8 rounded-[2rem] border bg-black border-zinc-800 shadow-[inset_0_1px_4px_rgba(0,0,0,0.8)]",
+                  "w-full",
                   "grid gap-6 sm:gap-8",
                   viewMode === 'grid' ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-1"
                 )}>
@@ -797,11 +801,11 @@ function DefaultCollectionContent({ handle }: DefaultCollectionProps) {
                 </div>
 
                 {pageInfo.hasNextPage && (
-                   <div className="mt-12">
+                   <div className="mt-16">
                      <button
                         onClick={() => fetchProducts(pageInfo.endCursor)}
                         disabled={isLoadingMore}
-                        className="px-10 py-4 border-2 border-slate-900 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-900 hover:text-white transition-all disabled:opacity-50 flex items-center gap-3 rounded-md"
+                        className="px-10 py-4 border border-white/20 text-white font-black text-[10px] uppercase tracking-[0.2em] hover:bg-white hover:text-black rounded-full transition-all duration-300 disabled:opacity-50 flex items-center gap-3"
                      >
                         {isLoadingMore && <Loader2 className="w-4 h-4 animate-spin" />}
                         {isLoadingMore ? 'Loading...' : 'Show More'}
@@ -810,15 +814,15 @@ function DefaultCollectionContent({ handle }: DefaultCollectionProps) {
                 )}
               </div>
             ) : (!isLoading && products.length === 0) ? (
-              <div className="py-24 text-center bg-gray-50/50 border border-dashed border-gray-300 rounded-3xl flex flex-col items-center justify-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <RefreshCcw className="w-8 h-8 text-gray-400" />
+              <div className="py-24 text-center bg-zinc-900/30 border border-dashed border-zinc-800 rounded-[2rem] flex flex-col items-center justify-center">
+                <div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mb-4 border border-white/5">
+                  <RefreshCcw className="w-8 h-8 text-zinc-500" />
                 </div>
-                <p className="text-gray-900 font-bold text-lg mb-2">No products found</p>
-                <p className="text-gray-500 text-sm mb-6 max-w-sm mx-auto">We couldn't find anything matching your current filters. Try adjusting them to see more results.</p>
+                <p className="text-white font-bold text-lg mb-2">No products found</p>
+                <p className="text-zinc-500 text-sm mb-6 max-w-sm mx-auto">We couldn't find anything matching your current filters. Try adjusting them to see more results.</p>
                 <button 
                   onClick={() => toggleFilter('RESET')} 
-                  className="px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-[var(--color-brand-orange)] transition-colors shadow-md"
+                  className="px-6 py-3 bg-[var(--color-brand-orange)] text-black text-[10px] font-black uppercase tracking-[0.2em] rounded-full hover:brightness-110 transition-all shadow-md"
                 >
                   Clear All Filters
                 </button>
@@ -837,7 +841,7 @@ export default function DefaultCollection({ handle }: DefaultCollectionProps) {
   return (
     <Suspense 
       fallback={
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center mt-20">
+        <div className="min-h-screen bg-zinc-950 flex items-center justify-center mt-20">
           <Loader2 className="w-10 h-10 text-[var(--color-brand-orange)] animate-spin" />
         </div>
       }

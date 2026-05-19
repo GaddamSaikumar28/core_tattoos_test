@@ -4,7 +4,7 @@ import TattooProductDetail from '@/src/components/sections/TattooProductDetail';
 import { RelatedProducts } from '@/src/components/sections/RelatedProducts';
 import { Breadcrumbs } from '@/src/components/shared/Breadcrumbs';
 import { Metadata } from 'next';
-
+import Advanced24HourReveal from '@/src/components/shared/Advanced24HourReveal';
 type Props = { params: Promise<{ handle: string }> };
 
 // =========================================================
@@ -87,7 +87,7 @@ export default async function GlobalProductPage({ params }: Props) {
       />
 
       {/* --- 3. Render Breadcrumbs (UI + Schema) --- */}
-      <div className="container mx-auto px-4 pt-6">
+      {/* <div className="container mx-auto px-4 pt-6">
         <Breadcrumbs 
           items={[
             { label: 'Home', url: '/' },
@@ -95,13 +95,15 @@ export default async function GlobalProductPage({ params }: Props) {
             { label: product.title, url: `/products/${product.handle}` }
           ]} 
         />
-      </div>
+      </div> */}
 
       <TattooProductDetail product={product} />
 
       {relatedProducts && relatedProducts.length > 0 && (
         <RelatedProducts products={relatedProducts} />
       )}
+
+      {/* <Advanced24HourReveal /> */}
     </div>
   );
 }

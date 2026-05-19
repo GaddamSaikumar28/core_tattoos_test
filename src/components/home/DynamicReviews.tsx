@@ -49,20 +49,21 @@ const allTestimonials: Testimonial[] = [...row1, ...row2];
 
 // --- Reusable Components ---
 const FiveStars: React.FC = () => (
-  <div className="flex gap-1 overflow-hidden h-[19px]">
+  <div className="flex gap-1.5 overflow-hidden">
     {[...Array(5)].map((_, i) => (
       <svg
         key={i}
-        width="20"
-        height="19"
+        width="16"
+        height="16"
         viewBox="0 0 20 19"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
+        className="drop-shadow-[0_0_8px_var(--color-brand-orange)]"
       >
         <path
           d="M10 0L12.2451 6.90983H19.5106L13.6327 11.1803L15.8779 18.0902L10 13.8197L4.12215 18.0902L6.36729 11.1803L0.489435 6.90983H7.75486L10 0Z"
-          fill="#FE8204"
+          fill="var(--color-brand-orange)"
         />
       </svg>
     ))}
@@ -70,32 +71,38 @@ const FiveStars: React.FC = () => (
 );
 
 const TestimonialCard: React.FC<TestimonialCardProps> = ({ item, isMobile = false }) => {
-  // Extract the first letter of the name for the avatar
   const initial = item.name ? item.name.charAt(0).toUpperCase() : '';
 
   return (
     <motion.div
-      whileHover={!isMobile ? { y: -5, boxShadow: '0px 10px 20px rgba(0,0,0,0.05)' } : {}}
+      whileHover={!isMobile ? { y: -8, scale: 1.02 } : {}}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-      className={`bg-white rounded-[30px] border border-black outline outline-1 outline-offset-[-1px] outline-black flex flex-col justify-start align-start gap-5 md:gap-6 ${
-        isMobile ? 'min-w-full px-5 py-8' : 'w-[416px] p-8 shrink-0'
+      className={`relative bg-[#0a0a0a] rounded-[24px] border border-gray-800 hover:border-[var(--color-brand-orange)]/50 transition-colors duration-500 overflow-hidden group flex flex-col justify-between gap-6 ${
+        isMobile ? 'min-w-full px-6 py-8' : 'w-[420px] p-8 shrink-0'
       }`}
     >
-      <div className="flex flex-col gap-4 md:gap-6">
+      {/* Subtle Glow Effect on Hover */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-brand-orange)]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+
+      {/* Decorative Quote Watermark */}
+      <div className="absolute -top-4 right-4 text-9xl font-serif text-white/[0.02] group-hover:text-[var(--color-brand-orange)]/[0.05] transition-colors duration-500 select-none pointer-events-none leading-none">
+        "
+      </div>
+
+      <div className="relative z-10 flex flex-col gap-6">
         <FiveStars />
-        <p className="text-black font-normal text-sm md:text-base leading-snug">
+        <p className="text-gray-300 font-light text-base md:text-lg leading-relaxed italic">
           {item.text}
         </p>
       </div>
-      <div className="flex items-center gap-4 mt-auto">
-        
-        {/* Replaced image with Initial Avatar */}
-        <div className="w-12 h-12 rounded-full bg-[#FE8204]/10 border border-[#FE8204] flex items-center justify-center text-[#FE8204] font-bold text-xl shrink-0">
+
+      <div className="relative z-10 flex items-center gap-4 mt-4 pt-6 border-t border-gray-800/50">
+        <div className="w-12 h-12 rounded-full bg-[var(--color-brand-orange)]/10 border border-[var(--color-brand-orange)]/30 flex items-center justify-center text-[var(--color-brand-orange)] font-bold text-xl shrink-0 shadow-[0_0_15px_rgba(255,122,0,0.1)]">
           {initial}
         </div>
-
-        <div className="flex flex-col flex-1">
-          <h4 className="text-black font-bold text-base">{item.name}</h4>
+        <div className="flex flex-col">
+          <h4 className="text-white font-medium text-base tracking-wide">{item.name}</h4>
+          <span className="text-gray-500 text-xs uppercase tracking-widest mt-0.5">Verified Ink</span>
         </div>
       </div>
     </motion.div>
@@ -119,18 +126,27 @@ export default function Testimonials() {
   };
 
   return (
-    <section className="relative w-full bg-white py-16 md:py-24 overflow-hidden">
+    <section className="relative w-full bg-[#050505] py-20 md:py-32 overflow-hidden selection:bg-[var(--color-brand-orange)] selection:text-white">
+      {/* Background ambient lighting */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-[1000px] bg-[var(--color-brand-orange)] opacity-[0.02] blur-[150px] pointer-events-none rounded-full"></div>
+
       {/* Header */}
-      <div className="px-4 md:px-16 mb-12 md:mb-16">
-        <motion.h2
+      <div className="px-4 md:px-16 mb-16 md:mb-20 flex flex-col items-center text-center relative z-10">
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-100px' }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="text-black font-bold text-4xl md:text-6xl uppercase tracking-wide"
+          className="flex flex-col items-center"
         >
-          Our Testimonials
-        </motion.h2>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[var(--color-brand-orange)]/30 bg-[var(--color-brand-orange)]/10 text-[var(--color-brand-orange)] text-[10px] md:text-xs font-bold tracking-[0.15em] uppercase mb-6">
+            Real Stories
+          </div>
+          <h2 className="text-white font-light text-4xl md:text-6xl tracking-tight leading-tight">
+            Ink that leaves a <br className="hidden md:block" />
+            <span className="text-[var(--color-brand-orange)] font-normal italic">lasting impression.</span>
+          </h2>
+        </motion.div>
       </div>
 
       {/* --- DESKTOP VIEW (Continuous Marquee) --- */}
@@ -138,8 +154,8 @@ export default function Testimonials() {
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
-        transition={{ duration: 0.8 }}
-        className="hidden md:flex flex-col gap-8 w-full group/marquee"
+        transition={{ duration: 0.8, delay: 0.2 }}
+        className="hidden md:flex flex-col gap-8 w-full group/marquee relative"
       >
         <style>
           {`
@@ -152,10 +168,10 @@ export default function Testimonials() {
               100% { transform: translateX(0); }
             }
             .animate-marquee-left {
-              animation: marqueeLeft 40s linear infinite;
+              animation: marqueeLeft 45s linear infinite;
             }
             .animate-marquee-right {
-              animation: marqueeRight 40s linear infinite;
+              animation: marqueeRight 45s linear infinite;
             }
             .group\\/marquee:hover .animate-marquee-left,
             .group\\/marquee:hover .animate-marquee-right {
@@ -164,15 +180,19 @@ export default function Testimonials() {
           `}
         </style>
 
+        {/* Gradient Edges to fade out cards beautifully */}
+        <div className="absolute inset-y-0 left-0 w-[15%] bg-gradient-to-r from-[#050505] to-transparent z-20 pointer-events-none"></div>
+        <div className="absolute inset-y-0 right-0 w-[15%] bg-gradient-to-l from-[#050505] to-transparent z-20 pointer-events-none"></div>
+
         {/* Top Row: Moves Right to Left */}
-        <div className="flex w-max animate-marquee-right gap-8">
+        <div className="flex w-max animate-marquee-right gap-8 pl-8">
           {[...row1, ...row1, ...row1].map((item, index) => (
             <TestimonialCard key={`row1-${index}`} item={item} />
           ))}
         </div>
 
         {/* Bottom Row: Moves Left to Right */}
-        <div className="flex w-max animate-marquee-left gap-8">
+        <div className="flex w-max animate-marquee-left gap-8 pl-8">
           {[...row2, ...row2, ...row2].map((item, index) => (
             <TestimonialCard key={`row2-${index}`} item={item} />
           ))}
@@ -180,9 +200,9 @@ export default function Testimonials() {
       </motion.div>
 
       {/* --- MOBILE VIEW (Interactive Carousel) --- */}
-      <div className="flex md:hidden flex-col w-full px-4">
+      <div className="flex md:hidden flex-col w-full px-4 relative z-10">
         {/* Carousel Track */}
-        <div className="overflow-hidden w-full rounded-[30px] touch-pan-y">
+        <div className="overflow-hidden w-full rounded-[24px] touch-pan-y">
           <motion.div
             className="flex gap-4"
             animate={{ x: `calc(-${currentIndex * 100}% - ${currentIndex * 16}px)` }}
@@ -195,7 +215,7 @@ export default function Testimonials() {
         </div>
 
         {/* Controls */}
-        <div className="flex justify-between items-center mt-8 w-full">
+        <div className="flex justify-between items-center mt-8 w-full px-2">
           {/* Pagination Dots */}
           <div className="flex gap-2">
             {allTestimonials.map((_, index) => (
@@ -203,28 +223,28 @@ export default function Testimonials() {
                 key={index}
                 onClick={() => setCurrentIndex(index)}
                 aria-label={`Go to slide ${index + 1}`}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                className={`h-2 rounded-full transition-all duration-500 ${
                   currentIndex === index
-                    ? 'bg-[#FE8204] w-6'
-                    : 'bg-white border border-black opacity-80 hover:bg-gray-200'
+                    ? 'bg-[var(--color-brand-orange)] w-8'
+                    : 'bg-gray-800 w-2 hover:bg-gray-600'
                 }`}
               />
             ))}
           </div>
 
           {/* Arrow Buttons */}
-          <div className="flex gap-4">
+          <div className="flex gap-3">
             <button
               onClick={prevSlide}
               disabled={currentIndex === 0}
               aria-label="Previous testimonial"
-              className={`w-12 h-12 rounded-full bg-white border border-black outline outline-1 outline-offset-[-1px] outline-black flex items-center justify-center transition-all ${
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
                 currentIndex === 0
-                  ? 'opacity-40 cursor-not-allowed'
-                  : 'hover:bg-gray-100 active:scale-95'
+                  ? 'bg-[#111111] border border-gray-800 text-gray-700 cursor-not-allowed'
+                  : 'bg-[#111111] border border-gray-600 text-white hover:border-[var(--color-brand-orange)] hover:text-[var(--color-brand-orange)] active:scale-95'
               }`}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path d="M15 18L9 12L15 6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
@@ -233,13 +253,13 @@ export default function Testimonials() {
               onClick={nextSlide}
               disabled={currentIndex === allTestimonials.length - 1}
               aria-label="Next testimonial"
-              className={`w-12 h-12 rounded-full bg-white border border-black outline outline-1 outline-offset-[-1px] outline-black flex items-center justify-center transition-all ${
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
                 currentIndex === allTestimonials.length - 1
-                  ? 'opacity-40 cursor-not-allowed'
-                  : 'hover:bg-gray-100 active:scale-95'
+                  ? 'bg-[#111111] border border-gray-800 text-gray-700 cursor-not-allowed'
+                  : 'bg-[#111111] border border-gray-600 text-white hover:border-[var(--color-brand-orange)] hover:text-[var(--color-brand-orange)] active:scale-95'
               }`}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path d="M9 18L15 12L9 6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>

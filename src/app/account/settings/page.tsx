@@ -1,4 +1,3 @@
-// app/account/settings/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -65,65 +64,96 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-3xl mt-10">
-      <h1 className="text-2xl font-black text-gray-900 mb-6">Account Settings</h1>
+    <div className="max-w-3xl mt-6 space-y-8 relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
-      <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 border border-gray-100 rounded-2xl shadow-sm bg-white p-6 border border-gray-100 rounded-2xl shadow-sm w-full">
+      {/* Dynamic Background Flare */}
+      <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#FE8204]/5 rounded-full blur-[120px] pointer-events-none -z-10" />
+
+      {/* Page Title Context Frame */}
+      <div className="border-b border-white/5 pb-6">
+        <h1 className="text-3xl font-black text-white uppercase tracking-tighter">Account Settings</h1>
+        <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mt-1">Configure your profile attributes and security credentials</p>
+      </div>
+      
+      {/* Premium Glassmorphic Configuration Form */}
+      <form onSubmit={handleSubmit} className="space-y-8 bg-zinc-900/30 backdrop-blur-md border border-white/5 rounded-[2rem] p-6 md:p-8 shadow-xl">
+        
+        {/* Profile Attributes Subsection */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="text-[11px] font-black uppercase tracking-widest text-gray-500">First Name</label>
+          <div className="space-y-2 group">
+            <label className="text-[10px] font-black uppercase tracking-[0.15em] text-zinc-500 ml-1 group-focus-within:text-[#FE8204] transition-colors">
+              First Name
+            </label>
             <input 
               name="firstName"
               value={formData.firstName}
               onChange={handleChange}
-              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[var(--color-brand-orange)] transition-colors"
+              className="w-full h-14 px-5 bg-zinc-900/50 border border-white/5 rounded-2xl text-sm font-bold text-white outline-none focus:border-[#FE8204] focus:ring-1 focus:ring-[#FE8204] transition-all shadow-inner placeholder:text-zinc-600"
               required
             />
           </div>
-          <div className="space-y-2">
-            <label className="text-[11px] font-black uppercase tracking-widest text-gray-500">Last Name</label>
+          
+          <div className="space-y-2 group">
+            <label className="text-[10px] font-black uppercase tracking-[0.15em] text-zinc-500 ml-1 group-focus-within:text-[#FE8204] transition-colors">
+              Last Name
+            </label>
             <input 
               name="lastName"
               value={formData.lastName}
               onChange={handleChange}
-              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[var(--color-brand-orange)] transition-colors"
+              className="w-full h-14 px-5 bg-zinc-900/50 border border-white/5 rounded-2xl text-sm font-bold text-white outline-none focus:border-[#FE8204] focus:ring-1 focus:ring-[#FE8204] transition-all shadow-inner placeholder:text-zinc-600"
               required
             />
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-[11px] font-black uppercase tracking-widest text-gray-500">Email Address</label>
+        {/* Communication Layer Component */}
+        <div className="space-y-2 group">
+          <label className="text-[10px] font-black uppercase tracking-[0.15em] text-zinc-500 ml-1 group-focus-within:text-[#FE8204] transition-colors">
+            Email Address
+          </label>
           <input 
             type="email"
             name="email"
             value={formData.email}
             onChange={handleChange}
-            className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[var(--color-brand-orange)] transition-colors"
+            className="w-full h-14 px-5 bg-zinc-900/50 border border-white/5 rounded-2xl text-sm font-bold text-white outline-none focus:border-[#FE8204] focus:ring-1 focus:ring-[#FE8204] transition-all shadow-inner placeholder:text-zinc-600"
             required
           />
         </div>
 
-        <div className="pt-6 border-t border-gray-100 space-y-2">
-          <h3 className="font-bold text-gray-900 mb-4">Security</h3>
-          <label className="text-[11px] font-black uppercase tracking-widest text-gray-500">New Password (leave blank to keep current)</label>
-          <input 
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            placeholder="Min. 8 characters"
-            className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[var(--color-brand-orange)] transition-colors"
-          />
+        {/* Security Parameters Boundary */}
+        <div className="pt-6 border-t border-white/5 space-y-6">
+          <div>
+            <h3 className="text-lg font-black text-white uppercase tracking-tight">Security</h3>
+            <p className="text-xs text-zinc-500 font-medium mt-0.5">Maintain control over access keys linked to your profile</p>
+          </div>
+          
+          <div className="space-y-2 group">
+            <label className="text-[10px] font-black uppercase tracking-[0.15em] text-zinc-500 ml-1 group-focus-within:text-[#FE8204] transition-colors">
+              New Password (leave blank to keep current)
+            </label>
+            <input 
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="Min. 8 characters"
+              className="w-full h-14 px-5 bg-zinc-900/50 border border-white/5 rounded-2xl text-sm font-bold text-white outline-none focus:border-[#FE8204] focus:ring-1 focus:ring-[#FE8204] transition-all shadow-inner placeholder:text-zinc-600"
+            />
+          </div>
         </div>
 
-        <button 
-          type="submit" 
-          disabled={isLoading}
-          className="w-full sm:w-auto px-8 py-4 bg-gray-900 text-white text-[13px] font-black uppercase tracking-widest rounded-xl hover:bg-[var(--color-brand-orange)] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-        >
-          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
-        </button>
+        {/* Core Submission Interface */}
+        <div className="pt-2">
+          <button 
+            type="submit" 
+            disabled={isLoading}
+            className="w-full sm:w-auto inline-flex items-center justify-center h-12 gap-2.5 px-8 bg-[#FE8204] text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-[#ff952b] hover:shadow-[0_0_20px_rgba(254,130,4,0.4)] hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:hover:translate-y-0 shadow-lg"
+          >
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
+          </button>
+        </div>
       </form>
     </div>
   );

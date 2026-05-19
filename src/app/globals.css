@@ -1,20 +1,20 @@
-@import "tailwindcss";
+/* @import "tailwindcss";
 
 @theme {
-  /* --- Color Palette --- */
+
   --color-primary: #ea0422;
   --color-brand-orange: #fe8204;
   --color-secondary: #121212;
   --color-white: #ffffff;
   --color-black: #000000;
 
-  /* --- Font Families --- */
-  /* By assigning Montserrat to --font-sans, it becomes the default for the whole app */
+
+
   --font-sans: var(--font-montserrat), ui-sans-serif, system-ui;
   --font-montserrat: var(--font-montserrat), sans-serif;
   --font-almarena: var(--font-almarena), serif;
 
-  /* --- Shadows --- */
+
   --shadow-card: -10px 10px 30px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
 }
 
@@ -22,25 +22,24 @@
   :root {
     background-color: var(--color-white);
     color: var(--color-black);
-    /* This ensures Montserrat is inherited by everything by default */
+  
     font-family: var(--font-montserrat);
   }
 
-  /* --- Professional Global Typography --- */
+
   
   body {
     @apply antialiased;
     line-height: 1.6;
   }
 
-  /* Body Text: 400 Weight (Regular) */
   p, .text-body {
     font-weight: 400;
     font-size: clamp(0.875rem, 0.5vw + 0.75rem, 1rem); 
-    margin-bottom: 1.25rem; /* Better vertical rhythm */
+    margin-bottom: 1.25rem; 
   }
 
-  /* Lead/Intro Text: 500 Weight (Medium) */
+ 
   .text-lead {
     font-weight: 500;
     font-size: clamp(1.125rem, 1.5vw + 0.5rem, 1.5rem);
@@ -48,36 +47,35 @@
     @apply tracking-tight;
   }
 
-  /* Small Text: 400 Weight */
+ 
   small, .text-small {
     font-size: clamp(0.75rem, 0.5vw + 0.6rem, 0.875rem);
-    @apply opacity-80; /* Slightly softer for secondary info */
+    @apply opacity-80; 
   }
 
-  /* --- Headings (Now using Montserrat for Professionalism) --- */
-  /* If you still want the 'Tattoo' feel for H1s only, you can swap back to Almarena */
+ 
   h1, h2, h3, h4, h5, h6, .font-heading {
-    font-family: var(--font-montserrat); /* Changed from Almarena to Montserrat */
-    font-weight: 700; /* Bold */
+    font-family: var(--font-montserrat); 
+    font-weight: 700; 
     @apply tracking-tight uppercase;
     line-height: 1.2;
     margin-bottom: 1rem;
   }
 
-  /* Hero Huge Text: For high-impact branding */
+ 
   .text-hero { 
     font-size: clamp(3rem, 10vw + 1rem, 8rem); 
-    font-weight: 800; /* Extra Bold for Hero */
+    font-weight: 800; 
     line-height: 0.9;
     @apply tracking-tighter;
   }
 
-  /* Section Titles */
+  
   h2, .text-h2 { 
     font-size: clamp(2rem, 5vw + 1rem, 3.5rem); 
   }
 
-  /* UI & Buttons: 500/600 Weight (Medium/SemiBold) */
+ 
   button, .text-btn, nav a {
     font-family: var(--font-montserrat);
     font-weight: 600; 
@@ -86,7 +84,6 @@
     letter-spacing: 0.05em;
   }
 
-  /* Form Elements */
   input, select, textarea {
     font-family: var(--font-montserrat);
     @apply text-base;
@@ -98,10 +95,6 @@
   visibility: hidden !important;
 }
 
-/**
- * 2. The Container Styling:
- * Matches the 'fixed inset-0' and 'bg-white' logic in your component.
- */
 .splash-wrapper {
   position: fixed;
   inset: 0;
@@ -109,21 +102,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #ffffff; /* Use your --color-white variable if preferred */
+  background-color: #ffffff; 
   overflow: hidden;
 }
 
-/**
- * 3. Smooth Transitions for non-Framer elements (Optional)
- * If you want a CSS-based backup for the blur effect
- */
+
 .splash-exit-active {
   filter: blur(10px);
   opacity: 0;
   transition: opacity 0.8s ease, filter 0.8s ease;
 }
 
-  /* Specific fix for Chrome Autofill */
   input:-webkit-autofill,
   input:-webkit-autofill:hover, 
   input:-webkit-autofill:focus, 
@@ -131,5 +120,180 @@
       -webkit-box-shadow: 0 0 0 30px var(--color-white) inset !important;
       -webkit-text-fill-color: var(--color-black) !important;
       transition: background-color 5000s ease-in-out 0s;
+  }
+} */
+
+
+
+
+
+@import "tailwindcss";
+
+@theme {
+  /* --- 1. Refined Dark Mode Color Palette --- */
+  /* Backgrounds */
+  --color-bg-base: #050505; /* Deepest black for the main body */
+  --color-bg-surface: #121212; /* Slightly lighter for cards/dropdowns */
+  
+  /* Text */
+  --color-text-primary: #F3F4F6; /* Off-white to reduce eye strain against dark bg */
+  --color-text-secondary: #9CA3AF; /* Muted gray for descriptions/subtitles */
+  
+  /* Accents based on the new design */
+  --color-brand-orange: #FF7A00; /* Vibrant orange for primary CTAs & highlights */
+  --color-brand-purple: #2D1B4E; /* Deep purple for AI/Custom background */
+  --color-brand-purple-light: #9D72FF; /* Neon purple for glowing text/icons */
+  
+  /* Utilities */
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-border: #2A2A2A;
+
+  /* --- 2. Font Families --- */
+  /* Keep your structure, assuming Montserrat is your clean sans-serif */
+  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui;
+  --font-montserrat: var(--font-montserrat), sans-serif;
+  --font-almarena: var(--font-almarena), serif; /* Assuming this is the stylized wide font from the design */
+
+  /* --- 3. Shadows & Glows --- */
+  --shadow-card: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-glow-purple: 0 0 15px rgba(157, 114, 255, 0.3);
+
+   --animate-marquee: marquee 30s linear infinite;
+}
+
+@keyframes marquee {
+  0%   { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+
+@layer base {
+  /* --- Global Resets & Theming --- */
+  :root {
+    /* FLIPPED to Dark Mode */
+    background-color: var(--color-bg-base);
+    color: var(--color-text-primary);
+    font-family: var(--font-montserrat);
+    color-scheme: dark; /* Helps browsers render default scrollbars/inputs correctly */
+  }
+
+  body {
+    @apply antialiased;
+    line-height: 1.6;
+    overflow-x: hidden; /* Prevents horizontal scroll breakage */
+  }
+
+  /* --- Typography System (Strict Uniformity) --- */
+  
+  /* Body Text */
+  p, .text-body {
+    font-weight: 400;
+    font-size: clamp(0.875rem, 0.5vw + 0.75rem, 1rem); 
+    color: var(--color-text-secondary);
+    margin-bottom: 1.25rem;
+  }
+
+  .text-lead {
+    font-weight: 500;
+    font-size: clamp(1.125rem, 1.5vw + 0.5rem, 1.5rem);
+    line-height: 1.4;
+    color: var(--color-text-primary);
+    @apply tracking-tight;
+  }
+
+  small, .text-small {
+    font-size: clamp(0.75rem, 0.5vw + 0.6rem, 0.875rem);
+    color: var(--color-text-secondary);
+  }
+
+  /* Headings: The new design uses a very wide, bold stylized font. 
+     I am mapping this to your Almarena font variable assuming that's it. */
+  h1, h2, h3, h4, h5, h6, .font-heading {
+    font-family: var(--font-almarena); 
+    font-weight: 700; 
+    color: var(--color-text-primary);
+    @apply tracking-tight;
+    line-height: 1.2;
+    margin-bottom: 1rem;
+  }
+
+  .text-hero { 
+    font-size: clamp(2.5rem, 8vw + 1rem, 6rem); 
+    font-weight: 800; 
+    line-height: 0.95;
+    text-transform: uppercase;
+    @apply tracking-tighter;
+  }
+
+  h2, .text-h2 { 
+    font-size: clamp(1.75rem, 4vw + 1rem, 3rem); 
+    text-transform: uppercase;
+  }
+
+  /* Form Elements */
+  input, select, textarea {
+    font-family: var(--font-montserrat);
+    @apply text-base bg-[--color-bg-surface] border border-[--color-border] rounded-md px-4 py-2 text-[--color-text-primary] focus:outline-none focus:border-[--color-brand-orange] transition-colors;
+  }
+
+  /* Dark mode Chrome Autofill fix */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:active{
+      -webkit-box-shadow: 0 0 0 30px var(--color-bg-surface) inset !important;
+      -webkit-text-fill-color: var(--color-text-primary) !important;
+      transition: background-color 5000s ease-in-out 0s;
+  }
+}
+
+@layer components {
+  /* --- Reusable Uniform Components --- */
+  
+  /* Base Button - Guarantees uniform padding, typography, and transitions everywhere */
+  .btn {
+    @apply inline-flex items-center justify-center px-6 py-3 rounded-full font-semibold uppercase tracking-wider transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed;
+    font-family: var(--font-montserrat);
+    font-size: clamp(0.75rem, 0.5vw + 0.6rem, 0.875rem);
+  }
+
+  /* Primary Orange Button */
+  .btn-primary {
+    @apply bg-[--color-brand-orange] text-white hover:brightness-110 active:scale-95;
+  }
+
+  /* Outline/Secondary Button */
+  .btn-outline {
+    @apply border-2 border-[--color-border] text-[--color-text-primary] hover:border-[--color-text-primary] bg-transparent active:scale-95;
+  }
+
+  /* AI / Tech Purple Button (Pill shape) */
+  .btn-tech {
+    @apply bg-[--color-brand-purple] text-[--color-brand-purple-light] border border-transparent hover:border-[--color-brand-purple-light] hover:shadow-[var(--shadow-glow-purple)] active:scale-95;
+  }
+
+  /* --- Splash Screen (Kept your logic intact, updated colors) --- */
+  .splash-completed .splash-wrapper {
+    display: none !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+  }
+
+  .splash-wrapper {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-bg-base); /* Flipped to dark */
+    overflow: hidden;
+  }
+
+  .splash-exit-active {
+    filter: blur(10px);
+    opacity: 0;
+    transition: opacity 0.8s ease, filter 0.8s ease;
   }
 }

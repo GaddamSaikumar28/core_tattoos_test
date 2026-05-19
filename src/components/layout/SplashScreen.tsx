@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -12,48 +10,76 @@ interface SplashScreenProps {
   rightImageUrl: string;
 }
 
-// --- Framer Motion Variants ---
-const containerVariants: Variants = {
+// --- Cinematic Framer Motion Variants ---
+const backgroundVariants: Variants = {
   hidden: { opacity: 1 },
   visible: { opacity: 1 },
   exit: { 
     opacity: 0, 
-    // Adds a subtle blur out effect to the whole container on exit
-    filter: 'blur(10px)', 
-    transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] } // Custom modern cubic-bezier ease
+    scale: 1.05, // Slight zoom in as it fades out to reveal the app
+    filter: 'blur(15px)', 
+    transition: { duration: 1, ease: [0.25, 1, 0.5, 1] }
   }
 };
 
 const logoVariants: Variants = {
-  hidden: { opacity: 0, scale: 0.85, filter: 'blur(8px)' },
+  hidden: { opacity: 0, scale: 0.7, filter: 'blur(20px)' },
   visible: { 
     opacity: 1, 
     scale: 1, 
     filter: 'blur(0px)',
-    transition: { duration: 1.2, ease: "easeOut", delay: 0.2 } 
+    transition: { 
+      duration: 1.5, 
+      ease: [0.16, 1, 0.3, 1], // Expo out
+      delay: 0.2 
+    } 
   }
 };
 
-const butterflyLeftVariants: Variants = {
-  hidden: { opacity: 0, x: -40, y: 40, rotate: -15 },
+// We treat the white-background images as physical floating "Cards"
+const floatingCardLeft: Variants = {
+  hidden: { opacity: 0, x: -80, y: 60, rotateZ: -25, rotateY: 30, scale: 0.6 },
   visible: { 
     opacity: 1, 
     x: 0, 
     y: 0, 
-    rotate: 0,
-    // Spring physics make it feel organic, like it's settling into place
-    transition: { type: "spring", stiffness: 45, damping: 15, delay: 0.6 }
+    rotateZ: -12, 
+    rotateY: 0, 
+    scale: 1,
+    transition: { type: "spring", stiffness: 60, damping: 20, delay: 0.5 }
+  },
+  // Continuous floating animation after entering
+  floating: {
+    y: [0, -15, 0],
+    rotateZ: [-12, -10, -12],
+    transition: { duration: 5, repeat: Infinity, ease: "easeInOut" }
   }
 };
 
-const butterflyRightVariants: Variants = {
-  hidden: { opacity: 0, x: 40, y: 40, rotate: 15 },
+const floatingCardRight: Variants = {
+  hidden: { opacity: 0, x: 80, y: 60, rotateZ: 25, rotateY: -30, scale: 0.6 },
   visible: { 
     opacity: 1, 
     x: 0, 
     y: 0, 
-    rotate: 0,
-    transition: { type: "spring", stiffness: 45, damping: 15, delay: 0.8 }
+    rotateZ: 12, 
+    rotateY: 0, 
+    scale: 1,
+    transition: { type: "spring", stiffness: 60, damping: 20, delay: 0.7 }
+  },
+  floating: {
+    y: [0, -15, 0],
+    rotateZ: [12, 10, 12],
+    transition: { duration: 6, repeat: Infinity, ease: "easeInOut", delay: 0.5 }
+  }
+};
+
+const ambientGlowVariants: Variants = {
+  hidden: { opacity: 0, scale: 0.5 },
+  visible: { 
+    opacity: [0, 0.3, 0.15], 
+    scale: 1.5,
+    transition: { duration: 3, ease: "easeOut" }
   }
 };
 
@@ -68,14 +94,13 @@ export default function SplashScreen({ logoUrl, leftImageUrl, rightImageUrl }: S
     if (hasSeenSplash) {
       setShowIntro(false);
     } else {
-      // Lock scrolling while splash is active
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden'; // Lock scroll
 
       const timer = setTimeout(() => {
         setShowIntro(false);
         sessionStorage.setItem('hasSeenSplash', 'true');
         document.body.style.overflow = ''; // Unlock scroll
-      }, 3500); 
+      }, 4000); // Slightly longer for the cinematic effect to play out
       
       return () => {
         clearTimeout(timer);
@@ -84,70 +109,95 @@ export default function SplashScreen({ logoUrl, leftImageUrl, rightImageUrl }: S
     }
   }, []);
 
-  // Anti-flash hydration guard
   if (!isMounted) {
-    return <div suppressHydrationWarning className="fixed inset-0 z-[100] bg-[var(--color-white)]" />;
+    return <div suppressHydrationWarning className="fixed inset-0 z-[100] bg-zinc-950" />;
   }
+
   return (
     <AnimatePresence>
       {showIntro && (
         <motion.div
-          variants={containerVariants}
+          variants={backgroundVariants}
           initial="hidden"
           animate="visible"
           exit="exit"
-          aria-hidden="true" // Screen-reader optimization for decorative screens
-          // pointer-events-auto during animation, then none so it doesn't block the site while exiting
-          className=" splash-wrapper fixed inset-0 z-[100] flex items-center justify-center bg-[var(--color-white)] overflow-hidden pointer-events-auto"
+          aria-hidden="true" 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950 overflow-hidden pointer-events-auto selection:bg-transparent"
         >
-          <div className="relative w-full h-full max-w-[1440px] mx-auto flex items-center justify-center">
+          {/* Ambient Brand Core Glow */}
+          <motion.div 
+            variants={ambientGlowVariants}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40vw] h-[40vw] min-w-[500px] bg-[#FE8204]/20 rounded-full blur-[120px] pointer-events-none z-0"
+          />
+
+          {/* Cinematic Noise/Grain Overlay */}
+          <div className="absolute inset-0 z-0 opacity-20 pointer-events-none mix-blend-overlay" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")' }} />
+
+          <div className="relative w-full h-full max-w-[1440px] mx-auto flex items-center justify-center perspective-[1000px]">
             
-            {/* Top-Left Butterfly */}
+            {/* Top-Left Floating Art Card */}
             <motion.div 
-              variants={butterflyLeftVariants}
-              className="absolute top-[8%] left-[5%] md:top-[9%] md:left-[5%] lg:top-[10%] lg:left-[7%]"
+              variants={floatingCardLeft}
+              initial="hidden"
+              animate={["visible", "floating"]}
+              className="absolute top-[12%] left-[8%] md:top-[15%] md:left-[12%] lg:top-[18%] lg:left-[18%] z-10"
             >
-              <Image 
-                src={leftImageUrl} 
-                alt=""
-                width={240}
-                height={240}
-                sizes="(max-width: 768px) 100px, 240px"
-                className="w-[100px] md:w-[150px] lg:w-[200px] xl:w-[240px] h-auto drop-shadow-sm"
-                priority
-              />
+              <div className="bg-white p-2 md:p-3 rounded-2xl shadow-[0_20px_50px_-15px_rgba(0,0,0,0.7)] border border-white/20 transform-gpu overflow-hidden group">
+                <Image 
+                  src={leftImageUrl} 
+                  alt=""
+                  width={220}
+                  height={220}
+                  sizes="(max-width: 768px) 120px, 220px"
+                  className="w-[120px] md:w-[160px] lg:w-[220px] xl:w-[260px] h-auto rounded-xl"
+                  priority
+                />
+                {/* Glossy card overlay reflection */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
+              </div>
             </motion.div>
 
-            {/* Dead-Center Logo */}
+            {/* Dead-Center Cinematic Logo */}
             <motion.div 
               variants={logoVariants}
-              className="relative z-10" 
+              className="relative z-20 flex flex-col items-center" 
             >
               <Image 
                 src={logoUrl} 
                 alt="Core Tattoos Logo"
-                width={360}
-                height={150}
-                sizes="(max-width: 768px) 180px, 360px"
-                className="w-[180px] sm:w-[240px] md:w-[280px] lg:w-[320px] xl:w-[360px] h-auto drop-shadow-md"
+                width={400}
+                height={180}
+                sizes="(max-width: 768px) 200px, 400px"
+                className="w-[200px] sm:w-[280px] md:w-[320px] lg:w-[380px] xl:w-[420px] h-auto drop-shadow-[0_0_30px_rgba(254,130,4,0.3)]"
                 priority
+              />
+              <motion.div 
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: "60%", opacity: 1 }}
+                transition={{ duration: 1.5, delay: 1, ease: "easeOut" }}
+                className="h-px bg-gradient-to-r from-transparent via-[#FE8204]/50 to-transparent mt-6"
               />
             </motion.div>
 
-            {/* Bottom-Right Butterfly */}
+            {/* Bottom-Right Floating Art Card */}
             <motion.div 
-              variants={butterflyRightVariants}
-              className="absolute bottom-[8%] right-[5%] md:bottom-[12%] md:right-[8%] lg:bottom-[15%] lg:right-[12%]"
+              variants={floatingCardRight}
+              initial="hidden"
+              animate={["visible", "floating"]}
+              className="absolute bottom-[12%] right-[8%] md:bottom-[15%] md:right-[12%] lg:bottom-[18%] lg:right-[18%] z-10"
             >
-              <Image 
-                src={rightImageUrl} 
-                alt="Butterfly Decoration Right"
-                width={240}
-                height={240}
-                sizes="(max-width: 768px) 100px, 240px"
-                className="w-[100px] md:w-[150px] lg:w-[200px] xl:w-[240px] h-auto scale-x-[-1] drop-shadow-sm"
-                priority
-              />
+              <div className="bg-white p-2 md:p-3 rounded-2xl shadow-[0_20px_50px_-15px_rgba(0,0,0,0.7)] border border-white/20 transform-gpu overflow-hidden group">
+                <Image 
+                  src={rightImageUrl} 
+                  alt="Butterfly Decoration Right"
+                  width={220}
+                  height={220}
+                  sizes="(max-width: 768px) 120px, 220px"
+                  className="w-[120px] md:w-[160px] lg:w-[220px] xl:w-[260px] h-auto rounded-xl scale-x-[-1]"
+                  priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
+              </div>
             </motion.div>
             
           </div>

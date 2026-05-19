@@ -2,7 +2,7 @@
 'use server';
 
 
-import { getProductsQuery, getCollectionNamesQuery, searchProductsQuery , getAboutPageQuery, getHowItWorksPageQuery, getFaqSectionQuery} from './queries';
+import { getProductsQuery, getCollectionNamesQuery, searchProductsQuery , getAboutPageQuery, getHowItWorksPageQuery, getFaqSectionQuery, getSafeForSkinSectionQuery} from './queries';
 import { getProductByHandleQuery, getProductRecommendationsQuery } from './queries';
 import { getCollectionProductsQuery } from './queries';
 import { 
@@ -14,6 +14,18 @@ import {
   updateCartBuyerIdentityMutation
 } from './queries';
 // --- SHARED TYPES FOR PRODUCTION ---
+// export interface Variant {
+//   variantId: string;
+//   title: string;
+//   price: number;
+//   compareAtPrice: number | null;
+//   currency: string;
+//   sku: string | null;
+//   availableForSale: boolean;
+//   quantityAvailable: number | null;
+//   selectedOptions: { name: string; value: string }[];
+// }
+
 export interface Variant {
   variantId: string;
   title: string;
@@ -24,8 +36,12 @@ export interface Variant {
   availableForSale: boolean;
   quantityAvailable: number | null;
   selectedOptions: { name: string; value: string }[];
+  image?: { url: string; altText: string; width: number; height: number } | null; // ADD THIS LINE
 }
-
+export interface SkinToneSwatch {
+  hexCode: string;
+  imageUrl: string;
+}
 export interface FormattedProduct {
   id: string;
   handle: string;
@@ -51,6 +67,8 @@ export interface FormattedProduct {
     hoverImage: string | null;
     gallery: any[];
     videos: any[];
+    models: any[];
+    arOverlayImage: string | null;
   };
   attributes: {
     placements: string[];
@@ -66,6 +84,7 @@ export interface FormattedProduct {
     cardTheme: string;
     aspectRatio: string;
   };
+  skinToneSwatches: SkinToneSwatch[];
   allVariants: Variant[];
 }
 
@@ -239,17 +258,6 @@ export async function searchShopifyProducts(searchQuery: string): Promise<Search
       };
     });
 
-    // if (!res.body?.data?.products?.edges) return [];
-
-    // // Map to the clean interface expected by your Header
-    // return res.body.data.products.edges.map(({ node }: any) => ({
-    //   id: node.id,
-    //   handle: node.handle,
-    //   title: node.title,
-    //   price: parseFloat(node.priceRange?.minVariantPrice?.amount || "0").toFixed(2),
-    //   image: node.images?.edges?.[0]?.node?.url || '/assets/images/placeholder.png', // Fallback local image if missing
-    //   category: node.productType || 'Product',
-    // }));
 
   } catch (error) {
     // console.error("Failed to search products:", error);
@@ -278,37 +286,6 @@ const TATTOO_CATEGORIES = {
   '#919291'
 ];
 
-// const UI_COLORS = [
-//   // --- THE VIBRANT POP ---
-//   // High energy, modern tech, and flat-design classics. 
-//   // These look incredible behind stark white elements.
-//   '#FF6B6B', // Soft Coral / Punchy Red
-//   '#4ECDC4', // Electric Teal
-//   '#F7B731', // Rich Mustard Yellow
-//   '#A55EEA', // Vibrant Lilac / Purple
-//   '#2D98DA', // Azure Blue
-//   '#20BF6B', // Emerald Mint
-//   '#FA8231', // Bold Tangerine
-
-//   // --- THE MUTED LUXURY ---
-//   // Neater, richer, and more grounded. 
-//   // Perfect for a high-end, organic, or neo-traditional tattoo vibe.
-//   '#8FA08D', // Deep Sage Green
-//   '#D47A6A', // Warm Terracotta
-//   '#6B8EAD', // Slate Steel Blue
-//   '#C98A92', // Dusty Rose
-//   '#DDA77B', // Soft Ochre / Clay
-//   '#7A5C61'  // Deep Mauve
-// ];
- //const UI_COLORS = ['#F9F9F9', '#F4F1EA', '#EFEFEF', '#FAFAFA'];
-// const UI_COLORS = [
-//   '#FF5964', // Vibrant Coral Red
-//   '#35A7FF', // Electric Sky Blue
-//   '#38E4AE', // Mint/Neon Green
-//   '#FFD166', // Sunny Yellow
-//   '#9D8DF1', // Soft Purple/Lavender
-//   '#FF9F1C'  // Bright Tangerine
-// ];
 // --- 2. UTILITY FUNCTIONS ---
 const calculateDiscount = (price: number, compareAtPrice: number | null): number | null => {
   if (!compareAtPrice || compareAtPrice <= price) return null;
@@ -327,12 +304,18 @@ export async function mapShopifyProductsForProduction(shopifyJson: any) {
     const allMedia = node.media?.edges?.map((m: any) => m.node) || [];
     const images: any[] = [];
     const videos: any[] = [];
-    
+    const models: any[] = [];
     const legacyImages = node.images?.edges?.map((img: any) => img.node) || [];
     const mediaToProcess = allMedia.length > 0 ? allMedia : legacyImages;
     
     mediaToProcess.forEach((mediaItem: any) => {
-      if (mediaItem.mediaContentType === 'VIDEO' || mediaItem.sources) {
+      if (mediaItem.mediaContentType === 'MODEL_3D') {
+        models.push({
+          sources: mediaItem.sources || [],
+        });
+      }
+
+      else if (mediaItem.mediaContentType === 'VIDEO' || mediaItem.sources) {
         videos.push({
           url: mediaItem.sources?.[0]?.url,
           previewImage: mediaItem.previewImage?.url || null,
@@ -347,6 +330,14 @@ export async function mapShopifyProductsForProduction(shopifyJson: any) {
       }
     });
 
+    const rawSwatches = node.skinToneSwatches?.references?.edges || [];
+    const skinToneSwatches = rawSwatches.map(({ node: swatchNode }: any) => {
+      return {
+        hexCode: swatchNode.hexCode?.value || null,
+        imageUrl: swatchNode.previewImage?.reference?.image?.url || null,
+      };
+    }).filter((swatch: SkinToneSwatch) => swatch.hexCode && swatch.imageUrl);
+    const arOverlayUrl = node.arOverlayImage?.reference?.image?.url || null;
     const variants = node.variants?.edges?.map((v: any) => ({
       variantId: v.node.id, 
       title: v.node.title,
@@ -356,7 +347,13 @@ export async function mapShopifyProductsForProduction(shopifyJson: any) {
       sku: v.node.sku || null,
       availableForSale: v.node.availableForSale || false,
       quantityAvailable: v.node.quantityAvailable ?? null,
-      selectedOptions: v.node.selectedOptions || []
+      selectedOptions: v.node.selectedOptions || [],
+      image: v.node.image ? {
+        url: v.node.image.url,
+        altText: v.node.image.altText || v.node.title,
+        width: v.node.image.width,
+        height: v.node.image.height
+      } : null
     })) || [];
 
     const defaultVariant = variants[0] || {};
@@ -393,7 +390,9 @@ export async function mapShopifyProductsForProduction(shopifyJson: any) {
         featuredImage: node.featuredImage?.url || images[0]?.url || null,
         hoverImage: images[1]?.url || null, 
         gallery: images,                    
-        videos: videos,                     
+        videos: videos,  
+        models: models,
+        arOverlayImage: arOverlayUrl                   
       },
 
       attributes: {
@@ -415,7 +414,7 @@ export async function mapShopifyProductsForProduction(shopifyJson: any) {
         cardTheme: "light",
         aspectRatio: (images[0] && images[0].height > images[0].width * 1.5) ? 'tall' : 'standard',
       },
-      
+      skinToneSwatches: skinToneSwatches,
       allVariants: variants
     };
   });
@@ -1382,4 +1381,113 @@ export async function getCollection(handle: string) {
   });
 
   return res.body?.data?.collection || null;
+}
+
+
+// src/lib/shopify/index.ts
+import { getCommunityGallerySectionQuery } from './queries';
+export async function getCommunityGallerySectionData(handle: string = 'community_gallery_section') {
+  const res = await shopifyFetch<any>({
+    query: getCommunityGallerySectionQuery,
+    tags: ['community_gallery_section'],
+    variables: { handle },
+    cache: 'no-store',
+  });
+
+  //console.log(res);
+  //console.log("Fetched Community Gallery MO:", JSON.stringify(res.body?.data?.metaobject, null, 2));
+  const mo = res.body?.data?.metaobject;
+  if (!mo) return null;
+
+  // Map over the references edges to cleanly extract just the image data
+  const rawImages = mo.images?.references?.edges || [];
+  const parsedImages = rawImages
+    .map((edge: any) => {
+      const img = edge.node?.image;
+      if (!img) return null;
+      return {
+        url: img.url,
+        alt: img.altText || 'Community image',
+        width: img.width,
+        height: img.height,
+      };
+    })
+    .filter(Boolean);
+
+  return {
+    tagText: mo.tag_text?.value || '@COMMUNITY',
+    tagLink: mo.tag_link?.value || '#',
+    subtitle: mo.subtitle?.value || '',
+    titleWhite: mo.title_white?.value || 'COMMUNITY',
+    titleColored: mo.title_colored?.value || 'GALLERY',
+    footerText: mo.footer_text?.value || '',
+    buttonText: mo.button_text?.value || 'Share Your Look',
+    buttonLink: mo.button_link?.value || '#',
+    images: parsedImages,
+  };
+}
+
+
+import { getHowItWorksSectionQuery } from './queries';
+export async function getHowItWorksData(handle: string = 'how_it_works_section') {
+  const res = await shopifyFetch<any>({
+    query: getHowItWorksSectionQuery,
+    tags: ['how_it_works_section'],
+    variables: { handle },
+     cache: 'no-store',
+  });
+
+  const mo = res.body?.data?.metaobject;
+  if (!mo) return null;
+
+  const rawSteps = mo.steps?.references?.edges || [];
+  const parsedSteps = rawSteps.map((edge: any) => {
+    const node = edge.node;
+    const img = node.image?.reference?.image;
+    return {
+      title: node.title?.value || '',
+      description: node.description?.value || '',
+      image: img ? { url: img.url, alt: img.altText || '', width: img.width, height: img.height } : null,
+    };
+  });
+
+  return {
+    tagText: mo.tag_text?.value || 'SIMPLE PROCESS',
+    subtitle: mo.subtitle?.value || 'Four effortless steps to premium body art.',
+    titleWhite: mo.title_white?.value || 'HOW IT',
+    titleColored: mo.title_colored?.value || 'WORKS',
+    buttonText: mo.button_text?.value || 'Start Your Journey',
+    buttonLink: mo.button_link?.value || '#',
+    steps: parsedSteps,
+  };
+}
+
+
+export async function getSafeForSkinData(handle: string = 'safe_for_skin_section') {
+  const res = await shopifyFetch<any>({
+    query: getSafeForSkinSectionQuery,
+    tags: ['safe_for_skin_section'],
+    variables: { handle },
+  });
+
+  const mo = res.body?.data?.metaobject;
+  if (!mo) return null;
+
+  // Safely parse JSON fields
+  const parseJSON = (str: string | undefined, fallback: any) => {
+    try { return str ? JSON.parse(str) : fallback; } 
+    catch (e) { return fallback; }
+  };
+
+  return {
+    tagText: mo.tag_text?.value || 'SAFETY & ETHICS',
+    titleWhite: mo.title_white?.value || 'SAFE FOR YOUR',
+    titleColored: mo.title_colored?.value || 'SKIN.',
+    description: mo.description?.value || '',
+    formulaTitle: mo.formula_title?.value || 'Our Formula',
+    complianceText: mo.compliance_text?.value || '',
+    features: parseJSON(mo.features?.value, []),
+    ingredients: parseJSON(mo.ingredients?.value, []),
+    stats: parseJSON(mo.stats?.value, []),
+  };
 }

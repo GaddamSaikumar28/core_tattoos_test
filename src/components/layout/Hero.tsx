@@ -1,14 +1,9 @@
 "use client";
-import React, { useEffect, useState , useMemo} from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { FormattedProduct } from "@/src/lib/shopify";
 import Link from "next/link";
-// import { getHomePageHeroCollections } from '@/src/lib/shopify/index'; 
-// interface ProductState {
-//   formattedData: FormattedProduct[];
-//   pageInfo: any; 
-// }
 const MotionLink = motion(Link);
 interface HeroProps {
   initialProducts: FormattedProduct[];
@@ -127,7 +122,9 @@ const TattooCard = ({
   index,
 }: any) => {
   const [hasError, setHasError] = useState(false);
- const imageUrl = card.product?.media?.featuredImage || card.product?.media?.gallery?.[0]?.url;
+  const imageUrl =
+    card.product?.media?.featuredImage ||
+    card.product?.media?.gallery?.[0]?.url;
   const imageAlt = card.product?.title || `Tattoo Card ${card.id}`;
   return (
     <motion.div
@@ -214,14 +211,9 @@ export default function Hero({ initialProducts = [] }: HeroProps) {
   const [topCardReady, setTopCardReady] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [cardIsFalling, setCardIsFalling] = useState(false);
- //const [allProducts, setAllProducts] = useState([]);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
-// const [allProducts, setAllProducts] = useState<ProductState>({
-//   formattedData: [],
-//   pageInfo: null
-// });
 
   const cardsWithProducts = useMemo(() => {
     return deckConfig.map((card, index) => {
@@ -351,49 +343,49 @@ export default function Hero({ initialProducts = [] }: HeroProps) {
                   </span>
                 </motion.p>
 
-                    {/* 1. Changed motion.button to motion.div so it's valid HTML */}
-<motion.div
-  className="relative mt-8 text-white rounded-full hidden md:flex font-bold uppercase tracking-widest text-[12px] lg:text-[14px] group overflow-hidden w-fit"
-  initial={{ y: 20, opacity: 0 }}
-  animate={{ y: 0, opacity: 1 }}
-  transition={{ duration: 0.8, ease: "easeOut", delay: 0.3 }}
->
-  <span className="absolute inset-0 bg-black"></span>
-  <span className="absolute inset-0 bg-[#FE8204] origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 ease-out"></span>
+                {/* 1. Changed motion.button to motion.div so it's valid HTML */}
+                <motion.div
+                  className="relative mt-8 text-white rounded-full hidden md:flex font-bold uppercase tracking-widest text-[12px] lg:text-[14px] group overflow-hidden w-fit"
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ duration: 0.8, ease: "easeOut", delay: 0.3 }}
+                >
+                  <span className="absolute inset-0 bg-black"></span>
+                  <span className="absolute inset-0 bg-[#FE8204] origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 ease-out"></span>
 
-  {/* 2. Changed span to Link and added href */}
-  <Link 
-    href="/collections"
-    className="relative z-10 flex items-center gap-4 px-7 py-3.5 lg:px-8 lg:py-4 cursor-pointer"
-  >
-    SHOP COLLECTIONS
-    <span className="bg-white text-black rounded-full w-8 h-8 flex items-center justify-center group-hover:translate-x-1 transition-transform">
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M5 12h14"></path>
-        <path d="m12 5 7 7-7 7"></path>
-      </svg>
-    </span>
-  </Link>
-</motion.div>
+                  {/* 2. Changed span to Link and added href */}
+                  <Link
+                    href="/collections"
+                    className="relative z-10 flex items-center gap-4 px-7 py-3.5 lg:px-8 lg:py-4 cursor-pointer"
+                  >
+                    SHOP COLLECTIONS
+                    <span className="bg-white text-black rounded-full w-8 h-8 flex items-center justify-center group-hover:translate-x-1 transition-transform">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M5 12h14"></path>
+                        <path d="m12 5 7 7-7 7"></path>
+                      </svg>
+                    </span>
+                  </Link>
+                </motion.div>
               </motion.div>
 
               {/* Right Column: Scaled-down Card Deck */}
               <motion.div
                 // className="w-[50%] md:w-[45%] h-[250px] md:h-[380px] lg:h-[420px] relative flex justify-center items-center order-2  md:mt-0"
-                   className="w-[50%] md:w-[45%] h-[220px] md:h-[380px] lg:h-[480px] relative flex justify-center items-center order-2 md:mt-0"
+                className="w-[50%] md:w-[45%] h-[220px] md:h-[380px] lg:h-[480px] relative flex justify-center items-center order-2 md:mt-0"
                 animate={{
                   x: isScrolled && isDesktop ? "-61%" : "0%",
-                //   y: isScrolled ? 80 : 0,
-                y: isScrolled ? (isDesktop ? 20 : 80) : 0,
+                  //   y: isScrolled ? 80 : 0,
+                  y: isScrolled ? (isDesktop ? 20 : 80) : 0,
                 }}
                 transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
               >
@@ -474,7 +466,7 @@ export default function Hero({ initialProducts = [] }: HeroProps) {
               <motion.div
                 // className="w-full order-3 md:hidden flex flex-col items-center text-center px-4 pb-12 mt-4"
 
-                 className="w-full order-3 md:hidden flex flex-col items-center text-center px-4 mt-10"
+                className="w-full order-3 md:hidden flex flex-col items-center text-center px-4 mt-10"
                 animate={{
                   opacity: isScrolled ? 0 : 1,
                   y: isScrolled ? 40 : 0,
@@ -502,29 +494,6 @@ export default function Hero({ initialProducts = [] }: HeroProps) {
                     realistic design within 24 hours.
                   </span>
                 </motion.p>
-                {/* <motion.button
-                  className="mt-8 bg-black text-white rounded-full px-8 py-4 flex items-center gap-4 font-bold uppercase tracking-widest text-[13px] hover:bg-gray-800 transition-colors group"
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ duration: 0.8, ease: "easeOut", delay: 0.3 }}
-                >
-                  SHOP COLLECTIONS
-                  <span className="bg-white text-black rounded-full w-8 h-8 flex items-center justify-center group-hover:translate-x-1 transition-transform">
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M5 12h14"></path>
-                      <path d="m12 5 7 7-7 7"></path>
-                    </svg>
-                  </span>
-                </motion.button> */}
                 <MotionLink
                   href="/collections"
                   className="mt-8 bg-black text-white rounded-full px-8 py-4 flex items-center gap-4 font-bold uppercase tracking-widest text-[13px] hover:bg-gray-800 transition-colors group"
@@ -549,7 +518,6 @@ export default function Hero({ initialProducts = [] }: HeroProps) {
                     </svg>
                   </span>
                 </MotionLink>
-                
               </motion.div>
             </main>
 

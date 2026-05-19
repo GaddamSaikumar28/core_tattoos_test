@@ -24,7 +24,7 @@ export function RelatedProducts({ products }: RelatedProductsProps) {
   };
 
   return (
-    <section className="bg-black py-20 border-t border-white/10 mt-20 overflow-hidden">
+    <section className="bg-black py-20 border-t border-white/10 overflow-hidden">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-10">
           <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">

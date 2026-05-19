@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React from 'react';
@@ -36,14 +35,14 @@ export function CartItemCard({ item, compact = false }: CartItemCardProps) {
     <div 
       className={`flex gap-4 group transition-all duration-300 ${
         compact 
-          ? 'py-4 border-b border-gray-100 last:border-0' 
-          : 'p-4 sm:p-5 bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_20px_-4px_rgba(0,0,0,0.08)]'
+          ? 'py-4 border-b border-white/5 last:border-0' 
+          : 'p-4 sm:p-5 bg-zinc-900/40 backdrop-blur-md rounded-2xl border border-white/5 shadow-lg hover:border-white/15 hover:bg-zinc-900/60'
       }`}
     >
       {/* --- Image Section --- */}
       <Link 
         href={`/collections/${productHandle}`} 
-        className="relative shrink-0 overflow-hidden rounded-xl bg-gray-50 border border-gray-100 block"
+        className="relative shrink-0 overflow-hidden rounded-xl bg-zinc-950 border border-white/5 group-hover:border-white/10 transition-colors block"
       >
         <div className={`${compact ? 'w-20 h-24' : 'w-24 h-24 sm:w-32 sm:h-32'} relative`}>
           <Image
@@ -51,9 +50,11 @@ export function CartItemCard({ item, compact = false }: CartItemCardProps) {
             alt={product.featuredImage?.altText || productTitle}
             fill
             loading="lazy"
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            className="object-cover transition-transform duration-700 group-hover:scale-110"
             sizes="(max-width: 768px) 100px, 150px"
           />
+          {/* Subtle Dark Vignette Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-50 z-10 pointer-events-none" />
         </div>
       </Link>
 
@@ -65,17 +66,17 @@ export function CartItemCard({ item, compact = false }: CartItemCardProps) {
           <div className="flex flex-col">
             <Link 
               href={`/tattoos/${productHandle}`} 
-              className="font-bold text-gray-900 text-sm sm:text-base leading-tight hover:text-[var(--color-brand-orange,#fe8204)] transition-colors line-clamp-2"
+              className="font-black text-white text-sm sm:text-base leading-tight uppercase tracking-tight hover:text-[#FE8204] transition-colors line-clamp-2"
             >
               {productTitle}
             </Link>
             {displayVariantTitle && (
-              <span className="text-xs sm:text-sm text-gray-500 mt-1.5 font-medium bg-gray-50 inline-block px-2 py-0.5 rounded-md w-fit border border-gray-200">
+              <span className="text-[10px] sm:text-xs text-zinc-500 mt-1.5 font-black uppercase tracking-widest bg-zinc-950/50 inline-block px-2.5 py-1 rounded-md w-fit border border-white/10 shadow-inner">
                 {displayVariantTitle}
               </span>
             )}
           </div>
-          <p className="font-black text-gray-900 whitespace-nowrap text-sm sm:text-base tracking-tight">
+          <p className="font-black text-white whitespace-nowrap text-sm sm:text-base tracking-tight drop-shadow-sm">
             {currency}{price}
           </p>
         </div>
@@ -84,20 +85,20 @@ export function CartItemCard({ item, compact = false }: CartItemCardProps) {
         <div className="flex items-end sm:items-center justify-between mt-3 sm:mt-4">
           
           {/* Quantity Controls */}
-          <div className="flex items-center border border-gray-200 rounded-lg bg-gray-50 p-0.5 shadow-sm">
+          <div className="flex items-center border border-white/10 rounded-lg bg-zinc-950 p-0.5 shadow-inner">
             <button
               onClick={() => updateQuantity(lineId, quantity - 1)}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-white hover:shadow-sm rounded-md transition-all active:scale-95"
+              className="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-md transition-all active:scale-95"
               aria-label="Decrease quantity"
             >
               <Minus className="w-3.5 h-3.5" />
             </button>
-            <span className="w-10 text-center text-sm font-bold text-gray-900 select-none">
+            <span className="w-10 text-center text-sm font-bold text-white select-none">
               {quantity}
             </span>
             <button
               onClick={() => updateQuantity(lineId, quantity + 1)}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-white hover:shadow-sm rounded-md transition-all active:scale-95"
+              className="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-md transition-all active:scale-95"
               aria-label="Increase quantity"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -107,11 +108,11 @@ export function CartItemCard({ item, compact = false }: CartItemCardProps) {
           {/* Remove Button */}
           <button
             onClick={() => removeLineItem(lineId)}
-            className="group/remove flex items-center gap-1.5 p-2 sm:px-3 sm:py-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all active:scale-95"
+            className="group/remove flex items-center gap-2 p-2 sm:px-3 sm:py-2 text-zinc-600 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all active:scale-95"
             aria-label="Remove item"
           >
             <Trash2 className="w-4 h-4 transition-transform group-hover/remove:scale-110" />
-            {!compact && <span className="text-sm font-bold hidden sm:inline tracking-wide">Remove</span>}
+            {!compact && <span className="text-[10px] font-black uppercase tracking-[0.2em] hidden sm:inline pt-0.5">Remove</span>}
           </button>
           
         </div>

@@ -4,7 +4,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 
 import SplashScreen from "../components/layout/SplashScreen";
-import Header from "../components/layout/Header";
+// import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
 import { Toaster } from "sonner";
 import { CartProvider } from "../context/CartContext";
@@ -16,6 +16,7 @@ import Script from "next/script";
 import { getGlobalSettingsData } from "@/src/lib/shopify";
 import CartDrawerWrapper from "../components/cart/CartDrawerWrapper";
 import MetaPixel from "../components/shared/MetaPixel";
+import Header from "../components/Header";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -43,9 +44,6 @@ const almarena = localFont({
 
 // --- SEO ADDITION: metadataBase and verification added ---
 export const metadata: Metadata = {
-  // metadataBase: new URL(
-  //   process.env.NEXT_PUBLIC_SITE_URL || "https://justtattoos.com",
-  // ),
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://www.justtattoos.com"),
   title: "Just Tattoos",
   description: "Authentic tattoo lifestyle and apparel.",
@@ -84,7 +82,7 @@ export default async function RootLayout({
   const settings = await getGlobalSettingsData();
   // Define a safe fallback just in case the API completely fails
   const globalData = settings || {
-    headerLogo: "/assets/icons/DesktopLogo.svg",
+    headerLogo: "/assets/icons/DesktopLogo.svg", // Note: Ensure this points to a white/light logo for dark theme
     footerLogo: "/assets/icons/DesktopLogo.svg",
     splashLogo: "/assets/icons/DesktopLogo.svg",
     splashLeftImage: "/assets/icons/butterflys.svg",
@@ -96,7 +94,6 @@ export default async function RootLayout({
   };
 
   // Safe fallback for the site URL in the schema
-  // const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://justtattoos.com";
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.justtattoos.com";
 
   return (
@@ -128,7 +125,8 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased flex flex-col min-h-screen">
+      {/* Upgraded Body Tag: Forces the new dark mode background, text colors, and custom orange text selection */}
+      <body className="antialiased flex flex-col min-h-screen bg-[var(--color-bg-base)] text-[var(--color-text-primary)] selection:bg-[var(--color-brand-orange)] selection:text-white">
         <SpeedInsights />
         {/* --- SEO ADDITION: Global Organization & WebSite Schema --- */}
         <script
@@ -199,6 +197,7 @@ export default async function RootLayout({
           />
         </noscript>
         <MetaPixel />
+        
         <CartProvider>
           <AuthProvider>
             <SplashScreen
@@ -224,7 +223,8 @@ export default async function RootLayout({
             <CartDrawerWrapper />
           </AuthProvider>
 
-          <Toaster position="bottom-right" richColors />
+          {/* Upgraded Toaster to match dark theme better natively */}
+          <Toaster position="bottom-right" richColors theme="dark" />
         </CartProvider>
 
         <Script

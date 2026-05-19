@@ -1,9 +1,8 @@
-
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import clsx from 'clsx';
-import { Check } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 
 export interface FilterOptions {
   collections: string[];
@@ -26,94 +25,152 @@ interface FilterSidebarProps {
 }
 
 export function FilterSidebar({ filters, activeFilters, onToggle }: FilterSidebarProps) {
+  const hasAnyActive = Object.values(activeFilters).some((arr) => arr.length > 0);
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-700">
-      
+    <div className="space-y-1">
+
       {filters.collections && filters.collections.length > 0 && (
-        <FilterGroup 
-          title="Categories" 
-          items={filters.collections} 
-          activeItems={activeFilters.collections} 
-          onToggle={(v) => onToggle('collections', v)} 
+        <FilterGroup
+          title="Categories"
+          items={filters.collections}
+          activeItems={activeFilters.collections}
+          onToggle={(v) => onToggle('collections', v)}
         />
       )}
 
       {filters.styles && filters.styles.length > 0 && (
-        <FilterGroup 
-          title="Style" 
-          items={filters.styles} 
-          activeItems={activeFilters.styles} 
-          onToggle={(v) => onToggle('styles', v)} 
+        <FilterGroup
+          title="Style"
+          items={filters.styles}
+          activeItems={activeFilters.styles}
+          onToggle={(v) => onToggle('styles', v)}
         />
       )}
-      
+
       {filters.sizes && filters.sizes.length > 0 && (
-        <FilterGroup 
-          title="Size" 
-          items={filters.sizes} 
-          activeItems={activeFilters.sizes} 
-          onToggle={(v) => onToggle('sizes', v)} 
+        <FilterGroup
+          title="Size"
+          items={filters.sizes}
+          activeItems={activeFilters.sizes}
+          onToggle={(v) => onToggle('sizes', v)}
         />
       )}
-      
+
       {filters.placements && filters.placements.length > 0 && (
-        <FilterGroup 
-          title="Placement" 
-          items={filters.placements} 
-          activeItems={activeFilters.placements} 
-          onToggle={(v) => onToggle('placements', v)} 
+        <FilterGroup
+          title="Placement"
+          items={filters.placements}
+          activeItems={activeFilters.placements}
+          onToggle={(v) => onToggle('placements', v)}
         />
       )}
-      
-      {Object.values(activeFilters).some(arr => arr.length > 0) && (
-        <button 
-          onClick={() => onToggle('RESET')} 
-          className="w-full py-3 rounded-xl bg-slate-950 text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-[var(--color-brand-orange)] transition-colors shadow-lg"
-        >
-          Reset Filters
-        </button>
+
+      {hasAnyActive && (
+        <div className="pt-4">
+          <button
+            onClick={() => onToggle('RESET')}
+            className="w-full py-2.5 rounded-lg border border-zinc-700 text-zinc-400 text-[9px] font-black uppercase tracking-[0.25em] hover:border-[var(--color-brand-orange)] hover:text-[var(--color-brand-orange)] transition-all duration-200"
+          >
+            Clear All Filters
+          </button>
+        </div>
       )}
     </div>
   );
 }
 
-function FilterGroup({ title, items, activeItems, onToggle }: { title: string, items: string[], activeItems: string[], onToggle: (val: string) => void }) {
+// ─── Collapsible filter group — no max-height cap so all items always show ────
+function FilterGroup({
+  title,
+  items,
+  activeItems,
+  onToggle,
+}: {
+  title: string;
+  items: string[];
+  activeItems: string[];
+  onToggle: (val: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(true);
+  const activeCount = activeItems.length;
+
   return (
-    <div className="space-y-4">
-      <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] border-b border-slate-200 pb-2">
-        {title}
-      </h4>
-      <div className="space-y-3">
-        {items.map((item) => {
-          const isActive = activeItems.includes(item);
-          return (
-            <label key={item} className="flex items-center gap-3 cursor-pointer group select-none">
-              <div 
-                className={clsx(
-                  "w-4 h-4 rounded-sm border transition-all flex items-center justify-center",
-                  // Updated to Brand Orange
-                  isActive ? "bg-[var(--color-brand-orange)] border-[var(--color-brand-orange)] text-white" : "border-slate-300 bg-white group-hover:border-slate-500"
-                )}
+    <div className="border-b border-zinc-800/60 last:border-0">
+
+      {/* Group header toggle */}
+      <button
+        onClick={() => setIsOpen((o) => !o)}
+        className="w-full flex items-center justify-between py-3.5 group"
+        aria-expanded={isOpen}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-400 group-hover:text-zinc-200 transition-colors duration-150">
+            {title}
+          </span>
+          {activeCount > 0 && (
+            <span className="bg-[var(--color-brand-orange)] text-black text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center leading-none shrink-0">
+              {activeCount}
+            </span>
+          )}
+        </div>
+        <ChevronDown
+          className={clsx(
+            'w-3.5 h-3.5 text-zinc-600 transition-transform duration-300 shrink-0',
+            isOpen ? 'rotate-180' : 'rotate-0'
+          )}
+        />
+      </button>
+
+      {/* Items — rendered in DOM always, hidden via display so nothing is clipped */}
+      <div className={clsx('pb-3', isOpen ? 'block' : 'hidden')}>
+        <div className="space-y-0.5">
+          {items.map((item) => {
+            const isActive = activeItems.includes(item);
+            return (
+              <label
+                key={item}
+                className="flex items-center gap-3 px-1 py-2 rounded-lg cursor-pointer group/item hover:bg-zinc-800/40 transition-colors duration-150 select-none"
               >
-                <input 
-                  type="checkbox" 
-                  className="hidden" 
-                  checked={isActive} 
-                  onChange={() => onToggle(item)} 
+                {/* Hidden native checkbox — keeps onChange logic identical to original */}
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={isActive}
+                  onChange={() => onToggle(item)}
                 />
-                {isActive && <Check className="w-3 h-3" strokeWidth={4} />}
-              </div>
-              <span className={clsx(
-                "text-xs font-bold transition-colors uppercase tracking-widest line-clamp-1", 
-                // Updated active text color
-                isActive ? "text-[var(--color-brand-orange)]" : "text-slate-500 group-hover:text-slate-800"
-              )}>
-                {item}
-              </span>
-            </label>
-          );
-        })}
+
+                {/* Custom checkbox */}
+                <div
+                  className={clsx(
+                    'w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 transition-all duration-150',
+                    isActive
+                      ? 'bg-[var(--color-brand-orange)] border-[var(--color-brand-orange)]'
+                      : 'border-zinc-700 bg-transparent group-hover/item:border-zinc-500'
+                  )}
+                >
+                  {isActive && (
+                    <Check className="w-2.5 h-2.5 text-black" strokeWidth={3.5} />
+                  )}
+                </div>
+
+                {/* Label text */}
+                <span
+                  className={clsx(
+                    'text-[10px] font-bold uppercase tracking-widest leading-tight line-clamp-1 transition-colors duration-150',
+                    isActive
+                      ? 'text-[var(--color-brand-orange)]'
+                      : 'text-zinc-500 group-hover/item:text-zinc-200'
+                  )}
+                >
+                  {item}
+                </span>
+              </label>
+            );
+          })}
+        </div>
       </div>
+
     </div>
   );
 }

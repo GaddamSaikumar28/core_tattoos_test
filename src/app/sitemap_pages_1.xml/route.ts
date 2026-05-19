@@ -15,7 +15,6 @@ export async function GET() {
     '/shipping', 
     '/terms-of-service',
     '/collections', 
-    '/arvr', 
     '/tracking'
   ];
 

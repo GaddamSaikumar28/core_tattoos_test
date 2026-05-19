@@ -92,66 +92,7 @@ export default function Footer({
   
   // --- Dynamic Menu State ---
   const [dynamicMenus, setDynamicMenus] = useState<FooterMenuColumn[]>(footerMenus);
-
-  // --- Fetch Menus from Shopify ---
-  // useEffect(() => {
-  //   async function fetchFooterNav() {
-  //     try {
-  //       // Fetch all 3 specific menus concurrently for better performance
-  //       const [shopMenu, aboutMenu, careMenu] = await Promise.all([
-  //         getMenu('footer'),
-  //         getMenu('footer-menu-about'),
-  //         getMenu('footer-menu-customer-care')
-  //       ]);
-
-  //       const formattedMenus: FooterMenuColumn[] = [];
-
-  //       // 1. Process Shop Menu
-  //       if (shopMenu?.items) {
-  //         formattedMenus.push({
-  //           title: shopMenu.title || 'Shop',
-  //           links: shopMenu.items.map((item: any) => ({
-  //             name: item.title,
-  //             href: item.url?.replace(/^https?:\/\/[^\/]+/, '') || '#',
-  //           }))
-  //         });
-  //       }
-
-  //       // 2. Process About Menu
-  //       if (aboutMenu?.items) {
-  //         formattedMenus.push({
-  //           title: aboutMenu.title || 'About',
-  //           links: aboutMenu.items.map((item: any) => ({
-  //             name: item.title,
-  //             href: item.url?.replace(/^https?:\/\/[^\/]+/, '') || '#',
-  //           }))
-  //         });
-  //       }
-
-  //       // 3. Process Customer Care Menu
-  //       if (careMenu?.items) {
-  //         formattedMenus.push({
-  //           title: careMenu.title || 'Customer Care',
-  //           links: careMenu.items.map((item: any) => ({
-  //             name: item.title,
-  //             href: item.url?.replace(/^https?:\/\/[^\/]+/, '') || '#',
-  //           }))
-  //         });
-  //       }
-
-  //       // Only update state if we successfully fetched data
-  //       if (formattedMenus.length > 0) {
-  //         setDynamicMenus(formattedMenus);
-  //       }
-
-  //     } catch (error) {
-  //       console.error("Failed to load footer menus", error);
-  //     }
-  //   }
-
-  //   fetchFooterNav();
-  // }, []);
-// --- Fetch Menus from Shopify ---
+-
   useEffect(() => {
     async function fetchFooterNav() {
       try {
@@ -237,64 +178,6 @@ export default function Footer({
 
     fetchFooterNav();
   }, []);
-  // useEffect(() => {
-  //   async function fetchFooterNav() {
-  //     try {
-  //       // Fetch all 3 specific menus concurrently for better performance
-  //       const [shopMenu, aboutMenu, careMenu] = await Promise.all([
-  //         getMenu('footer'),
-  //         getMenu('footer-menu-about'),
-  //         getMenu('footer-menu-customer-care')
-  //       ]);
-
-  //       console.log("Fetched Menus:", { shopMenu, aboutMenu, careMenu }); // Debugging log
-  //       const formattedMenus: FooterMenuColumn[] = [];
-
-  //       // 1. Process Shop Menu (Forcing the "Shop" title)
-  //       if (shopMenu?.items) {
-  //         formattedMenus.push({
-  //           title: 'Shop', // Kept old-fashioned way
-  //           links: shopMenu.items.map((item: any) => ({
-  //             name: item.title,
-  //             href: item.url?.replace(/^https?:\/\/[^\/]+/, '') || '#',
-  //           }))
-  //         });
-  //       }
-
-  //       // 2. Process About Menu (Forcing the "About" title)
-  //       if (aboutMenu?.items) {
-  //         formattedMenus.push({
-  //           title: 'About', // Kept old-fashioned way
-  //           links: aboutMenu.items.map((item: any) => ({
-  //             name: item.title,
-  //             href: item.url?.replace(/^https?:\/\/[^\/]+/, '') || '#',
-  //           }))
-  //         });
-  //       }
-
-  //       // 3. Process Customer Care Menu (Forcing the "Customer Care" title)
-  //       if (careMenu?.items) {
-  //         formattedMenus.push({
-  //           title: 'Customer Care', // Kept old-fashioned way
-  //           links: careMenu.items.map((item: any) => ({
-  //             name: item.title,
-  //             href: item.url?.replace(/^https?:\/\/[^\/]+/, '') || '#',
-  //           }))
-  //         });
-  //       }
-
-  //       // Only update state if we successfully fetched data
-  //       if (formattedMenus.length > 0) {
-  //         setDynamicMenus(formattedMenus);
-  //       }
-
-  //     } catch (error) {
-  //       console.error("Failed to load footer menus", error);
-  //     }
-  //   }
-
-  //   fetchFooterNav();
-  // }, []);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });

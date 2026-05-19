@@ -1,11 +1,13 @@
+
+
 "use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, ArrowRight } from "lucide-react";
+import { Loader2, ArrowRight, ShoppingBag } from "lucide-react";
 import { useAuth } from "@/src/context/AuthContext";
-import {  ShoppingBag } from "lucide-react";
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -13,6 +15,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
   const shopifyAccountUrl = process.env.NEXT_PUBLIC_SHOPIFY_ACCOUNT_URL;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -24,31 +27,49 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-20 px-4 mt-16 md:mt-10">
-      <div className="max-w-md w-full bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-8 sm:p-10 border border-gray-100">
+    <div className="min-h-screen bg-black flex items-center justify-center py-20 px-4 mt-16 md:mt-10 relative overflow-hidden selection:bg-[#FE8204] selection:text-white">
+      
+      {/* Immersive Ambient Background Glows */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl h-[500px] bg-[#FE8204] opacity-[0.08] blur-[120px] pointer-events-none z-0 rounded-full" />
+      <div className="absolute top-0 right-0 w-96 h-96 bg-zinc-800 opacity-[0.2] blur-[100px] pointer-events-none z-0" />
+
+      {/* Main Glassmorphic Login Card */}
+      <div className="relative z-10 max-w-md w-full bg-zinc-900/70 backdrop-blur-2xl rounded-[2.5rem] p-8 sm:p-10 border border-white/10 shadow-2xl shadow-black/50">
         
+        {/* Header */}
         <div className="text-center mb-10">
-          <h1 className="text-3xl font-black uppercase tracking-tight text-gray-900 mb-2">Welcome Back</h1>
-          <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Sign in to your account</p>
+          {/* <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/5 border border-white/10 mb-6 shadow-inner">
+            <div className="w-4 h-4 bg-[#FE8204] rounded-full shadow-[0_0_15px_#FE8204]" />
+          </div> */}
+          <h1 className="text-3xl font-black uppercase tracking-tighter text-white mb-2">Welcome Back</h1>
+          <p className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">Sign in to your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-xs font-black text-gray-900 uppercase tracking-widest mb-2">Email Address</label>
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          
+          {/* Email Input */}
+          <div className="group">
+            <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 group-focus-within:text-[#FE8204] transition-colors">
+              Email Address
+            </label>
             <input 
               type="email" 
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full h-14 bg-gray-50 border border-gray-200 rounded-xl px-4 text-gray-900 focus:outline-none focus:border-[#fe8204] focus:ring-1 focus:ring-[#fe8204] transition-all"
+              className="w-full h-14 bg-zinc-950/50 border border-white/10 rounded-xl px-5 text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#FE8204] focus:ring-1 focus:ring-[#FE8204] focus:-translate-y-0.5 transition-all duration-300 shadow-inner"
               placeholder="you@example.com"
             />
           </div>
 
-          <div>
+          {/* Password Input */}
+          <div className="group">
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-black text-gray-900 uppercase tracking-widest">Password</label>
-              <Link href="/forgot-password" className="text-xs font-bold text-[#fe8204] hover:underline uppercase tracking-widest">
+              <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest group-focus-within:text-[#FE8204] transition-colors">
+                Password
+              </label>
+              <Link href="/forgot-password" className="text-[10px] font-bold text-zinc-500 hover:text-[#FE8204] hover:underline uppercase tracking-widest transition-colors">
                 Forgot?
               </Link>
             </div>
@@ -57,39 +78,56 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full h-14 bg-gray-50 border border-gray-200 rounded-xl px-4 text-gray-900 focus:outline-none focus:border-[#fe8204] focus:ring-1 focus:ring-[#fe8204] transition-all"
+              className="w-full h-14 bg-zinc-950/50 border border-white/10 rounded-xl px-5 text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#FE8204] focus:ring-1 focus:ring-[#FE8204] focus:-translate-y-0.5 transition-all duration-300 shadow-inner"
               placeholder="••••••••"
             />
           </div>
 
+          {/* Submit Button */}
           <button 
             type="submit" 
             disabled={isSubmitting}
-            className="w-full h-14 mt-4 bg-[#fe8204] text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-[#e07103] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-[#fe8204]/20 disabled:opacity-50"
+            className="w-full h-14 mt-2 bg-[#FE8204] text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-[#ff952b] hover:shadow-[0_0_25px_rgba(254,130,4,0.4)] hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
           >
-            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In"}
+            {isSubmitting ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <>
+                Sign In
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </form>
+
+        {/* Shopify Integration */}
         {shopifyAccountUrl && (
-          <div className="mb-8">
+          <div className="mt-6">
+            <div className="relative flex items-center py-4">
+              <div className="flex-grow border-t border-white/5"></div>
+              <span className="flex-shrink-0 mx-4 text-[10px] font-black uppercase tracking-widest text-zinc-600">Or</span>
+              <div className="flex-grow border-t border-white/5"></div>
+            </div>
             <a 
               href={shopifyAccountUrl}
-              className="w-full h-14 mt-5 bg-black text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-[#5a31f4] transition-colors flex items-center justify-center gap-3 shadow-lg"
+              className="w-full h-14 bg-white/5 border border-white/10 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-[#5a31f4] hover:border-[#5a31f4] hover:shadow-[0_0_25px_rgba(90,49,244,0.4)] hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-3 group"
             >
-              <ShoppingBag className="w-5 h-5" />
+              <ShoppingBag className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
               Continue with Shop
             </a>
           </div>
         )}
 
-        <div className="mt-8 pt-8 border-t border-gray-100 text-center">
-          <p className="text-sm font-bold text-gray-500">
+        {/* Footer Link */}
+        <div className="mt-8 pt-8 border-t border-white/10 text-center">
+          <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
             Don't have an account?{" "}
-            <Link href="/signup" className="text-[#fe8204] hover:underline uppercase tracking-widest ml-1">
+            <Link href="/signup" className="text-white hover:text-[#FE8204] transition-colors ml-2 font-black border-b border-transparent hover:border-[#FE8204] pb-0.5">
               Create one
             </Link>
           </p>
         </div>
+
       </div>
     </div>
   );

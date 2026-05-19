@@ -135,6 +135,13 @@ export const productFragment = /* GraphQL */ `
               mimeType
             }
           }
+          ... on Model3d {
+            sources {
+              url
+              format
+              mimeType
+            }
+          }
         }
       }
     }
@@ -147,6 +154,40 @@ export const productFragment = /* GraphQL */ `
       edges {
         node {
           ...image
+        }
+      }
+    }
+
+    skinToneSwatches: metafield(namespace: "custom", key: "skin_tone_swatches") {
+      references(first: 5) {
+        edges {
+          node {
+            ... on Metaobject {
+              id
+              hexCode: field(key: "color") {
+                value
+              }
+              previewImage: field(key: "file") {
+                reference {
+                  ... on MediaImage {
+                    image {
+                      ...image
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    arOverlayImage: metafield(namespace: "custom", key: "ar_overlay_image") {
+      reference {
+        ... on MediaImage {
+          image {
+            ...image
+          }
         }
       }
     }
@@ -368,22 +409,6 @@ export const updateCartBuyerIdentityMutation = /* GraphQL */ `
   }
   ${cartFragment}
 `;
-
-
-// export const getCollectionProductsQuery = /* GraphQL */ `
-//   query getCollectionProducts($handle: String!, $first: Int!) {
-//     collection(handle: $handle) {
-//       products(first: $first) {
-//         edges {
-//           node {
-//             ...product
-//           }
-//         }
-//       }
-//     }
-//   }
-//   ${productFragment}
-// `;
 
 
 // Add to queries.ts
@@ -1058,6 +1083,91 @@ export const getCollectionQuery = /* GraphQL */ `
         title
         description
       }
+    }
+  }
+`;
+
+
+// src/lib/shopify/queries/communityGallery.ts
+
+export const getCommunityGallerySectionQuery = /* GraphQL */ `
+  query getCommunityGallerySection($handle: String!) {
+    metaobject(handle: {handle: $handle, type: "community_gallery_section"}) {
+      tag_text: field(key: "tag_text") { value }
+      tag_link: field(key: "tag_link") { value }
+      subtitle: field(key: "subtitle") { value }
+      title_white: field(key: "title_white") { value }
+      title_colored: field(key: "title_colored") { value }
+      footer_text: field(key: "footer_text") { value }
+      button_text: field(key: "button_text") { value }
+      button_link: field(key: "button_link") { value }
+      
+      # Fetching the list of images
+      images: field(key: "images") {
+        references(first: 50) {
+          edges {
+            node {
+              ... on MediaImage {
+                image {
+                  url
+                  altText
+                  width
+                  height
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const getHowItWorksSectionQuery = /* GraphQL */ `
+  query getHowItWorksSection($handle: String!) {
+    metaobject(handle: {handle: $handle, type: "how_it_works_section"}) {
+      tag_text: field(key: "tag_text") { value }
+      subtitle: field(key: "subtitle") { value }
+      title_white: field(key: "title_white") { value }
+      title_colored: field(key: "title_colored") { value }
+      button_text: field(key: "button_text") { value }
+      button_link: field(key: "button_link") { value }
+      
+      steps: field(key: "steps") {
+        references(first: 4) {
+          edges {
+            node {
+              ... on Metaobject {
+                title: field(key: "title") { value }
+                description: field(key: "description") { value }
+                image: field(key: "image") {
+                  reference {
+                    ... on MediaImage {
+                      image { url altText width height }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const getSafeForSkinSectionQuery = /* GraphQL */ `
+  query getSafeForSkinSection($handle: String!) {
+    metaobject(handle: {handle: $handle, type: "safe_for_skin_section"}) {
+      tag_text: field(key: "tag_text") { value }
+      title_white: field(key: "title_white") { value }
+      title_colored: field(key: "title_colored") { value }
+      description: field(key: "description") { value }
+      features: field(key: "features") { value }
+      formula_title: field(key: "formula_title") { value }
+      ingredients: field(key: "ingredients") { value }
+      stats: field(key: "stats") { value }
+      compliance_text: field(key: "compliance_text") { value }
     }
   }
 `;
