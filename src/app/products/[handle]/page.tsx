@@ -4,6 +4,7 @@ import TattooProductDetail from '@/src/components/sections/TattooProductDetail';
 import { RelatedProducts } from '@/src/components/sections/RelatedProducts';
 import { Breadcrumbs } from '@/src/components/shared/Breadcrumbs';
 import { Metadata } from 'next';
+import TattooProductAngleView from '@/src/components/sections/TattooProductAngleView';
 import Advanced24HourReveal from '@/src/components/shared/Advanced24HourReveal';
 type Props = { params: Promise<{ handle: string }> };
 
@@ -86,19 +87,9 @@ export default async function GlobalProductPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
       />
 
-      {/* --- 3. Render Breadcrumbs (UI + Schema) --- */}
-      {/* <div className="container mx-auto px-4 pt-6">
-        <Breadcrumbs 
-          items={[
-            { label: 'Home', url: '/' },
-            { label: 'Temporary Tattoos', url: '/collections' },
-            { label: product.title, url: `/products/${product.handle}` }
-          ]} 
-        />
-      </div> */}
 
       <TattooProductDetail product={product} />
-
+      <TattooProductAngleView product={product} />
       {relatedProducts && relatedProducts.length > 0 && (
         <RelatedProducts products={relatedProducts} />
       )}

@@ -69,6 +69,7 @@ export interface FormattedProduct {
     videos: any[];
     models: any[];
     arOverlayImage: string | null;
+    angleViews: TattooAngleView[];
   };
   attributes: {
     placements: string[];
@@ -87,7 +88,11 @@ export interface FormattedProduct {
   skinToneSwatches: SkinToneSwatch[];
   allVariants: Variant[];
 }
-
+export interface TattooAngleView {
+  name: string;
+  degree: number;
+  imageUrl: string | null;
+}
 export interface SearchResult {
   id: string;
   handle: string;
@@ -338,6 +343,14 @@ export async function mapShopifyProductsForProduction(shopifyJson: any) {
       };
     }).filter((swatch: SkinToneSwatch) => swatch.hexCode && swatch.imageUrl);
     const arOverlayUrl = node.arOverlayImage?.reference?.image?.url || null;
+    const rawAngles = node.tattooAngleViews?.references?.edges || [];
+    const angleViews: TattooAngleView[] = rawAngles.map(({ node: angleNode }: any) => {
+      return {
+        name: angleNode.angleName?.value || "Side View",
+        degree: angleNode.angleDegree?.value ? parseInt(angleNode.angleDegree.value, 10) : 0,
+        imageUrl: angleNode.angleImage?.reference?.image?.url || null,
+      };
+    }).filter((view: TattooAngleView) => view.imageUrl);
     const variants = node.variants?.edges?.map((v: any) => ({
       variantId: v.node.id, 
       title: v.node.title,
@@ -392,7 +405,8 @@ export async function mapShopifyProductsForProduction(shopifyJson: any) {
         gallery: images,                    
         videos: videos,  
         models: models,
-        arOverlayImage: arOverlayUrl                   
+        arOverlayImage: arOverlayUrl,
+        angleViews: angleViews                   
       },
 
       attributes: {

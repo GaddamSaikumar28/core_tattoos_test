@@ -192,6 +192,34 @@ export const productFragment = /* GraphQL */ `
       }
     }
 
+    tattooAngleViews: metafield(namespace: "custom", key: "360_views") {
+      references(first: 20) {
+        edges {
+          node {
+            ... on Metaobject {
+              id
+              angleName: field(key: "angle_name") {
+                value
+              }
+              angleDegree: field(key: "angle_degree") {
+                value
+              }
+              angleImage: field(key: "image") {
+                reference {
+                  ... on MediaImage {
+                    image {
+                      ...image
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+
   }
   ${imageFragment}
 `;
