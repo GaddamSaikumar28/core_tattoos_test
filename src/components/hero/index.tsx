@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -6,8 +7,6 @@ import HeroCarousel from "./HeroCarousel";
 import HeroMarquee from "./HeroMarquee";
 import HeroBackground from "./HeroBackground";
 import { FormattedProduct } from "@/src/lib/shopify";
-// ─── Shared product type (exported for child components) ──────────────────────
-
 
 interface HeroProps {
   initialProducts: FormattedProduct[];
@@ -19,7 +18,7 @@ export default function Hero({ initialProducts }: HeroProps) {
 
   return (
     <section
-      className="relative w-full overflow-hidden bg-[#0A0A0A]"
+      className="relative w-full overflow-hidden bg-[#0A0A0A] flex flex-col"
       style={{ minHeight: "100dvh" }}
     >
       {/* ── LAYER 1: Raw Background Image ──────────────────────────────────── */}
@@ -36,32 +35,45 @@ export default function Hero({ initialProducts }: HeroProps) {
 
       {/* ── LAYER 3: Dynamic Ambient Glow ──────────────────────────────────── */}
       {activeProduct && (
-        <div className="absolute inset-0 z-0 opacity-40 pointer-events-none mix-blend-screen">
+        <div className="absolute inset-0 z-0 opacity-40 pointer-events-none mix-blend-screen transition-opacity duration-700">
           <HeroBackground activeProduct={activeProduct} />
         </div>
       )}
 
       {/* ── Page shell ─────────────────────────────────────────────────────── */}
-      <div
-        className="relative z-10 flex flex-col w-full mx-auto max-w-[1600px]"
-        style={{ minHeight: "100dvh" }}
-      >
+      <div className="relative z-10 flex flex-col flex-1 w-full mx-auto max-w-[1600px]">
         <div
-          className="flex-1 flex flex-col lg:flex-row items-stretch
-                     px-6 md:px-8 lg:px-12 xl:px-16
-                     pt-[100px] pb-8
-                     lg:pt-[120px] lg:pb-12"
+          className="flex-1 flex flex-col lg:flex-row items-center justify-center 
+                     px-4 md:px-8 lg:px-12 xl:px-16 
+                     pt-[100px] lg:pt-[120px] pb-8 lg:pb-12"
         >
-          {/* ── Left column: Typography + Stats ────────────────────────────── */}
+          {/*
+            ── Left column: Typography + Stats ──────────────────────────────
+            Mobile:  order-2  → appears BELOW the carousel
+            Desktop: lg:order-1 → left side
+          */}
           <div
-            className="w-full lg:w-[45%] flex flex-col justify-center
-                       py-8 lg:py-0 pr-0 lg:pr-8 xl:pr-12 z-20"
+            className="
+              order-2 lg:order-1
+              w-full lg:w-[45%] flex flex-col justify-center
+              mt-6 lg:mt-0 z-20
+            "
           >
             <HeroContent />
           </div>
 
-          {/* ── Right column: Card Carousel ─────────────────────────────────── */}
-          <div className="w-full lg:w-[55%] flex flex-col min-h-[500px] lg:min-h-0 relative z-10">
+          {/*
+            ── Right column: Card Carousel ───────────────────────────────────
+            Mobile:  order-1  → appears ABOVE the text
+            Desktop: lg:order-2 → right side
+          */}
+          <div
+            className="
+              order-1 lg:order-2
+              w-full lg:w-[55%] flex flex-col relative z-10
+              h-[55dvh] lg:h-auto lg:min-h-[600px] items-center justify-center
+            "
+          >
             <HeroCarousel
               products={initialProducts}
               activeIndex={activeIndex}

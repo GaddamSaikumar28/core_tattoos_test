@@ -444,7 +444,7 @@ export async function getProduct(handle: string): Promise<FormattedProduct | nul
     query: getProductByHandleQuery,
     tags: ['products', handle],
     variables: { handle },
-    //cache: 'no-store',
+    cache: 'no-store',
   });
 
   if (!res.body?.data?.product) return null;
