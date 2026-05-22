@@ -24,9 +24,12 @@ export interface TattooProduct {
 // ─── Page data builder ───────────────────────────────────────────────────────
 export function buildPagesFromProducts(products: TattooProduct[]) {
   // Cover page
-  const COVER_FRONT = "https://picsum.photos/seed/cover-front/800/1200";
+//   const COVER_FRONT = "https://picsum.photos/seed/cover-front/800/1200";
+//   const PAGE_BLANK  = "https://picsum.photos/seed/page-blank/800/1200";
+//   const COVER_BACK  = "https://picsum.photos/seed/cover-back/800/1200";
+  const COVER_FRONT = "/assets/images/coverfrontpage.jpg";
   const PAGE_BLANK  = "https://picsum.photos/seed/page-blank/800/1200";
-  const COVER_BACK  = "https://picsum.photos/seed/cover-back/800/1200";
+  const COVER_BACK  = "/assets/images/coverbackpage.jpg";
 
   const pages: { front: string; back: string; meta?: TattooProduct }[] = [
     {
@@ -55,9 +58,26 @@ export function buildPagesFromProducts(products: TattooProduct[]) {
 }
 
 // ─── Fallback picsum pages (used when no products are injected) ───────────────
+// export const pages: { front: string; back: string }[] = [
+//   {
+//     front: "https://picsum.photos/seed/jt-cover/800/1200",
+//     back: "https://picsum.photos/seed/jt-p0/800/1200",
+//   },
+// ];
+// for (let i = 1; i < 15; i += 2) {
+//   pages.push({
+//     front: `https://picsum.photos/seed/jt-p${i}/800/1200`,
+//     back: `https://picsum.photos/seed/jt-p${i + 1}/800/1200`,
+//   });
+// }
+// pages.push({
+//   front: "https://picsum.photos/seed/jt-p15/800/1200",
+//   back: "https://picsum.photos/seed/jt-back/800/1200",
+// });
+// Inside UI.tsx
 export const pages: { front: string; back: string }[] = [
   {
-    front: "https://picsum.photos/seed/jt-cover/800/1200",
+    front: "/assets/images/coverfrontpage.jpg", // 👇 Updated cover front
     back: "https://picsum.photos/seed/jt-p0/800/1200",
   },
 ];
@@ -69,7 +89,7 @@ for (let i = 1; i < 15; i += 2) {
 }
 pages.push({
   front: "https://picsum.photos/seed/jt-p15/800/1200",
-  back: "https://picsum.photos/seed/jt-back/800/1200",
+  back: "/assets/images/coverbackpage.jpg", // 👇 Updated cover back
 });
 
 // ─── UI Component ────────────────────────────────────────────────────────────

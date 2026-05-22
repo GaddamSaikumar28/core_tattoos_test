@@ -451,7 +451,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
             </div>
 
             {/* ── Skin-tone swatch bar ─────────────────────── */}
-            {swatches.length > 0 && (
+            {/* {swatches.length > 0 && (
               <div className="flex items-center justify-center gap-4">
                 <span className="text-[9px] font-bold tracking-[0.15em] uppercase text-neutral-600 shrink-0">Skin Tone</span>
                 <div className="flex items-center gap-2.5">
@@ -474,10 +474,84 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                   ))}
                 </div>
               </div>
+            )} */}
+          {/* ── UNIFIED THUMBNAILS & SKIN TONE SWATCHES ROW ────────────────── */}
+            {((thumbnails.length > 1) || (swatches.length > 0)) && (
+              <div className="flex flex-row items-center gap-6 overflow-x-auto no-scrollbar pb-2 mt-2 w-full">
+                
+                {/* Left: Thumbnails Strip */}
+                {thumbnails.length > 1 && (
+                  <div className="flex flex-row gap-2.5 shrink-0">
+                    {thumbnails.map((thumb: any, idx: number) => {
+                      const isActive =
+                        (thumb.type === "3d" && viewState.type === "3d") ||
+                        (thumb.type === "skintone" && viewState.type === "skintone") ||
+                        (thumb.type === "gallery" && viewState.type === "gallery" && viewState.index === thumb.index);
+
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() =>
+                            setViewState(
+                              thumb.type === "gallery"
+                                ? { type: "gallery", source: thumb.source, index: thumb.index }
+                                : { type: thumb.type as any, source: thumb.source },
+                            )
+                          }
+                          className={clsx(
+                            "relative w-[72px] h-[90px] shrink-0 rounded-xl overflow-hidden bg-[#111] border-2 transition-all duration-300",
+                            isActive
+                              ? "border-[#fe8204] shadow-[0_0_12px_rgba(254,130,4,0.25)]"
+                              : "border-white/[0.07] hover:border-white/20 opacity-60 hover:opacity-100",
+                          )}
+                        >
+                          {thumb.type === "3d" && (
+                            <div className="absolute inset-0 bg-black/50 z-10 flex flex-col items-center justify-center gap-1">
+                              <Box className="w-4 h-4 text-[#fe8204]" />
+                              <span className="text-[7px] font-black text-white uppercase tracking-wider">3D</span>
+                            </div>
+                          )}
+                          <Image
+                            src={thumb.thumbUrl}
+                            alt="Thumbnail"
+                            fill
+                            className="object-cover"
+                            sizes="72px"
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Right: Skin Tone Swatches */}
+                {swatches.length > 0 && (
+                  <div className="flex flex-row items-center gap-3 shrink-0 ml-2">
+                    {swatches.map((swatch: any) => (
+                      <button
+                        key={swatch.hexCode}
+                        onClick={() => {
+                          setActiveSkinTone(swatch.hexCode);
+                          setViewState({ type: "skintone", source: swatch });
+                        }}
+                        className={clsx(
+                          "w-8 h-8 rounded-full border-2 transition-all duration-300",
+                          activeSkinTone === swatch.hexCode
+                            ? "border-white scale-110 shadow-[0_0_12px_rgba(255,255,255,0.2)]"
+                            : "border-transparent hover:scale-110 hover:border-white/40 opacity-60 hover:opacity-100",
+                        )}
+                        style={{ backgroundColor: swatch.hexCode }}
+                        aria-label={`Skin tone ${swatch.hexCode}`}
+                      />
+                    ))}
+                  </div>
+                )}
+
+              </div>
             )}
 
             {/* ── Thumbnails strip ──────────────────────────── */}
-            {thumbnails.length > 1 && (
+            {/* {thumbnails.length > 1 && (
               <div className="flex flex-row gap-2.5 overflow-x-auto no-scrollbar pb-1">
                 {thumbnails.map((thumb: any, idx: number) => {
                   const isActive =
@@ -519,7 +593,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                   );
                 })}
               </div>
-            )}
+            )} */}
           </div>
 
           {/* ══════════════════════════════════════════════════

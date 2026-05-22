@@ -46,9 +46,11 @@ for (let i = 0; i < _pos.count; i++) {
 pageGeometry.setAttribute("skinIndex",  new THREE.Uint16BufferAttribute(skinIndexes, 4));
 pageGeometry.setAttribute("skinWeight", new THREE.Float32BufferAttribute(skinWeights, 4));
 
-const whiteColor    = new THREE.Color("white");
-const emissiveColor = new THREE.Color("#FF7A00");
+// const whiteColor    = new THREE.Color("white");
+// const emissiveColor = new THREE.Color("#FF7A00");
 
+const whiteColor    = new THREE.Color("#b3b3b3"); 
+const emissiveColor = new THREE.Color("#FF7A00");
 const pageMaterials = [
   new THREE.MeshStandardMaterial({ color: whiteColor }),
   new THREE.MeshStandardMaterial({ color: "#111" }),
@@ -153,8 +155,8 @@ const manualSkinnedMesh = useMemo(() => {
 
     // FIX: Using a soft off-white tint instead of harsh pure white 
     // to prevent scene lights from blowing out the texture details.
-    const pageTint = new THREE.Color("#e5e5e5"); 
-
+    // const pageTint = new THREE.Color("#e5e5e5"); 
+    const pageTint = new THREE.Color("#999999");
     const materials = [
       ...pageMaterials,
       new THREE.MeshStandardMaterial({

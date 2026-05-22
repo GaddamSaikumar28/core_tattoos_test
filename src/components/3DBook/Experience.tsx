@@ -312,7 +312,8 @@ export const Experience = ({ products, customPages }: ExperienceProps) => {
       <ambientLight intensity={0.5} />
       <directionalLight
         position={[2, 5, 2]}
-        intensity={2.5}
+        // intensity={2.5}
+        intensity={1.5}
         castShadow
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
