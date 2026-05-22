@@ -120,7 +120,7 @@ type ViewState =
 // =========================================================
 export default function TattooProductDetail({ product }: TattooProductDetailProps) {
   const { addToCart, buyNow } = useCart();
-  console.log(product,"in the product detail page");
+  // console.log(product,"in the product detail page");
   // ── Data Parsing ──────────────────────────────────────────
   const models = product.media?.models || [];
   const swatches = product.skinToneSwatches || [];
@@ -298,7 +298,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
     viewState.type === "skintone" ? viewState.source.imageUrl : viewState.source.url;
 
   return (
-    <div className="bg-[#080808] min-h-screen pt-[130px] lg:pt-[150px] pb-24 selection:bg-[#fe8204] selection:text-white font-sans">
+    <div className="bg-[#080808] min-h-screen pt-[130px] lg:pt-[150px] pb-12 selection:bg-[#fe8204] selection:text-white font-sans">
       <div className="container max-w-[1400px] mx-auto px-4 lg:px-8">
 
         {/* BREADCRUMBS */}
@@ -528,8 +528,8 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
           <div className="flex flex-col py-2">
 
             {/* ── Header ──────────────────────────────────── */}
-            <div className="mb-7">
-              <div className="flex items-center justify-between mb-3">
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-[9px] font-black text-[#fe8204] uppercase tracking-[0.15em] bg-[#fe8204]/10 px-2.5 py-1 rounded-md border border-[#fe8204]/15">
                     {product.vendor}
@@ -548,7 +548,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                 </div>
               </div>
 
-              <h1 className="text-[32px] md:text-[40px] lg:text-[42px] font-bold text-white leading-[1.1] tracking-tight mb-5">
+              <h1 className="text-[32px] md:text-[40px] lg:text-[42px] font-bold text-white leading-[1.1] tracking-tight mb-2">
                 {product.title}
               </h1>
 
@@ -559,7 +559,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
             </div>
 
             {/* ── Trust micro-badges ───────────────────────── */}
-            <div className="flex items-center justify-between pb-6 mb-6 border-b border-white/[0.06]">
+            <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/[0.06]">
               {[
                 { icon: Lock, label: "Secure Pay" },
                 { icon: Truck, label: "Ships in 24h" },
@@ -574,9 +574,9 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
             </div>
 
             {/* ── Price & Inventory ────────────────────────── */}
-            <div className="mb-8 pb-8 border-b border-white/[0.06]">
+            <div className="mb-4 pb-4 border-b border-white/[0.06]">
               {isOnSale && (
-                <div className="mb-3">
+                <div className="mb-1.5">
                   <span className="inline-block bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full text-[11px] font-bold tracking-wide border border-emerald-500/15">
                     Save ${savingsAmount}
                   </span>
@@ -598,7 +598,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                 )}
               </div>
 
-              <div className="mt-3">
+              <div className="mt-1.5">
                 {stockLevel > 0 && stockLevel < 10 ? (
                   <div className="flex items-center gap-1.5 text-red-400">
                     <AlertCircle className="w-3.5 h-3.5" />
@@ -616,8 +616,8 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
 
             {/* ── Variants ─────────────────────────────────── */}
             {variants.length > 1 && (
-              <div className="mb-8">
-                <div className="flex items-center justify-between mb-3">
+              <div className="mb-5">
+                <div className="flex items-center justify-between mb-1.5">
                   <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
                     Select Option
                   </h3>
@@ -645,7 +645,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
             )}
 
             {/* ── Feature grid ─────────────────────────────── */}
-            <div className="grid grid-cols-2 gap-3 mb-8 pb-8 border-b border-white/[0.06]">
+            <div className="grid grid-cols-2 gap-3 mb-4 pb-4 border-b border-white/[0.06]">
               {[
                 { icon: Droplets, text: "Waterproof 12–14 Days" },
                 { icon: Clock, text: "Lasts 1–2 Weeks" },
@@ -664,7 +664,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
 
             {/* ── Tattoo specs row ─────────────────────────── */}
             {(product.attributes?.placements?.length > 0 || product.styling?.tattooColorType) && (
-              <div className="flex items-center justify-between py-6 border-b border-white/[0.06] mb-8">
+              <div className="flex items-center justify-between py-4 border-b border-white/[0.06] mb-2">
                 {product.styling?.tattooColorType && (
                   <>
                     <div className="text-left flex-1">
@@ -689,7 +689,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
             )}
 
             {/* ── Quantity + CTA ───────────────────────────── */}
-            <div className="flex flex-col gap-3 mb-10">
+            <div className="flex flex-col gap-2 mb-5">
 
               {/* Row: qty selector + add to cart */}
               <div className="flex items-stretch gap-3">
@@ -761,10 +761,10 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                 isOpen={activeAccordion === "details"}
                 onToggle={() => toggleAccordion("details")}
               >
-                <div className="space-y-5">
+                <div className="space-y-2">
                   {product.attributes?.themes?.length > 0 && (
                     <div>
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-neutral-600 mb-2.5">Themes</span>
+                      <span className="block text-[9px] font-black uppercase tracking-widest text-neutral-600 mb-1">Themes</span>
                       <div className="flex flex-wrap gap-2">
                         {product.attributes.themes.map((theme: string, i: number) => (
                           <span key={i} className="bg-white/[0.06] text-neutral-300 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase border border-white/[0.06]">{theme}</span>
@@ -774,7 +774,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                   )}
                   {product.attributes?.placements?.length > 0 && (
                     <div>
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-neutral-600 mb-2.5">Best Placements</span>
+                      <span className="block text-[9px] font-black uppercase tracking-widest text-neutral-600 mb-1">Best Placements</span>
                       <div className="flex flex-wrap gap-2">
                         {product.attributes.placements.map((p: string, i: number) => (
                           <span key={i} className="bg-white/[0.06] text-neutral-300 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase border border-white/[0.06]">{p}</span>
@@ -923,7 +923,7 @@ function AccordionItem({
     <div className="border-b border-white/[0.06] last:border-0">
       <button
         onClick={onToggle}
-        className="w-full py-5 flex items-center justify-between group outline-none"
+        className="w-full py-3 flex items-center justify-between group outline-none"
       >
         <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-neutral-400 group-hover:text-white transition-colors duration-200">
           {title}
@@ -941,7 +941,7 @@ function AccordionItem({
             transition={{ duration: 0.28, ease: "easeInOut" }}
             className="overflow-hidden"
           >
-            <div className="pb-6">{children}</div>
+            <div className="pb-3">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>

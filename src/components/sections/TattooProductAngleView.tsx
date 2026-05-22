@@ -54,11 +54,9 @@ export default function TattooProductAngleView({ product }: TattooProductAngleVi
   const [zoomLevel, setZoomLevel] = useState(100);
   const [isRotating, setIsRotating] = useState(false);
   
-  // Placements state (for top tabs)
-  const placements = product.attributes?.placements?.length 
-    ? product.attributes.placements 
-    : ["Full Sleeve", "Shoulder", "Forearm"];
-  const [activePlacement, setActivePlacement] = useState(placements[0]);
+  // Placements state (Dynamic from data)
+  const placements = product.attributes?.placements || [];
+  const [activePlacement, setActivePlacement] = useState(placements[0] || "");
 
   const dragStartX = useRef<number | null>(null);
   const currentView = angleViews[currentIndex];
@@ -119,12 +117,12 @@ export default function TattooProductAngleView({ product }: TattooProductAngleVi
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-100px" }}
       transition={{ duration: 0.7, ease: "easeOut" }}
-      className="bg-[#050505] py-24 lg:py-32 relative overflow-hidden font-sans border-t border-white/[0.04]"
+      className="bg-[#050505] py-12 lg:py-16 relative overflow-hidden font-sans border-t border-white/[0.04]"
     >
       <div className="container max-w-[1400px] mx-auto px-4 lg:px-8">
         
         {/* ── HEADER ────────────────────────────────────────── */}
-        <div className="mb-14 md:mb-16">
+        <div className="mb-8 md:mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#fe8204]/20 bg-[#fe8204]/10 text-[#fe8204] text-[9px] font-bold uppercase tracking-widest mb-4">
             <Box className="w-3.5 h-3.5" />
             3D Experience
@@ -134,30 +132,32 @@ export default function TattooProductAngleView({ product }: TattooProductAngleVi
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-12 xl:gap-20 items-start">
+        <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-8 xl:gap-12 items-start">
           
           {/* ══════════════════════════════════════════════════
               LEFT — INTERACTIVE VIEWER
           ══════════════════════════════════════════════════ */}
           <div className="flex flex-col gap-6 relative">
             
-            {/* Top Tabs (Placements) */}
-            <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-30 flex justify-center gap-1.5 p-1 bg-[#111]/80 backdrop-blur-md rounded-full border border-white/[0.06]">
-              {placements.slice(0, 3).map((placement) => (
-                <button
-                  key={placement}
-                  onClick={() => setActivePlacement(placement)}
-                  className={clsx(
-                    "px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-widest transition-all duration-300",
-                    activePlacement === placement
-                      ? "bg-[#fe8204] text-black shadow-[0_0_15px_rgba(254,130,4,0.3)]"
-                      : "bg-transparent text-neutral-500 hover:text-white"
-                  )}
-                >
-                  {placement}
-                </button>
-              ))}
-            </div>
+            {/* Top Tabs (Placements) - Conditionally rendered if data exists */}
+            {placements.length > 0 && (
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-30 flex justify-center gap-1.5 p-1 bg-[#111]/80 backdrop-blur-md rounded-full border border-white/[0.06]">
+                {placements.slice(0, 3).map((placement: string) => (
+                  <button
+                    key={placement}
+                    onClick={() => setActivePlacement(placement)}
+                    className={clsx(
+                      "px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-widest transition-all duration-300",
+                      activePlacement === placement
+                        ? "bg-[#fe8204] text-black shadow-[0_0_15px_rgba(254,130,4,0.3)]"
+                        : "bg-transparent text-neutral-500 hover:text-white"
+                    )}
+                  >
+                    {placement}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Viewport Container */}
             <div 
@@ -227,7 +227,7 @@ export default function TattooProductAngleView({ product }: TattooProductAngleVi
                   <RotateCcw className={clsx("w-5 h-5", zoomLevel > 100 && "opacity-30")} />
                 </button>
                 <span className="text-[14px] font-black text-white w-10 text-center tabular-nums drop-shadow-md">
-                  {currentView.degree}°
+                  {currentView?.degree || 0}°
                 </span>
                 <button 
                   onClick={() => handleManualRotate("right")}
@@ -247,10 +247,10 @@ export default function TattooProductAngleView({ product }: TattooProductAngleVi
           {/* ══════════════════════════════════════════════════
               RIGHT — CONTROLS & FEATURES
           ══════════════════════════════════════════════════ */}
-          <div className="flex flex-col gap-5 pt-2">
+          <div className="flex flex-col gap-4">
             
-            {/* Zoom Slider Panel (Exact match to design) */}
-            <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-2xl p-6 flex flex-col gap-5">
+            {/* Zoom Slider Panel */}
+            <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-2xl p-5 flex flex-col gap-4">
               <div className="flex justify-between items-center text-[11px] font-bold text-neutral-400">
                 <span>Zoom Level</span>
                 <span className="text-[#fe8204]">{zoomLevel}%</span>
@@ -318,7 +318,7 @@ export default function TattooProductAngleView({ product }: TattooProductAngleVi
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: i * 0.1 }}
-                  className="flex gap-4 p-5 rounded-2xl bg-[#0a0a0a] border border-white/[0.04] hover:border-[#fe8204]/20 transition-colors group cursor-default"
+                  className="flex gap-4 p-4 rounded-2xl bg-[#0a0a0a] border border-white/[0.04] hover:border-[#fe8204]/20 transition-colors group cursor-default"
                 >
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-transparent">
                     <feat.icon className="w-5 h-5 text-[#fe8204] drop-shadow-[0_0_8px_rgba(254,130,4,0.4)]" />
@@ -332,7 +332,7 @@ export default function TattooProductAngleView({ product }: TattooProductAngleVi
             </div>
 
             {/* CTA Button */}
-            <button className="mt-2 w-full h-[64px] bg-gradient-to-r from-[#ffb347] to-[#fe8204] text-black rounded-xl text-[14px] font-black uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2.5 shadow-[0_0_30px_rgba(254,130,4,0.25)] relative overflow-hidden group">
+            <button className="mt-2 w-full h-[56px] bg-gradient-to-r from-[#ffb347] to-[#fe8204] text-black rounded-xl text-[14px] font-black uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2.5 shadow-[0_0_30px_rgba(254,130,4,0.25)] relative overflow-hidden group">
               {/* Shine effect */}
               <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
               <Sparkles className="w-4 h-4" />
