@@ -44,15 +44,15 @@ function BookLoadingShell() {
         </div>
       </div>
 
-      <p
+      {/* <p
         className="text-[#FF7A00] text-xl z-10 tracking-[0.25em]"
         style={{ fontFamily: "'Bebas Neue', Impact, sans-serif" }}
       >
         JUST TATTOOS
-      </p>
-      <p className="text-white/30 text-xs tracking-widest mt-2 z-10">
+      </p> */}
+      {/* <p className="text-white/30 text-xs tracking-widest mt-2 z-10">
         3D LOOKBOOK
-      </p>
+      </p> */}
     </div>
   );
 }

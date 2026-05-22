@@ -120,13 +120,13 @@ useEffect(() => {
       <div className="pointer-events-none absolute top-0 left-0 right-0 z-20 flex items-start justify-between px-6 pt-6">
         {/* Brand pill */}
         <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-full px-4 py-2">
-          <div className="w-2 h-2 rounded-full bg-[#FF7A00] animate-pulse" />
-          <span
+          {/* <div className="w-2 h-2 rounded-full bg-[#FF7A00] animate-pulse" /> */}
+          {/* <span
             style={{ fontFamily: "'Bebas Neue', 'Impact', sans-serif", letterSpacing: "0.15em" }}
             className="text-white text-sm"
           >
             JUST TATTOOS
-          </span>
+          </span> */}
         </div>
 
         {/* Page indicator */}
