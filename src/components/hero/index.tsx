@@ -7,6 +7,7 @@ import HeroMarquee from "./HeroMarquee";
 import HeroBackground from "./HeroBackground";
 import { FormattedProduct } from "@/src/lib/shopify";
 import { useEffect } from "react";
+
 interface HeroProps {
   initialProducts: FormattedProduct[];
 }
@@ -15,6 +16,7 @@ export default function Hero({ initialProducts }: HeroProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const activeProduct = initialProducts[activeIndex] || initialProducts[0];
   const [startAnimation, setStartAnimation] = useState(false);
+
   useEffect(() => {
     const hasSeenSplash = sessionStorage.getItem("hasSeenSplash");
     if (hasSeenSplash) {
@@ -32,11 +34,9 @@ export default function Hero({ initialProducts }: HeroProps) {
       };
     }
   }, []);
+
   return (
     <section
-      /* FIX: Changed style={{ minHeight: "100dvh" }} to match the exact 
-        tailwinds classes used in HeroSkeleton (h-[100dvh] min-h-[800px])
-      */
       className="relative w-full h-[100dvh] min-h-[800px] overflow-hidden bg-[#0A0A0A] flex flex-col justify-center"
     >
       {/* ── LAYER 1: Raw Background Image ──────────────────────────────────── */}
@@ -76,12 +76,13 @@ export default function Hero({ initialProducts }: HeroProps) {
             <HeroContent />
           </div>
 
+          {/* ── Right column: Carousel ── */}
           <div
             className="
               order-1 lg:order-2
-              w-full lg:w-[55%] flex flex-col relative z-10
+              w-full lg:w-[55%] flex flex-col relative z-30
               h-[55dvh] lg:h-auto lg:min-h-[600px] lg:self-stretch items-center justify-center
-              mt-20 lg:mt-0
+              mt-28 lg:mt-0
             "
           >
             <HeroCarousel

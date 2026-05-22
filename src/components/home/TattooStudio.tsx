@@ -105,7 +105,7 @@ export default function TattooStudio() {
   };
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white p-4 md:p-8 font-sans">
+    <div className="min-h-screen bg-[#09090b] text-white p-4 md:p-8">
       {/* Header Section */}
       <div className="max-w-7xl mx-auto mb-8 md:mb-12">
         <h4 className="text-[#8b5cf6] text-xs md:text-sm tracking-widest font-semibold mb-4 uppercase flex items-center gap-2">

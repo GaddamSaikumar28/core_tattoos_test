@@ -4,7 +4,6 @@ import React, {
   useState,
   useEffect,
   useRef,
-  useCallback,
   useMemo,
 } from "react";
 import Image from "next/image";
@@ -54,24 +53,21 @@ const BLOB_PATH = "M12,2 L17,4 L21,9 L21,14 L18,19 L13,22 L8,22 L4,19 L3,14 L7,4
 
 const CARD_COUNT = 8;
 
-// ─── Animation Timeline (ms) ──────────────────────────────────────────────────
-// Each card falls with a 80ms stagger, taking 750ms each.
-// Last card lands at: 7*80 + 750 = 1310ms
-// Expand starts at: 1350ms (only 40ms gap — feels seamless)
-// Tilt + spin begin at 1900ms
-const FALL_STAGGER  = 80;   // was 120 — tighter stagger = feels snappier
-const FALL_DUR      = 750;  // was 900 — shorter fall = snappier
-const EXPAND_START  = 1350; // was 1800 — last card (7*80+750=1310) + 40ms gap
-const EXPAND_DUR    = 700;  // was 900 — faster ring expansion
-const TILT_START    = 1900; // was 2400
-const TILT_DUR      = 700;  // was 900
-const SPIN_START    = 2100; // was 2600
+// ─── Animation Timeline (ms) - Optimized for snappier mobile feel ─────────────
+const FALL_STAGGER  = 90;   
+const FALL_DUR      = 800;  
+const EXPAND_START  = 1500; 
+const EXPAND_DUR    = 1200; 
+const TILT_START    = 1600; 
+const TILT_DUR      = 1000; 
+const SPIN_START    = 2700; 
 
 // ─── Math Helpers ─────────────────────────────────────────────────────────────
-function easeOutQuart(t: number) { return 1 - Math.pow(1 - t, 4); }
 function easeOutCubic(t: number) { return 1 - Math.pow(1 - t, 3); }
 function easeOutExpo(t: number)  { return t >= 1 ? 1 : 1 - Math.pow(2, -10 * t); }
-function easeInOutQuad(t: number){ return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2; }
+function easeInOutQuart(t: number) { 
+  return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2; 
+}
 function clamp01(t: number)      { return Math.max(0, Math.min(1, t)); }
 function progress(elapsed: number, start: number, dur: number) {
   return clamp01((elapsed - start) / dur);
@@ -80,7 +76,7 @@ function progress(elapsed: number, start: number, dur: number) {
 // ─── Configuration ────────────────────────────────────────────────────────────
 function getCfg(isMobile: boolean) {
   return isMobile
-    ? { cardW: 168, cardH: 248, radius: 155, perspective: 820,  rotSpeed: 0.022 }
+    ? { cardW: 180, cardH: 260, radius: 240, perspective: 1000, rotSpeed: 0.025 }
     : { cardW: 240, cardH: 360, radius: 320, perspective: 1200, rotSpeed: 0.018 };
 }
 
@@ -187,7 +183,7 @@ function CardInner({ card, isMobile }: { card: CardData; isMobile: boolean }) {
         alt={card.title}
         fill
         className="object-cover"
-        sizes={isMobile ? "168px" : "280px"}
+        sizes={isMobile ? "180px" : "280px"}
         draggable={false}
         priority={false}
       />
@@ -243,13 +239,11 @@ function CylinderCarousel({
   const lastActive    = useRef(-1);
   const startTimeRef  = useRef<number | null>(null);
 
-  // Pre-build the 8 display cards
   const displayCards = useMemo(
     () => Array.from({ length: CARD_COUNT }, (_, i) => cards[i % cards.length]),
     [cards]
   );
 
-  // Wheel handler
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -261,7 +255,6 @@ function CylinderCarousel({
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  // Parallax handler
   useEffect(() => {
     if (isMobile) return;
     const onMove = (e: MouseEvent) => {
@@ -278,88 +271,94 @@ function CylinderCarousel({
   useAnimationFrame((time, delta) => {
     if (!startAnimation) return;
 
-    // Zero-index the clock from the moment startAnimation becomes true
     if (startTimeRef.current === null) {
       startTimeRef.current = time;
     }
     const activeTime = time - startTimeRef.current;
     const elapsed    = reduceMotion ? activeTime + SPIN_START + 5000 : activeTime;
-    const dt         = Math.min(delta, 50); // cap delta — prevents huge jumps on tab-switch
+    const dt         = Math.min(delta, 50);
 
-    // ── 1. Auto-rotation (kicks in after SPIN_START) ──
     if (!isDragging.current && elapsed >= SPIN_START) {
       autoRotation.current += cfg.rotSpeed * dt;
     }
 
-    const currentDragOffset = dragX.get() * (isMobile ? 0.38 : 0.28);
+    const currentDragOffset = dragX.get() * (isMobile ? 0.45 : 0.28);
     const totalRotation     = autoRotation.current - currentDragOffset;
 
-    // Fall parameters
     const fallFromY  = isMobile ? -480 : -720;
     const fallRotZ   = Array.from({ length: CARD_COUNT }, (_, i) => (i - CARD_COUNT / 2) * 3.0);
 
-    // ── 2. Per-card style update ──────────────────────────────────────────
     cardRefs.current.forEach((el, i) => {
       if (!el) return;
 
       const fallStart = i * FALL_STAGGER;
       const t         = clamp01((elapsed - fallStart) / FALL_DUR);
       const landed    = t >= 1;
+      const stackZ    = -(i * 1.5);
 
-      // ── PHASE A: Falling ──────────────────────────────────────────────
+      let currentZ = stackZ;
+      let currentX = 0;
+      let currentY = 0;
+      let rotZ = 0;
+      let finalScale = 1;
+      let finalOpacity = 1;
+      let finalBrightness = 1;
+      let finalBlur = 0;
+
       if (!landed) {
-        const te       = easeOutExpo(t);
-        const tRot     = easeOutCubic(t);
-        const currentY = fallFromY * (1 - te);
-        const rotZ     = fallRotZ[i] * (1 - tRot);
+        const te   = easeOutExpo(t);
+        const tRot = easeOutCubic(t);
+        currentY   = fallFromY * (1 - te);
+        rotZ       = fallRotZ[i] * (1 - tRot);
+        finalScale = 0.82 + 0.18 * te;
+        finalOpacity = Math.min(1, t * 4);
+      } else if (elapsed < EXPAND_START) {
+        // Buffer phase - perfectly settled
+        currentY = 0;
+        rotZ = 0;
+        finalScale = 1;
+        finalOpacity = 1;
+      } else {
+        const expandT = easeInOutQuart(progress(elapsed, EXPAND_START, EXPAND_DUR));
 
-        el.style.transform = `translateY(${currentY}px) rotateZ(${rotZ}deg) scale(${0.82 + 0.18 * te})`;
-        el.style.opacity   = String(Math.min(1, t * 4));
-        el.style.filter    = "";
-        el.style.zIndex    = String(100 - i);
-        return;
+        const cardBaseDeg = i * stepDeg;
+        const finalDeg    = cardBaseDeg - totalRotation;
+        const finalRad    = (finalDeg * Math.PI) / 180;
+        const normRad     = ((finalRad + Math.PI) % (2 * Math.PI)) - Math.PI;
+
+        const ring = ringPos(normRad, cfg.radius);
+        currentX = ring.x * expandT;
+        currentZ = stackZ * (1 - expandT) + ring.z * expandT;
+
+        finalScale      = 1 + (ring.scale - 1) * expandT;
+        finalOpacity    = 1 + (ring.opacity - 1) * expandT;
+        finalBrightness = 1 + (ring.brightness - 1) * expandT;
+        // Optimization: Disable blur entirely on mobile for max frame rate
+        finalBlur       = isMobile ? 0 : ring.blur * expandT; 
       }
 
-      // ── PHASE B: Ring expansion ───────────────────────────────────────
-      // Use easeInOutQuad so expansion starts gently right after landing
-      const expandT = easeInOutQuad(progress(elapsed, EXPAND_START, EXPAND_DUR));
-
-      const cardBaseDeg = i * stepDeg;
-      const finalDeg    = cardBaseDeg - totalRotation;
-      const finalRad    = (finalDeg * Math.PI) / 180;
-      const normRad     = ((finalRad + Math.PI) % (2 * Math.PI)) - Math.PI;
-
-      const ring   = ringPos(normRad, cfg.radius * Math.max(expandT, 0.001));
-      const stackZ = -(i * 1.5);
-
-      // Before expansion: keep the stack centered, fully opaque
-      if (elapsed < EXPAND_START) {
-        el.style.transform = `translateX(0px) translateZ(${stackZ}px) scale(1)`;
-        el.style.opacity   = "1";
-        el.style.filter    = "";
-        el.style.zIndex    = String(CARD_COUNT - i);
-        return;
+      el.style.transform = `translateX(${currentX}px) translateY(${currentY}px) translateZ(${currentZ}px) rotateZ(${rotZ}deg) scale(${finalScale})`;
+      el.style.opacity   = String(finalOpacity);
+      
+      if (!isMobile) {
+        el.style.filter = finalBrightness !== 1 || finalBlur !== 0 ? `brightness(${finalBrightness}) blur(${finalBlur}px)` : "";
+      } else {
+        el.style.filter = finalBrightness !== 1 ? `brightness(${finalBrightness})` : "";
       }
 
-      const currentX = ring.x * expandT;
-      const currentZ = stackZ * (1 - expandT) + ring.z * expandT;
-
-      el.style.transform = `translateX(${currentX}px) translateZ(${currentZ}px) scale(${ring.scale})`;
-      el.style.opacity   = String(0.25 + (ring.opacity - 0.25) * expandT + (1 - expandT) * 0.75);
-      el.style.filter    = `brightness(${ring.brightness}) blur(${ring.blur * expandT}px)`;
-      el.style.zIndex    = String(Math.round((currentZ + cfg.radius) * 10 + 1000));
+      // FIX: Seamless continuous depth tracking instead of rigid jump stops the Safari stacking freeze
+      el.style.zIndex    = String(Math.round((currentZ + 1000) * 10));
     });
 
-    // ── 3. Container tilt + parallax ────────────────────────────────────
     if (cylinderRef.current) {
-      const tiltT  = easeOutCubic(progress(elapsed, TILT_START, TILT_DUR));
-      const tiltX  = isMobile ? 0 : -13 * tiltT;
-      const pxTilt = isMobile ? 0 : mouseParallax.current.y * 2.2;
-      const pxShift= isMobile ? 0 : mouseParallax.current.x * 7;
+      const tiltT   = easeOutCubic(progress(elapsed, TILT_START, TILT_DUR));
+      // FIX: Mobile needs a slight tilt to force hardware context + better 3D layout
+      const tiltX   = isMobile ? -5 * tiltT : -13 * tiltT;
+      const pxTilt  = isMobile ? 0 : mouseParallax.current.y * 2.2;
+      const pxShift = isMobile ? 0 : mouseParallax.current.x * 7;
       cylinderRef.current.style.transform = `rotateX(${tiltX + pxTilt}deg) translateX(${pxShift}px)`;
     }
 
-    // ── 4. Active index (debounced via rAF, not setTimeout) ─────────────
     if (elapsed >= SPIN_START) {
       const active = Math.round((((totalRotation % 360) + 360) % 360) / stepDeg) % CARD_COUNT;
       if (lastActive.current !== active) {
@@ -378,7 +377,7 @@ function CylinderCarousel({
       onPan={(_, info) => { dragX.set(info.offset.x); }}
       onPanEnd={(_, info) => {
         isDragging.current = false;
-        autoRotation.current -= info.offset.x * (isMobile ? 0.38 : 0.28);
+        autoRotation.current -= info.offset.x * (isMobile ? 0.45 : 0.28);
         dragX.set(0);
       }}
     >
@@ -425,10 +424,10 @@ export default function HeroCarousel({
   const reduceMotion = useReducedMotion() ?? false;
   const isMobile     = useIsMobile();
 
-  const [mounted,      setMounted]      = useState(false);
-  const [isAdvisorOpen,setAdvisorOpen]  = useState(false);
-  const [fabHovered,   setFabHovered]   = useState(false);
-  const [showHint,     setShowHint]     = useState(false);
+  const [mounted,       setMounted]      = useState(false);
+  const [isAdvisorOpen, setAdvisorOpen]  = useState(false);
+  const [fabHovered,    setFabHovered]   = useState(false);
+  const [showHint,      setShowHint]     = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -460,8 +459,8 @@ export default function HeroCarousel({
   }
 
   return (
-    <div className="relative flex h-full w-full flex-col justify-center">
-      <div className="relative min-h-0 w-full flex-1">
+    <div className="relative flex h-full w-full flex-col justify-center" suppressHydrationWarning>
+      <div className={`relative min-h-0 w-full flex-1 ${isMobile ? "translate-y-8" : ""}`}>
         <CylinderCarousel
           cards={allCards}
           onSlideChange={onSlideChange}
@@ -474,7 +473,7 @@ export default function HeroCarousel({
       <div
         className={`pointer-events-auto z-50 flex items-center gap-4 ${
           isMobile
-            ? "relative w-full justify-between px-4 pb-3 pt-2"
+            ? "absolute -bottom-14 w-full justify-between px-4" 
             : "absolute bottom-6 right-8 justify-end"
         }`}
       >

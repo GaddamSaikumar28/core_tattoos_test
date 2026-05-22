@@ -298,7 +298,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
     viewState.type === "skintone" ? viewState.source.imageUrl : viewState.source.url;
 
   return (
-    <div className="bg-[#080808] min-h-screen pt-[130px] lg:pt-[150px] pb-12 selection:bg-[#fe8204] selection:text-white font-sans">
+    <div className="bg-[#080808] min-h-screen pt-[130px] lg:pt-[150px] pb-12 selection:bg-[#fe8204] selection:text-white">
       <div className="container max-w-[1400px] mx-auto px-4 lg:px-8">
 
         {/* BREADCRUMBS */}

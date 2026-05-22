@@ -43,7 +43,7 @@ export default function SafeForSkinClient({ data }: { data: SafeForSkinData }) {
   };
 
   return (
-    <section className="w-full bg-[#0a0a0a] text-white py-24 px-4 md:px-8 overflow-hidden font-sans">
+    <section className="w-full bg-[#0a0a0a] text-white py-24 px-4 md:px-8 overflow-hidden ">
       <div className="max-w-7xl mx-auto flex flex-col gap-20">
         
         {/* === HEADER === */}

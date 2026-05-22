@@ -117,7 +117,7 @@ export default function TattooProductAngleView({ product }: TattooProductAngleVi
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-100px" }}
       transition={{ duration: 0.7, ease: "easeOut" }}
-      className="bg-[#050505] py-12 lg:py-16 relative overflow-hidden font-sans border-t border-white/[0.04]"
+      className="bg-[#050505] py-12 lg:py-16 relative overflow-hidden border-t border-white/[0.04]"
     >
       <div className="container max-w-[1400px] mx-auto px-4 lg:px-8">
         
