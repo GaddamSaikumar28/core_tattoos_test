@@ -160,12 +160,20 @@
   --shadow-glow-purple: 0 0 15px rgba(157, 114, 255, 0.3);
 
    --animate-marquee: marquee 30s linear infinite;
+
+   --animate-fade-in-up : fade-in-up 0.4s ease-out forwards;
 }
 
 @keyframes marquee {
   0%   { transform: translateX(0%); }
   100% { transform: translateX(-50%); }
 }
+
+@keyframes fade-in-up {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
 
 
 @layer base {

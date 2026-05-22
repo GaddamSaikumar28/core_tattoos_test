@@ -15,7 +15,7 @@ interface HeroProps {
 export default function Hero({ initialProducts }: HeroProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const activeProduct = initialProducts[activeIndex] || initialProducts[0];
-
+  //console.log(initialProducts,"in the hero section");
   return (
     <section
       className="relative w-full overflow-hidden bg-[#0A0A0A] flex flex-col"
