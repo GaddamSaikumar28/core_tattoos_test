@@ -288,7 +288,9 @@ function Floor() {
   return (
     <mesh position-y={-1.6} rotation-x={-Math.PI / 2} receiveShadow>
       <planeGeometry args={[20, 20]} />
-      <meshStandardMaterial color="#080808" metalness={0.6} roughness={0.8} />
+      {/* <meshStandardMaterial color="#080808" metalness={0.6} roughness={0.8} /> */}
+      {/* <meshStandardMaterial color="#1a0a00" metalness={0.2} roughness={0.9} /> */}
+      <meshStandardMaterial color="#FF7A00" metalness={0.2} roughness={0.8} />
     </mesh>
   );
 }
@@ -324,8 +326,8 @@ export const Experience = ({ products, customPages }: ExperienceProps) => {
       <SweepLight />
 
       {/* Environment */}
-      <Environment preset="dawn" />
-
+      {/* <Environment preset="dawn" /> */}
+        <Environment preset="sunset" />
       {/* Background scatter */}
       <InkParticles />
       <Sparkles count={30} scale={8} size={1.2} speed={0.25} opacity={0.35} color="#FF7A00" />
@@ -342,6 +344,7 @@ export const Experience = ({ products, customPages }: ExperienceProps) => {
       {/* Bigger & Bolder JUST TATTOOS label */}
       <Float floatIntensity={0.5} speed={1.5}>
         <Text
+          font="/assets/fonts/Almarena-Bold.otf"
           position={[0, 1.9, 0.5]} // Shifted up slightly to fit the larger text
           fontSize={0.28}
           fontWeight="bold" // Bolder font

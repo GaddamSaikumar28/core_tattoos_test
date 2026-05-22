@@ -202,6 +202,9 @@ export default async function RootLayout({
         <CartProvider>
           <AuthProvider>
             <SplashScreen
+              logoUrl={globalData.splashLogo}
+              leftImageUrl={globalData.splashLeftImage}
+              rightImageUrl={globalData.splashRightImage}
             />
 
             <Header logoUrl={globalData.headerLogo} />

@@ -238,7 +238,8 @@ useEffect(() => {
           {/* Progress bar */}
           <div className="mt-2 h-0.5 bg-white/10 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-[#FF7A00] to-[#FFB347] rounded-full transition-all duration-500"
+            //   className="h-full bg-gradient-to-r from-[#FF7A00] to-[#FFB347] rounded-full transition-all duration-500"
+            className="h-full bg-gradient-to-r from-[#FF7A00] to-[#FFB347] rounded-full transition-all duration-500"
               style={{ width: `${(page / count) * 100}%` }}
             />
           </div>

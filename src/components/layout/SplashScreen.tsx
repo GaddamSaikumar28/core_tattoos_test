@@ -1,12 +1,82 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants, TargetAndTransition } from "framer-motion";
+import Image from "next/image";
 
-// FIXED: Explicitly typed as a 4-element tuple to resolve the TypeScript Easing compilation error
-const luxuryEase: [number, number, number, number] = [0.16, 1, 0.3, 1];
+interface SplashScreenProps {
+  logoUrl: string;
+  leftImageUrl: string;
+  rightImageUrl: string;
+}
 
-export default function SplashScreen() {
+// --- Technical Functionality ---
+// Deep, cinematic easing curve for luxury feel
+const luxuryEase: [number, number, number, number] = [0.25, 1, 0.5, 1];
+
+// --- Framer Motion Variants (Dark Theme Optimized) ---
+const containerVariants: Variants = {
+  hidden: { opacity: 1 },
+  visible: { opacity: 1 },
+  exit: {
+    opacity: 0,
+    scale: 1.05, // Slightly deeper scale-out for a cinematic fade
+    filter: "blur(20px)", // Heavier blur as it fades into the dark site
+    transition: { duration: 1.2, ease: luxuryEase }, 
+  },
+};
+
+const logoVariants: Variants = {
+  hidden: { opacity: 0, scale: 0.9, filter: "blur(15px)" },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    filter: "blur(0px)",
+    transition: { duration: 1.8, ease: luxuryEase, delay: 0.2 },
+  },
+};
+
+// Butterflies emerge from the shadows smoothly
+const butterflyLeftVariants: Variants = {
+  hidden: { opacity: 0, x: -50, y: 50, rotate: -20, filter: "blur(10px)" },
+  visible: {
+    opacity: 1,
+    x: 0,
+    y: 0,
+    rotate: 0,
+    filter: "blur(0px)",
+    transition: { type: "spring", stiffness: 35, damping: 20, delay: 0.8 },
+  },
+};
+
+const butterflyRightVariants: Variants = {
+  hidden: { opacity: 0, x: 50, y: 50, rotate: 20, filter: "blur(10px)" },
+  visible: {
+    opacity: 1,
+    x: 0,
+    y: 0,
+    rotate: 0,
+    filter: "blur(0px)",
+    transition: { type: "spring", stiffness: 35, damping: 20, delay: 1.0 },
+  },
+};
+
+// Continuous floating effect for the butterflies once they land
+// Fixed TypeScript error by explicitly typing as TargetAndTransition
+const floatAnimation: TargetAndTransition = {
+  y: [0, -12, 0], // Smooth medium-slow travel distance
+  transition: {
+    duration: 5, // Slowed down for a beautiful, organic breathing effect
+    repeat: Infinity,
+    ease: "easeInOut",
+  },
+};
+
+export default function SplashScreen({
+  logoUrl,
+  leftImageUrl,
+  rightImageUrl,
+}: SplashScreenProps) {
   const [showIntro, setShowIntro] = useState<boolean>(true);
   const [isMounted, setIsMounted] = useState<boolean>(false);
 
@@ -19,19 +89,20 @@ export default function SplashScreen() {
       return;
     }
 
+    // Lock scrolling while splash is active
     document.body.style.overflow = "hidden";
 
-    // TIMELINE CALCULATION (Slower, premium pacing):
-    // Spin (3.0s) -> Text Reveal (1.8s) -> Hold & Appreciate (2.0s) = 6.8 seconds total display time
+    // 6.8 second premium pacing timeline
     const completeTimer = setTimeout(() => {
       setShowIntro(false);
       sessionStorage.setItem("hasSeenSplash", "true");
       window.dispatchEvent(new Event("splashComplete"));
-      // Let the 1.0-second exit fade animation finish completely before releasing scroll
+      
+      // Let the exit fade animation finish completely before releasing scroll
       const scrollTimer = setTimeout(() => {
         document.body.style.overflow = "";
-      }, 1000); 
-      
+      }, 1200);
+
       return () => clearTimeout(scrollTimer);
     }, 6800);
 
@@ -41,8 +112,14 @@ export default function SplashScreen() {
     };
   }, []);
 
+  // Anti-flash hydration guard (Now optimized for a dark theme)
   if (!isMounted) {
-    return <div suppressHydrationWarning className="fixed inset-0 z-[100] bg-[#050505]" />;
+    return (
+      <div
+        suppressHydrationWarning
+        className="fixed inset-0 z-[100] bg-[#050505]"
+      />
+    );
   }
 
   return (
@@ -50,81 +127,69 @@ export default function SplashScreen() {
       {showIntro && (
         <motion.div
           key="jt-splash"
-          initial={{ opacity: 1 }}
-          exit={{
-            opacity: 0,
-            scale: 1.02, // Ultra-subtle elegant scale out
-            filter: "blur(15px)",
-            transition: { duration: 1.0, ease: luxuryEase }, // Silky smooth 1-second fade out
-          }}
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#050505] overflow-hidden select-none pointer-events-auto"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          aria-hidden="true"
+          // Ultra-dark background: #050505 gives a richer OLED-style black than standard black
+          className="splash-wrapper fixed inset-0 z-[100] flex items-center justify-center bg-[#050505] overflow-hidden pointer-events-auto select-none"
         >
-          {/* Ambient Background Glow - Breathes outward as the logo expands */}
-          <motion.div
-            initial={{ scale: 0.7, opacity: 0.2 }}
-            animate={{ scale: 1.5, opacity: 0.5 }}
-            transition={{ duration: 4.0, delay: 2.8, ease: luxuryEase }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-[#FF7A00]/5 rounded-full blur-[120px] pointer-events-none"
-          />
-
-          {/* Core Logo Container */}
-          <div className="relative flex flex-col items-center justify-center">
+          <div className="relative w-full h-full max-w-[1440px] mx-auto flex items-center justify-center">
             
-            {/* The Morphing Typographic Element */}
+            {/* Top-Left Butterfly */}
             <motion.div
-              initial={{ rotate: 0 }}
-              animate={{ rotate: 720 }}
-              transition={{
-                duration: 3.0, // Slowed down significantly for a weighted, deliberate rotation
-                ease: luxuryEase,
-              }}
-              className="flex items-center justify-center text-white text-6xl sm:text-7xl font-black tracking-normal"
-              style={{
-                fontFamily: "'Bebas Neue', 'Impact', sans-serif",
-                transformOrigin: "center center",
-                willChange: "transform",
-              }}
+              variants={butterflyLeftVariants}
+              className="absolute top-[10%] left-[5%] md:top-[12%] md:left-[8%] lg:top-[15%] lg:left-[10%]"
             >
-              {/* Anchor Letter: J */}
-              <span className="text-[#FF7A00] inline-block">J</span>
-
-              {/* 'UST ' Content Container */}
-              <motion.span
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: "auto", opacity: 1 }}
-                transition={{ duration: 1.8, delay: 2.9, ease: luxuryEase }} // Smooth, unhurried width expansion
-                className="overflow-hidden inline-block whitespace-pre text-white"
-                style={{ willChange: "width, opacity" }}
-              >
-                UST{" "}
-              </motion.span>
-
-              {/* Anchor Letter: T */}
-              {/* Perfectly centered during rotation; spacing is cleanly handled by the whitespace above */}
-              <span className="text-[#FF7A00] inline-block">T</span>
-
-              {/* 'ATTOOS' Content Container */}
-              <motion.span
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: "auto", opacity: 1 }}
-                transition={{ duration: 1.8, delay: 3.0, ease: luxuryEase }} // Staggered by 0.1s after 'UST' for natural flow
-                className="overflow-hidden inline-block whitespace-nowrap text-white"
-                style={{ willChange: "width, opacity" }}
-              >
-                ATTOOS
-              </motion.span>
+              <motion.div animate={floatAnimation}>
+                <Image
+                  src={leftImageUrl}
+                  alt=""
+                  width={240}
+                  height={240}
+                  sizes="(max-width: 768px) 100px, 240px"
+                  // Added a subtle white/gray drop shadow to separate from the black background
+                  className="w-[100px] md:w-[150px] lg:w-[200px] xl:w-[240px] h-auto drop-shadow-[0_0_15px_rgba(255,255,255,0.08)]"
+                  priority
+                />
+              </motion.div>
             </motion.div>
 
-            {/* Accent Line - Unrolls symmetrically from the center */}
-            <div className="h-[2px] mt-6 w-full max-w-[260px] relative overflow-hidden">
-              <motion.div
-                initial={{ scaleX: 0, opacity: 0 }}
-                animate={{ scaleX: 1, opacity: 0.4 }}
-                transition={{ duration: 2.0, delay: 3.4, ease: luxuryEase }} // Follows behind the expanding text beautifully
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-[#FF7A00] to-transparent origin-center"
-                style={{ willChange: "transform" }}
+            {/* Dead-Center Logo */}
+            <motion.div variants={logoVariants} className="relative z-10">
+              <Image
+                src={logoUrl}
+                alt="Core Tattoos Logo"
+                width={360}
+                height={150}
+                sizes="(max-width: 768px) 180px, 360px"
+                className="w-[180px] sm:w-[240px] md:w-[280px] lg:w-[320px] xl:w-[360px] h-auto drop-shadow-[0_0_20px_rgba(255,255,255,0.12)]"
+                priority
               />
-            </div>
+            </motion.div>
+
+            {/* Bottom-Right Butterfly */}
+            <motion.div
+              variants={butterflyRightVariants}
+              className="absolute bottom-[10%] right-[5%] md:bottom-[15%] md:right-[8%] lg:bottom-[18%] lg:right-[10%]"
+            >
+              <motion.div animate={floatAnimation}>
+                <Image
+                  src={rightImageUrl}
+                  alt="Butterfly Decoration Right"
+                  width={240}
+                  height={240}
+                  sizes="(max-width: 768px) 100px, 240px"
+                  className="w-[100px] md:w-[150px] lg:w-[200px] xl:w-[240px] h-auto scale-x-[-1] drop-shadow-[0_0_15px_rgba(255,255,255,0.08)]"
+                  priority
+                />
+              </motion.div>
+            </motion.div>
+            
+            {/* Optional: Subtle ambient radial glow behind the logo to create depth on black */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40vw] h-[40vw] rounded-full bg-white/5 blur-[100px] pointer-events-none z-0" />
+
           </div>
         </motion.div>
       )}
