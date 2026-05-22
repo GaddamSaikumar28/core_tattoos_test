@@ -83,13 +83,22 @@ export const UI = ({ totalPages, productMeta }: UIProps) => {
   const count = totalPages ?? pages.length;
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Scroll active button into view
-  useEffect(() => {
+
+useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
+    
     const active = container.querySelector("[data-active='true']") as HTMLElement;
     if (active) {
-      active.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      // Calculate center alignment inside the container menu itself
+      const containerWidth = container.clientWidth;
+      const activeOffset = active.offsetLeft;
+      const activeWidth = active.clientWidth;
+      
+      container.scrollTo({
+        left: activeOffset - containerWidth / 2 + activeWidth / 2,
+        behavior: "smooth",
+      });
     }
   }, [page]);
 

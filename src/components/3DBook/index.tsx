@@ -74,7 +74,8 @@ function BookScene({ products }: BookSceneProps) {
   const [cameraZ, setCameraZ] = useState(3.5);
 
   useEffect(() => {
-    const update = () => setCameraZ(window.innerWidth > 800 ? 3.5 : 5.5);
+    //const update = () => setCameraZ(window.innerWidth > 800 ? 3.5 : 5.5);
+    const update = () => setCameraZ(window.innerWidth > 800 ? 5.0 : 7.5);
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
@@ -100,7 +101,7 @@ function BookScene({ products }: BookSceneProps) {
       >
         <color attach="background" args={["#050505"]} />
         <fog attach="fog" args={["#050505", 8, 20]} />
-        <group position-y={0}>
+        <group position-y={0} scale={0.7}>
           <Suspense fallback={null}>
             {/* FIX: Prop drill builtPages into customPages here */}
             <Experience products={products} customPages={builtPages} />

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -15,11 +14,13 @@ interface HeroProps {
 export default function Hero({ initialProducts }: HeroProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const activeProduct = initialProducts[activeIndex] || initialProducts[0];
-  //console.log(initialProducts,"in the hero section");
+
   return (
     <section
-      className="relative w-full overflow-hidden bg-[#0A0A0A] flex flex-col"
-      style={{ minHeight: "100dvh" }}
+      /* FIX: Changed style={{ minHeight: "100dvh" }} to match the exact 
+        tailwinds classes used in HeroSkeleton (h-[100dvh] min-h-[800px])
+      */
+      className="relative w-full h-[100dvh] min-h-[800px] overflow-hidden bg-[#0A0A0A] flex flex-col justify-center"
     >
       {/* ── LAYER 1: Raw Background Image ──────────────────────────────────── */}
       <div
@@ -41,37 +42,29 @@ export default function Hero({ initialProducts }: HeroProps) {
       )}
 
       {/* ── Page shell ─────────────────────────────────────────────────────── */}
-      <div className="relative z-10 flex flex-col flex-1 w-full mx-auto max-w-[1600px]">
+      <div className="relative z-10 flex flex-col flex-1 w-full mx-auto max-w-[1600px] h-full justify-center">
         <div
           className="flex-1 flex flex-col lg:flex-row items-center justify-center 
                      px-4 md:px-8 lg:px-12 xl:px-16 
-                     pt-[100px] lg:pt-[120px] pb-8 lg:pb-12"
+                    pt-[130px] lg:pt-[120px] pb-8 lg:pb-12"
         >
-          {/*
-            ── Left column: Typography + Stats ──────────────────────────────
-            Mobile:  order-2  → appears BELOW the carousel
-            Desktop: lg:order-1 → left side
-          */}
+          {/* ── Left column: Typography + Stats ── */}
           <div
             className="
               order-2 lg:order-1
               w-full lg:w-[45%] flex flex-col justify-center
-              mt-6 lg:mt-0 z-20
+              mt-2 lg:mt-0 z-20
             "
           >
             <HeroContent />
           </div>
 
-          {/*
-            ── Right column: Card Carousel ───────────────────────────────────
-            Mobile:  order-1  → appears ABOVE the text
-            Desktop: lg:order-2 → right side
-          */}
           <div
             className="
               order-1 lg:order-2
               w-full lg:w-[55%] flex flex-col relative z-10
-              h-[55dvh] lg:h-auto lg:min-h-[600px] items-center justify-center
+              h-[55dvh] lg:h-auto lg:min-h-[600px] lg:self-stretch items-center justify-center
+              mt-20 lg:mt-0
             "
           >
             <HeroCarousel
