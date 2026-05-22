@@ -1,3 +1,4 @@
+
 import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
 import localFont from "next/font/local";
@@ -200,11 +201,8 @@ export default async function RootLayout({
         
         <CartProvider>
           <AuthProvider>
-            {/* <SplashScreen
-              logoUrl={globalData.splashLogo}
-              leftImageUrl={globalData.splashLeftImage}
-              rightImageUrl={globalData.splashRightImage}
-            /> */}
+            <SplashScreen
+            />
 
             <Header logoUrl={globalData.headerLogo} />
 

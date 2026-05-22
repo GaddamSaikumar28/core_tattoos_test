@@ -6,7 +6,7 @@ import HeroCarousel from "./HeroCarousel";
 import HeroMarquee from "./HeroMarquee";
 import HeroBackground from "./HeroBackground";
 import { FormattedProduct } from "@/src/lib/shopify";
-
+import { useEffect } from "react";
 interface HeroProps {
   initialProducts: FormattedProduct[];
 }
@@ -14,7 +14,24 @@ interface HeroProps {
 export default function Hero({ initialProducts }: HeroProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const activeProduct = initialProducts[activeIndex] || initialProducts[0];
-
+  const [startAnimation, setStartAnimation] = useState(false);
+  useEffect(() => {
+    const hasSeenSplash = sessionStorage.getItem("hasSeenSplash");
+    if (hasSeenSplash) {
+      setStartAnimation(true);
+    } else {
+      const handleSplashComplete = () => setStartAnimation(true);
+      window.addEventListener("splashComplete", handleSplashComplete);
+      
+      // Safety fallback just in case the event is missed
+      const fallbackTimer = setTimeout(handleSplashComplete, 8500); 
+      
+      return () => {
+        window.removeEventListener("splashComplete", handleSplashComplete);
+        clearTimeout(fallbackTimer);
+      };
+    }
+  }, []);
   return (
     <section
       /* FIX: Changed style={{ minHeight: "100dvh" }} to match the exact 
@@ -71,6 +88,7 @@ export default function Hero({ initialProducts }: HeroProps) {
               products={initialProducts}
               activeIndex={activeIndex}
               onSlideChange={setActiveIndex}
+              startAnimation={startAnimation}
             />
           </div>
         </div>

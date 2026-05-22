@@ -24,6 +24,7 @@ interface HeroCarouselProps {
   products: FormattedProduct[];
   activeIndex: number;
   onSlideChange: (index: number) => void;
+  startAnimation: boolean;
 }
 
 interface CardData {
@@ -194,8 +195,8 @@ function CardInner({ card, isMobile }: { card: CardData; isMobile: boolean }) {
 }
 
 // ─── Core Cylinder Carousel ───────────────────────────────────────────────────
-function CylinderCarousel({ cards, onSlideChange, reduceMotion, isMobile }: {
-  cards: CardData[]; onSlideChange: (i: number) => void; reduceMotion: boolean; isMobile: boolean;
+function CylinderCarousel({ cards, onSlideChange, reduceMotion, isMobile, startAnimation }: {
+  cards: CardData[]; onSlideChange: (i: number) => void; reduceMotion: boolean; isMobile: boolean; startAnimation: boolean;
 }) {
   const cfg = useMemo(() => getCfg(isMobile), [isMobile]);
   const stepDeg = 360 / CARD_COUNT;
@@ -236,10 +237,23 @@ function CylinderCarousel({ cards, onSlideChange, reduceMotion, isMobile }: {
     window.addEventListener("mousemove", onMove, { passive: true });
     return () => window.removeEventListener("mousemove", onMove);
   }, [isMobile]);
-
+  const startTimeRef = useRef<number | null>(null);
   // Animation Loop
   useAnimationFrame((time, delta) => {
-    const elapsed = reduceMotion ? time + SPIN_START + 5000 : time;
+    // const elapsed = reduceMotion ? time + SPIN_START + 5000 : time;
+    // const dt = Math.min(delta, 100);
+    if (!startAnimation) return;
+
+    // 2. CAPTURE START TIME: Record the exact millisecond the animation is allowed to start
+    if (startTimeRef.current === null) {
+      startTimeRef.current = time;
+    }
+
+    // 3. ZERO-INDEX THE CLOCK: 'activeTime' now starts at 0 precisely when the splash screen ends
+    const activeTime = time - startTimeRef.current;
+    
+    // Use activeTime instead of the raw Framer 'time'
+    const elapsed = reduceMotion ? activeTime + SPIN_START + 5000 : activeTime;
     const dt = Math.min(delta, 100);
 
     // 1. Calculate Rotation
@@ -365,7 +379,7 @@ function CylinderCarousel({ cards, onSlideChange, reduceMotion, isMobile }: {
 }
 
 // ─── Main Export ──────────────────────────────────────────────────────────────
-export default function HeroCarousel({ products, activeIndex, onSlideChange }: HeroCarouselProps) {
+export default function HeroCarousel({ products, activeIndex, onSlideChange,startAnimation }: HeroCarouselProps) {
   const reduceMotion = useReducedMotion() ?? false;
   const isMobile = useIsMobile();
   
@@ -412,6 +426,8 @@ export default function HeroCarousel({ products, activeIndex, onSlideChange }: H
           onSlideChange={onSlideChange}
           reduceMotion={reduceMotion}
           isMobile={isMobile}
+          startAnimation={startAnimation}
+          
         />
       </div>
 
