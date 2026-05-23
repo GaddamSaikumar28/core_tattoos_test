@@ -342,7 +342,7 @@ export const Experience = ({ products, customPages }: ExperienceProps) => {
       )}
 
       {/* Bigger & Bolder JUST TATTOOS label */}
-      <Float floatIntensity={0.5} speed={1.5}>
+      {/* <Float floatIntensity={0.5} speed={1.5}>
         <Text
           font="/assets/fonts/Almarena-Bold.otf"
           position={[0, 1.9, 0.5]} // Shifted up slightly to fit the larger text
@@ -357,7 +357,7 @@ export const Experience = ({ products, customPages }: ExperienceProps) => {
         >
           JUST TATTOOS
         </Text>
-      </Float>
+      </Float> */}
 
       {/* The book */}
       <Float rotation-x={-Math.PI / 4} floatIntensity={0.8} speed={1.8} rotationIntensity={0.6}>

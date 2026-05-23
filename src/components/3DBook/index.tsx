@@ -133,7 +133,7 @@ function BookScene({ products }: BookSceneProps) {
         >
           <color attach="background" args={["#050505"]} />
           <fog attach="fog" args={["#050505", 8, 20]} />
-          <group position-y={0} scale={0.7}>
+          <group position-y={0} scale={1}>
             <Suspense fallback={null}>
               <Experience products={products} customPages={builtPages} />
             </Suspense>
