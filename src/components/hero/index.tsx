@@ -70,7 +70,7 @@ export default function Hero({ initialProducts }: HeroProps) {
             className="
               order-2 lg:order-1
               w-full lg:w-[45%] flex flex-col justify-center
-              mt-2 lg:mt-0 z-20
+              lg:mt-0 z-20
             "
           >
             <HeroContent />
@@ -82,7 +82,7 @@ export default function Hero({ initialProducts }: HeroProps) {
               order-1 lg:order-2
               w-full lg:w-[55%] flex flex-col relative z-30
               h-[55dvh] lg:h-auto lg:min-h-[600px] lg:self-stretch items-center justify-center
-              mt-28 lg:mt-0
+              lg:mt-0
             "
           >
             <HeroCarousel
