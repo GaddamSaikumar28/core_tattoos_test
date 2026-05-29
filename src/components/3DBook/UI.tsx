@@ -5,7 +5,6 @@ import { useEffect, useRef, memo } from "react";
 export const pageAtom = atom<number>(0);
 export const DUMMY_ROUGHNESS = "/textures/roughness.jpg";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 export interface TattooProduct {
   id: string;
   title: string;
@@ -20,7 +19,6 @@ export interface TattooProduct {
   badge?: string;
 }
 
-// ─── Page data builder ────────────────────────────────────────────────────────
 export function buildPagesFromProducts(products: TattooProduct[]) {
   const COVER_FRONT = "/assets/images/coverfrontpage.jpg";
   const PAGE_BLANK  = "https://picsum.photos/seed/page-blank/800/1200";
@@ -50,7 +48,6 @@ export function buildPagesFromProducts(products: TattooProduct[]) {
   return pages;
 }
 
-// ─── Fallback pages ────────────────────────────────────────────────────────────
 export const pages: { front: string; back: string }[] = [
   { front: "/assets/images/coverfrontpage.jpg", back: "https://picsum.photos/seed/jt-p0/800/1200" },
 ];
@@ -65,18 +62,6 @@ pages.push({
   back:  "/assets/images/coverbackpage.jpg",
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FIX — Replace `<style jsx global>` with a one-time useEffect injection.
-//
-// `style jsx global` is styled-jsx syntax.  It requires the styled-jsx
-// babel transform.  Next.js App Router uses the SWC compiler by default;
-// styled-jsx tags in SWC-compiled "use client" files produce no output — the
-// keyframes and utility classes silently never register, causing:
-//   • The product meta overlay to jump in without the fadeSlideUp animation
-//   • `.no-scrollbar` to have no effect (scrollbar always visible in WebKit)
-//
-// useEffect injection is compiler-agnostic and guaranteed to work.
-// ─────────────────────────────────────────────────────────────────────────────
 const UI_STYLE_ID = "book-ui-keyframes";
 
 function useUIStyles() {
@@ -97,7 +82,6 @@ function useUIStyles() {
   }, []);
 }
 
-// ─── UI Component ─────────────────────────────────────────────────────────────
 interface UIProps {
   totalPages?: number;
   productMeta?: (TattooProduct | undefined)[];
@@ -108,7 +92,6 @@ export const UI = ({ totalPages, productMeta }: UIProps) => {
   const count           = totalPages ?? pages.length;
   const scrollRef       = useRef<HTMLDivElement>(null);
 
-  // Inject styles (fixes broken style jsx)
   useUIStyles();
 
   useEffect(() => {
@@ -123,7 +106,8 @@ export const UI = ({ totalPages, productMeta }: UIProps) => {
     }
   }, [page]);
 
-  const currentMeta = productMeta?.[page];
+  // FIX: Shifted index evaluation back by 1 to fix the UI data overlay sync issue
+  const currentMeta = page > 0 && page < count ? productMeta?.[page - 1] : undefined;
 
   return (
     <>
@@ -203,7 +187,6 @@ export const UI = ({ totalPages, productMeta }: UIProps) => {
   );
 };
 
-// ─── NavButton — memoized to prevent re-renders on unrelated page changes ─────
 const NavButton = memo(function NavButton({
   label,
   active,

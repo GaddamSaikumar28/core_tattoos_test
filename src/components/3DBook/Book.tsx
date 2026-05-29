@@ -7,15 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { pageAtom, pages } from "./UI";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FIX #1 — Replace external picsum roughness URL with an inline data URI.
-//
-// OLD:  "https://picsum.photos/seed/roughness/8/8"
-//       → extra HTTP round-trip on every page load, no guaranteed caching,
-//         adds latency before the book cover can render.
-//
-// NEW:  1×1 white PNG as base64 — loaded synchronously from memory, no network.
-// ─────────────────────────────────────────────────────────────────────────────
+// Synchronous 1x1 base64 texture to eliminate cover loading layout flashes
 const DUMMY_ROUGHNESS =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAABjE+ibYAAAAASUVORK5CYII=";
 
@@ -29,18 +21,10 @@ export const PAGE_WIDTH  = 1.28;
 export const PAGE_HEIGHT = 1.71;
 const PAGE_DEPTH         = 0.003;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FIX #2 — Reduce PAGE_SEGMENTS from 30 → 20.
-//
-// Each segment adds one bone to the skinned mesh.  30 bones × 2 visible pages
-// = 60 matrix multiplications + skinning interpolations per useFrame call.
-// 20 segments still produces a smooth page-curl arc — the reduction is
-// imperceptible at normal viewing distance but saves ~33 % of skinning cost.
-// ─────────────────────────────────────────────────────────────────────────────
-const PAGE_SEGMENTS  = 20;
+const PAGE_SEGMENTS  = 20; // Reduced from 30 -> 20 to cut skinning cost by ~33%
 const SEGMENT_WIDTH  = PAGE_WIDTH / PAGE_SEGMENTS;
 
-// ─── Shared geometry (built once, reused across all Page instances) ───────────
+// Reusable static geometry instance across all pages
 const pageGeometry = new THREE.BoxGeometry(
   PAGE_WIDTH, PAGE_HEIGHT, PAGE_DEPTH,
   PAGE_SEGMENTS, 2,
@@ -232,28 +216,15 @@ export const Book = ({ customPages, ...props }: BookProps) => {
   const bookPages  = customPages ?? pages;
   const totalPages = bookPages.length;
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // FIX #3 — Changed useMemo → useEffect for texture preloading.
-  //
-  // OLD code (BROKEN):
-  //   useMemo(() => {
-  //     const timer = setTimeout(...);
-  //     return () => clearTimeout(timer);   // ← useMemo ignores return values!
-  //   }, [customPages]);                       //   The cleanup never ran → leak.
-  //
-  // useMemo is for computing derived values; it does NOT support cleanup
-  // functions.  useEffect is the correct hook for side-effects with cleanup.
-  // ─────────────────────────────────────────────────────────────────────────
+  // Swapped useMemo out for useEffect to execute texture pre-cache clear safely
   useEffect(() => {
     if (!customPages) return;
 
-    // Preload the cover immediately so it appears without delay
     if (customPages[0]) {
       useTexture.preload(customPages[0].front);
       useTexture.preload(customPages[0].back);
     }
 
-    // Preload remaining pages after the cover has rendered
     const timer = setTimeout(() => {
       customPages.slice(1).forEach((p) => {
         useTexture.preload(p.front);
@@ -261,7 +232,7 @@ export const Book = ({ customPages, ...props }: BookProps) => {
       });
     }, 600);
 
-    return () => clearTimeout(timer); // ← cleanup now actually runs
+    return () => clearTimeout(timer);
   }, [customPages]);
 
   useEffect(() => {

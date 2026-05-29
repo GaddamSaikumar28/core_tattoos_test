@@ -10,18 +10,6 @@ interface BookSceneProps {
   products?: TattooProduct[];
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FIX #1 — Inject BackgroundFX keyframes via useEffect instead of <style jsx>.
-//
-// `style jsx` and `style jsx global` are styled-jsx syntax.  In Next.js App
-// Router "use client" components styled-jsx is supported, but ONLY if the
-// `styled-jsx` npm package is installed and babel is configured.  When using
-// the default SWC compiler (no babel.config) styled-jsx tags silently produce
-// no output — the keyframes never register and the drift animations freeze.
-//
-// Solution: inject a <style> element once via useEffect.  This is guaranteed
-// to work regardless of compiler config.
-// ─────────────────────────────────────────────────────────────────────────────
 const BG_FX_STYLE_ID = "book-bg-fx-keyframes";
 
 function useBackgroundKeyframes() {
@@ -51,9 +39,7 @@ function useBackgroundKeyframes() {
   }, []);
 }
 
-// ─── Ambient background effects (CSS only, behind canvas) ────────────────────
 function BackgroundFX() {
-  // Keyframes injected once on mount (see above hook)
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
       <div className="absolute inset-0 bg-[#050505]" />
@@ -92,12 +78,10 @@ function BackgroundFX() {
   );
 }
 
-// ─── Main Scene ───────────────────────────────────────────────────────────────
 function BookScene({ products }: BookSceneProps) {
   const [cameraZ, setCameraZ]       = useState(5.0);
   const [canvasReady, setCanvasReady] = useState(false);
 
-  // Inject keyframes (fixes broken style jsx)
   useBackgroundKeyframes();
 
   useEffect(() => {
@@ -107,20 +91,6 @@ function BookScene({ products }: BookSceneProps) {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // FIX #2 — Improved Canvas defer strategy.
-  //
-  // The old code used requestIdleCallback with a 2000 ms timeout.  On mobile
-  // browsers the idle callback might never fire during a busy initial load,
-  // causing the book to simply not appear until the user scrolled.
-  //
-  // New strategy:
-  //   1. Use requestIdleCallback with a 500 ms timeout (shorter safety net).
-  //   2. Fall back to a 200 ms setTimeout so the hero gets one render cycle
-  //      before the WebGL context is created.
-  //   3. The hero section is in its own Suspense boundary above in page.tsx,
-  //      so by the time this component mounts the hero data is already resolved.
-  // ─────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     let id: number | ReturnType<typeof setTimeout>;
 
@@ -150,33 +120,27 @@ function BookScene({ products }: BookSceneProps) {
         <Canvas
           shadows
           gl={{
-            // FIX #3 — Only enable MSAA on low-DPI screens where it's cheap.
-            // On Retina (dpr ≥ 2) the native super-sampling already provides
-            // smooth edges; MSAA on top just doubles fill-rate for no gain.
             antialias: typeof window !== "undefined" && window.devicePixelRatio <= 1,
             toneMapping:     THREE.ACESFilmicToneMapping,
             powerPreference: "high-performance",
           }}
-          // FIX #4 — Cap DPR at 2 (saves up to 3× fill on 3× screens).
           dpr={[1, 2]}
           camera={{ position: [0, 0.2, cameraZ], fov: 42 }}
           className="relative z-10"
         >
           <color attach="background" args={["#050505"]} />
           <fog attach="fog" args={["#050505", 8, 20]} />
-          <group position-y={0} scale={1}>
+          <group position-y={0} scale={0.95}>
             <Suspense fallback={null}>
               <Experience products={products} customPages={builtPages} />
             </Suspense>
           </group>
         </Canvas>
       ) : (
-        /* Lightweight placeholder while Canvas defers — prevents layout shift */
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#050505]">
           <div className="flex flex-col items-center gap-3">
             <div
               className="w-12 h-12 rounded-full border-2 border-[#FF7A00]/30 border-t-[#FF7A00]"
-              /* FIX #5: animation name now matches keyframe injected by useBackgroundKeyframes */
               style={{ animation: "bookSpin 1s linear infinite" }}
             />
           </div>

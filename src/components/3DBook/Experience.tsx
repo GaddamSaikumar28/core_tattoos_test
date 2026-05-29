@@ -3,26 +3,18 @@ import {
   Float,
   OrbitControls,
   Text,
-  Sparkles,
   useTexture,
   useCursor,
 } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useAtom } from "jotai";
-import { useRef, useMemo, useCallback, useState, useEffect } from "react";
+import { useRef, useMemo, useCallback, useState, useEffect, Suspense } from "react";
 import * as THREE from "three";
 import { Book } from "./Book";
 import { pageAtom, TattooProduct } from "./UI";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FIX #1 — Module-level Vector3 pool.
-// The old code ran  `new THREE.Vector3(s, s, s)` inside useFrame per card per
-// frame → 480+ heap allocations / second at 60 fps with 8 cards.  GC pauses
-// caused stutter.  Pre-allocate once at module scope; mutate in place.
-// ─────────────────────────────────────────────────────────────────────────────
 const _scaleVec = new THREE.Vector3();
 
-// ─── Deterministic seeded helpers (unchanged) ─────────────────────────────────
 function seededFloat(index: number, salt: number): number {
   const x = Math.sin(index * 127.1 + salt * 311.7) * 43758.5453;
   return x - Math.floor(x);
@@ -31,11 +23,10 @@ function seededRange(index: number, salt: number, min: number, max: number): num
   return min + seededFloat(index, salt) * (max - min);
 }
 
-// ─── Scatter positions (unchanged) ────────────────────────────────────────────
 function computeCardPositions(count: number): THREE.Vector3[] {
-  const radiusX  = 3.8;
-  const radiusZ  = 2.8;
-  const arcSpread = Math.PI * 0.8;
+  const radiusX   = 3.8;
+  const radiusZ   = 2.8;
+  const arcSpread  = Math.PI * 0.8;
   const startAngle = -arcSpread / 2;
 
   return Array.from({ length: count }, (_, i) => {
@@ -47,7 +38,6 @@ function computeCardPositions(count: number): THREE.Vector3[] {
   });
 }
 
-// ─── AsteroidCard ─────────────────────────────────────────────────────────────
 interface AsteroidCardProps {
   product:    TattooProduct;
   position:   THREE.Vector3;
@@ -93,7 +83,6 @@ function AsteroidCard({
     groupRef.current.rotation.y = tiltY + Math.sin(t * spinSpeeds[1] + phase * 1.3) * 0.12;
     groupRef.current.rotation.z =         Math.sin(t * spinSpeeds[2] + phase * 0.8) * 0.04;
 
-    // FIX #1 applied: reuse _scaleVec instead of  new THREE.Vector3()
     const targetScale = isActive ? 1.25 : 1.0;
     _scaleVec.set(targetScale, targetScale, targetScale);
     groupRef.current.scale.lerp(_scaleVec, 0.08);
@@ -142,15 +131,6 @@ function AsteroidCard({
         />
       </mesh>
 
-      {/*
-        FIX #2 — Removed per-card <pointLight> that existed when isActive.
-        A SpotLight / PointLight costs O(pixels) in the fragment shader
-        for EVERY mesh in the scene — not just this card.  With 8 cards
-        potentially all activating, this exploded fragment shader cost.
-        The orange emissive on the border frame already communicates the
-        active state visually.
-      */}
-
       {isActive && (
         <Text
           position={[0, -(h / 2 + 0.12), 0.01]}
@@ -169,7 +149,6 @@ function AsteroidCard({
   );
 }
 
-// ─── AsteroidField ─────────────────────────────────────────────────────────────
 interface AsteroidFieldProps {
   products:   TattooProduct[];
   activePage: number;
@@ -177,14 +156,9 @@ interface AsteroidFieldProps {
 }
 
 function AsteroidField({ products, activePage, onActivate }: AsteroidFieldProps) {
-  // FIX #3 — Lazy-mount the asteroid field.
-  // The AsteroidField triggers N texture loads immediately (one per product).
-  // Competing with the book's cover textures loading at the same time stalled
-  // the Three.js upload queue and made the book take ages to appear.
-  // Waiting 1.5 s gives the book cover a clear runway.
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => setReady(true), 1500);
+    const t = setTimeout(() => setReady(true), 2500);
     return () => clearTimeout(t);
   }, []);
 
@@ -227,13 +201,9 @@ function AsteroidField({ products, activePage, onActivate }: AsteroidFieldProps)
   );
 }
 
-// ─── Background particles ─────────────────────────────────────────────────────
 function InkParticles() {
   const ref = useRef<THREE.Points>(null);
-  // FIX #4 — Reduced from 80 → 28 particles.
-  // Each point requires a vertex shader invocation per frame.  28 is visually
-  // indistinguishable from 80 at this spread / size but halves the draw call cost.
-  const count = 28;
+  const count = 20;
 
   const { positions, colors } = useMemo(() => {
     const pos = new Float32Array(count * 3);
@@ -272,7 +242,7 @@ function InkParticles() {
         size={0.025}
         vertexColors
         transparent
-        opacity={0.45}
+        opacity={0.4}
         sizeAttenuation
         depthWrite={false}
       />
@@ -280,19 +250,8 @@ function InkParticles() {
   );
 }
 
-/*
-  FIX #5 — SweepLight REMOVED entirely.
-  A SpotLight with animated position runs a shadow-map update + fragment shader
-  cost each frame.  Even with castShadow={false} the per-pixel lighting calc
-  runs for the whole scene.  The visual benefit (a slow orange sweep) was subtle
-  and not worth the ~4ms/frame cost on mid-range devices.
-*/
-
-// ─── Floor ─────────────────────────────────────────────────────────────────────
 function Floor() {
   return (
-    // FIX: Changed floor colour from #FF7A00 (bright orange, looked wrong)
-    // to near-black consistent with the scene background.
     <mesh position-y={-1.6} rotation-x={-Math.PI / 2} receiveShadow>
       <planeGeometry args={[20, 20]} />
       <meshStandardMaterial color="#080808" roughness={1} metalness={0} />
@@ -300,7 +259,6 @@ function Floor() {
   );
 }
 
-// ─── Main Experience ───────────────────────────────────────────────────────────
 interface ExperienceProps {
   products?:    TattooProduct[];
   customPages?: { front: string; back: string }[];
@@ -312,64 +270,38 @@ export const Experience = ({ products, customPages }: ExperienceProps) => {
 
   return (
     <>
-      {/*
-        FIX #6 — Lighting budget reduced from 6 lights → 3 lights.
-
-        OLD setup:  ambientLight + directionalLight(castShadow) + 2×pointLight
-                    + SweepLight(SpotLight) + per-card pointLight = 6+ lights.
-
-        NEW setup:  ambientLight(0.9) + directionalLight(2.0, shadow-map 512²)
-                    + 1 orange pointLight for accent = 3 lights.
-
-        Impact: fragment shader complexity is O(lights × fragments).
-        Halving the light count roughly halves GPU fragment time.
-        Shadow map resolution reduced 1024² → 512² — visually identical from
-        normal viewing distance, 4× fewer shadow texels to compute per frame.
-      */}
       <ambientLight intensity={0.9} />
       <directionalLight
         position={[2, 5, 2]}
         intensity={2.0}
         castShadow
-        shadow-mapSize-width={512}
-        shadow-mapSize-height={512}
+        shadow-mapSize-width={256}
+        shadow-mapSize-height={256}
         shadow-bias={-0.0001}
       />
       <pointLight position={[-2, 3, -1]} intensity={1.8} color="#FF7A00" />
 
-      {/*
-        FIX #7 — Environment HDR REMOVED.
-        `Environment preset="sunset"` downloads a compressed HDR (~300 KB) from
-        jsDelivr, decompresses it on the GPU into a 256³ cube-map, and samples
-        it for every PBR material in the scene every frame.  The visual effect
-        was subtle warm tones on the book cover.  Replaced by tweaking the
-        directional light colour and intensity to achieve the same warmth.
-      */}
-
-      {/* Reduced-count particles */}
       <InkParticles />
-      <Sparkles count={20} scale={8} size={0.9} speed={0.2} opacity={0.25} color="#FF7A00" />
 
-      {/* Asteroid product cards — lazy mounted after 1.5 s */}
+      {/* FIX: Isolated the AsteroidField inside a nested Suspense boundary to stop page-load canvas drops */}
       {products && products.length > 0 && (
-        <AsteroidField
-          products={products}
-          activePage={page}
-          onActivate={handleActivate}
-        />
+        <Suspense fallback={null}>
+          <AsteroidField
+            products={products}
+            activePage={page}
+            onActivate={handleActivate}
+          />
+        </Suspense>
       )}
 
-      {/* The book */}
       <Float rotation-x={-Math.PI / 4} floatIntensity={0.8} speed={1.8} rotationIntensity={0.6}>
         <group>
           <Book scale={[1.2, 1.2, 1.2]} customPages={customPages} />
         </group>
       </Float>
 
-      {/* Floor + shadow catcher */}
       <Floor />
       <mesh position-y={-1.59} rotation-x={-Math.PI / 2} receiveShadow>
-        {/* FIX: Reduced shadow plane from 100×100 → 30×30 (less overdraw) */}
         <planeGeometry args={[30, 30]} />
         <shadowMaterial transparent opacity={0.15} />
       </mesh>
