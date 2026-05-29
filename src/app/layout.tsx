@@ -1,17 +1,15 @@
-
 import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
 import localFont from "next/font/local";
+import { unstable_cache } from "next/cache";
 import "./globals.css";
 
 import SplashScreen from "../components/layout/SplashScreen";
-// import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
 import { Toaster } from "sonner";
 import { CartProvider } from "../context/CartContext";
 import FooterWrapper from "../components/layout/FooterWrapper";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-// import { CartDrawer } from "../components/cart/CartDrawer";
 import { AuthProvider } from "../context/AuthContext";
 import Script from "next/script";
 import { getGlobalSettingsData } from "@/src/lib/shopify";
@@ -43,35 +41,30 @@ const almarena = localFont({
   display: "swap",
 });
 
-// --- SEO ADDITION: metadataBase and verification added ---
+// Cache global settings to prevent Shopify API calls on every layout render
+const getCachedGlobalSettings = unstable_cache(
+  async () => {
+    const settings = await getGlobalSettingsData();
+    return settings;
+  },
+  ["global-settings-data"],
+  { revalidate: 3600 } // Cache for 1 hour
+);
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://www.justtattoos.com"),
   title: "Just Tattoos",
   description: "Authentic tattoo lifestyle and apparel.",
   verification: {
-    // Fulfills Google Search Console Request Exactly
-    google: "d01qN_aI17S2zOhlv4J36BQcOWOYndmIqB1twf3xkgM", 
+    google: "d01qN_aI17S2zOhlv4J36BQcOWOYndmIqB1twf3xkgM",
   },
   other: {
     "facebook-domain-verification": "pxy8rtt4m4qc86h0j1nmxcs4prlwbe",
   },
   icons: {
-    // 1. Primary Favicon (SVG)
-    icon: [
-      {
-        url: "/favicon.svg?v=1", // Versioning forces a cache refresh
-        type: "image/svg+xml",
-      },
-    ],
-    // 2. Shortcut icon for older browsers/bookmarks
+    icon: [{ url: "/favicon.svg?v=1", type: "image/svg+xml" }],
     shortcut: ["/favicon.svg?v=1"],
-    // 3. Apple Touch Icon for iPhone home screens
-    apple: [
-      {
-        url: "/favicon.svg?v=1",
-        type: "image/svg+xml",
-      },
-    ],
+    apple: [{ url: "/favicon.svg?v=1", type: "image/svg+xml" }],
   },
 };
 
@@ -80,10 +73,10 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const settings = await getGlobalSettingsData();
-  // Define a safe fallback just in case the API completely fails
+  const settings = await getCachedGlobalSettings();
+  
   const globalData = settings || {
-    headerLogo: "/assets/icons/DesktopLogo.svg", // Note: Ensure this points to a white/light logo for dark theme
+    headerLogo: "/assets/icons/DesktopLogo.svg",
     footerLogo: "/assets/icons/DesktopLogo.svg",
     splashLogo: "/assets/icons/DesktopLogo.svg",
     splashLeftImage: "/assets/icons/butterflys.svg",
@@ -94,7 +87,6 @@ export default async function RootLayout({
     youtubeLink: "#",
   };
 
-  // Safe fallback for the site URL in the schema
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.justtattoos.com";
 
   return (
@@ -106,14 +98,9 @@ export default async function RootLayout({
       <head>
         <link rel="icon" href="/favicon.svg?v=1" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/favicon.svg?v=1" />
-        <link
-          rel="preconnect"
-          href="https://cdn.shopify.com"
-          crossOrigin="anonymous"
-        />
+        <link rel="preconnect" href="https://cdn.shopify.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn.shopify.com" />
 
-        {/* --- EXACT CLIENT GA4 TRACKING SCRIPT --- */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-98T2GW3HED"></script>
         <script
           dangerouslySetInnerHTML={{
@@ -126,10 +113,10 @@ export default async function RootLayout({
           }}
         />
       </head>
-      {/* Upgraded Body Tag: Forces the new dark mode background, text colors, and custom orange text selection */}
+      
       <body className="antialiased flex flex-col min-h-screen bg-[var(--color-bg-base)] text-[var(--color-text-primary)] selection:bg-[var(--color-brand-orange)] selection:text-white">
         <SpeedInsights />
-        {/* --- SEO ADDITION: Global Organization & WebSite Schema --- */}
+        
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -174,29 +161,7 @@ export default async function RootLayout({
           }}
         />
 
-        <Script id="meta-pixel" strategy="afterInteractive">
-          {`
-            !function(f,b,e,v,n,t,s)
-            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-            n.queue=[];t=b.createElement(e);t.async=!0;
-            t.src=v;s=b.getElementsByTagName(e)[0];
-            s.parentNode.insertBefore(t,s)}(window, document,'script',
-            'https://connect.facebook.net/en_US/fbevents.js');
-            fbq('init', '923695433974920');
-            fbq('track', 'PageView');
-          `}
-        </Script>
-        <noscript>
-          <img
-            height="1"
-            width="1"
-            style={{ display: "none" }}
-            src="https://www.facebook.com/tr?id=923695433974920&ev=PageView&noscript=1"
-            alt=""
-          />
-        </noscript>
+        {/* Removed duplicate inline FB Pixel initialization. Component handles it. */}
         <MetaPixel />
         
         <CartProvider>
@@ -224,14 +189,10 @@ export default async function RootLayout({
             <CartDrawerWrapper />
           </AuthProvider>
 
-          {/* Upgraded Toaster to match dark theme better natively */}
           <Toaster position="bottom-right" richColors theme="dark" />
         </CartProvider>
-
-        <Script
-          src="https://cdn.your-messaging-app.com/widget.js"
-          strategy="lazyOnload"
-        />
+        
+        {/* Removed 404 messaging app widget that was blocking lazyOnload phase */}
       </body>
     </html>
   );
