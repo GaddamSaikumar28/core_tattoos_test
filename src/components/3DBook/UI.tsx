@@ -1,12 +1,11 @@
-
 "use client";
 import { atom, useAtom } from "jotai";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, memo } from "react";
 
 export const pageAtom = atom<number>(0);
 export const DUMMY_ROUGHNESS = "/textures/roughness.jpg";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 export interface TattooProduct {
   id: string;
   title: string;
@@ -21,12 +20,8 @@ export interface TattooProduct {
   badge?: string;
 }
 
-// ─── Page data builder ───────────────────────────────────────────────────────
+// ─── Page data builder ────────────────────────────────────────────────────────
 export function buildPagesFromProducts(products: TattooProduct[]) {
-  // Cover page
-//   const COVER_FRONT = "https://picsum.photos/seed/cover-front/800/1200";
-//   const PAGE_BLANK  = "https://picsum.photos/seed/page-blank/800/1200";
-//   const COVER_BACK  = "https://picsum.photos/seed/cover-back/800/1200";
   const COVER_FRONT = "/assets/images/coverfrontpage.jpg";
   const PAGE_BLANK  = "https://picsum.photos/seed/page-blank/800/1200";
   const COVER_BACK  = "/assets/images/coverbackpage.jpg";
@@ -34,65 +29,75 @@ export function buildPagesFromProducts(products: TattooProduct[]) {
   const pages: { front: string; back: string; meta?: TattooProduct }[] = [
     {
       front: COVER_FRONT,
-      back: products[0]?.frontImage ?? PAGE_BLANK,
-      meta: products[0],
+      back:  products[0]?.frontImage ?? PAGE_BLANK,
+      meta:  products[0],
     },
   ];
 
-  // Interior spreads: one product per spread (front of page = product image, back = next)
   for (let i = 0; i < products.length - 1; i++) {
     pages.push({
       front: products[i].backImage ?? PAGE_BLANK,
-      back: products[i + 1].frontImage ?? PAGE_BLANK,
-      meta: products[i + 1],
+      back:  products[i + 1].frontImage ?? PAGE_BLANK,
+      meta:  products[i + 1],
     });
   }
 
-  // Back cover
   pages.push({
     front: products[products.length - 1]?.backImage ?? PAGE_BLANK,
-    back: COVER_BACK,
+    back:  COVER_BACK,
   });
 
   return pages;
 }
 
-// ─── Fallback picsum pages (used when no products are injected) ───────────────
-// export const pages: { front: string; back: string }[] = [
-//   {
-//     front: "https://picsum.photos/seed/jt-cover/800/1200",
-//     back: "https://picsum.photos/seed/jt-p0/800/1200",
-//   },
-// ];
-// for (let i = 1; i < 15; i += 2) {
-//   pages.push({
-//     front: `https://picsum.photos/seed/jt-p${i}/800/1200`,
-//     back: `https://picsum.photos/seed/jt-p${i + 1}/800/1200`,
-//   });
-// }
-// pages.push({
-//   front: "https://picsum.photos/seed/jt-p15/800/1200",
-//   back: "https://picsum.photos/seed/jt-back/800/1200",
-// });
-// Inside UI.tsx
+// ─── Fallback pages ────────────────────────────────────────────────────────────
 export const pages: { front: string; back: string }[] = [
-  {
-    front: "/assets/images/coverfrontpage.jpg", // 👇 Updated cover front
-    back: "https://picsum.photos/seed/jt-p0/800/1200",
-  },
+  { front: "/assets/images/coverfrontpage.jpg", back: "https://picsum.photos/seed/jt-p0/800/1200" },
 ];
 for (let i = 1; i < 15; i += 2) {
   pages.push({
     front: `https://picsum.photos/seed/jt-p${i}/800/1200`,
-    back: `https://picsum.photos/seed/jt-p${i + 1}/800/1200`,
+    back:  `https://picsum.photos/seed/jt-p${i + 1}/800/1200`,
   });
 }
 pages.push({
   front: "https://picsum.photos/seed/jt-p15/800/1200",
-  back: "/assets/images/coverbackpage.jpg", // 👇 Updated cover back
+  back:  "/assets/images/coverbackpage.jpg",
 });
 
-// ─── UI Component ────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// FIX — Replace `<style jsx global>` with a one-time useEffect injection.
+//
+// `style jsx global` is styled-jsx syntax.  It requires the styled-jsx
+// babel transform.  Next.js App Router uses the SWC compiler by default;
+// styled-jsx tags in SWC-compiled "use client" files produce no output — the
+// keyframes and utility classes silently never register, causing:
+//   • The product meta overlay to jump in without the fadeSlideUp animation
+//   • `.no-scrollbar` to have no effect (scrollbar always visible in WebKit)
+//
+// useEffect injection is compiler-agnostic and guaranteed to work.
+// ─────────────────────────────────────────────────────────────────────────────
+const UI_STYLE_ID = "book-ui-keyframes";
+
+function useUIStyles() {
+  useEffect(() => {
+    if (document.getElementById(UI_STYLE_ID)) return;
+    const s = document.createElement("style");
+    s.id = UI_STYLE_ID;
+    s.textContent = `
+      @keyframes fadeSlideUp {
+        from { opacity: 0; transform: translateY(12px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { scrollbar-width: none; }
+    `;
+    document.head.appendChild(s);
+    return () => { document.getElementById(UI_STYLE_ID)?.remove(); };
+  }, []);
+}
+
+// ─── UI Component ─────────────────────────────────────────────────────────────
 interface UIProps {
   totalPages?: number;
   productMeta?: (TattooProduct | undefined)[];
@@ -100,36 +105,22 @@ interface UIProps {
 
 export const UI = ({ totalPages, productMeta }: UIProps) => {
   const [page, setPage] = useAtom(pageAtom);
-  const count = totalPages ?? pages.length;
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const count           = totalPages ?? pages.length;
+  const scrollRef       = useRef<HTMLDivElement>(null);
 
+  // Inject styles (fixes broken style jsx)
+  useUIStyles();
 
-useEffect(() => {
+  useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
-    
     const active = container.querySelector("[data-active='true']") as HTMLElement;
     if (active) {
-      // Calculate center alignment inside the container menu itself
-      const containerWidth = container.clientWidth;
-      const activeOffset = active.offsetLeft;
-      const activeWidth = active.clientWidth;
-      
       container.scrollTo({
-        left: activeOffset - containerWidth / 2 + activeWidth / 2,
+        left: active.offsetLeft - container.clientWidth / 2 + active.clientWidth / 2,
         behavior: "smooth",
       });
     }
-  }, [page]);
-
-  // Page flip sound (graceful fallback)
-  useEffect(() => {
-    // FIX: Commented out to prevent HTTP 404 console errors based on user instruction
-    /*
-    const audio = new Audio("/audios/page-flip-01a.mp3");
-    audio.volume = 0.4;
-    audio.play().catch(() => {});
-    */
   }, [page]);
 
   const currentMeta = productMeta?.[page];
@@ -138,30 +129,15 @@ useEffect(() => {
     <>
       {/* ── Top label ── */}
       <div className="pointer-events-none absolute top-0 left-0 right-0 z-20 flex items-start justify-between px-6 pt-6">
-        {/* Brand pill */}
-        <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-full px-4 py-2">
-          {/* <div className="w-2 h-2 rounded-full bg-[#FF7A00] animate-pulse" /> */}
-          {/* <span
-            style={{ fontFamily: "'Bebas Neue', 'Impact', sans-serif", letterSpacing: "0.15em" }}
-            className="text-white text-sm"
-          >
-            JUST TATTOOS
-          </span> */}
-        </div>
-
-        {/* Page indicator */}
+        <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-full px-4 py-2" />
         <div className="bg-black/60 backdrop-blur-md border border-white/10 rounded-full px-4 py-2">
           <span className="text-white/60 text-xs font-mono">
-            {page === 0
-              ? "COVER"
-              : page === count
-              ? "BACK"
-              : `${page} / ${count - 1}`}
+            {page === 0 ? "COVER" : page === count ? "BACK" : `${page} / ${count - 1}`}
           </span>
         </div>
       </div>
 
-      {/* ── Product meta overlay (bottom-left) ── */}
+      {/* ── Product meta overlay ── */}
       {currentMeta && (
         <div
           className="pointer-events-none absolute bottom-28 left-6 z-20 max-w-[220px]"
@@ -183,10 +159,7 @@ useEffect(() => {
             {currentMeta.themes.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {currentMeta.themes.slice(0, 3).map((t) => (
-                  <span
-                    key={t}
-                    className="text-[9px] px-2 py-0.5 rounded-full border border-white/20 text-white/50"
-                  >
+                  <span key={t} className="text-[9px] px-2 py-0.5 rounded-full border border-white/20 text-white/50">
                     {t}
                   </span>
                 ))}
@@ -198,25 +171,14 @@ useEffect(() => {
 
       {/* ── Bottom navigation ── */}
       <div className="pointer-events-auto absolute bottom-0 left-0 right-0 z-20">
-        {/* Gradient fade */}
         <div className="h-16 bg-gradient-to-t from-black/80 to-transparent" />
-
-        {/* Nav strip */}
         <div className="bg-black/80 backdrop-blur-xl border-t border-white/10 px-4 py-3">
           <div
             ref={scrollRef}
             className="flex items-center gap-2 overflow-x-auto no-scrollbar"
-            style={{ scrollbarWidth: "none" }}
           >
-            {/* Cover button */}
-            <NavButton
-              label="Cover"
-              active={page === 0}
-              onClick={() => setPage(0)}
-              accent
-            />
+            <NavButton label="Cover" active={page === 0} onClick={() => setPage(0)} accent />
 
-            {/* Interior pages */}
             {Array.from({ length: count - 1 }, (_, i) => i + 1).map((i) => (
               <NavButton
                 key={i}
@@ -226,39 +188,23 @@ useEffect(() => {
               />
             ))}
 
-            {/* Back cover */}
-            <NavButton
-              label="Back"
-              active={page === count}
-              onClick={() => setPage(count)}
-              accent
-            />
+            <NavButton label="Back" active={page === count} onClick={() => setPage(count)} accent />
           </div>
 
-          {/* Progress bar */}
           <div className="mt-2 h-0.5 bg-white/10 rounded-full overflow-hidden">
             <div
-            //   className="h-full bg-gradient-to-r from-[#FF7A00] to-[#FFB347] rounded-full transition-all duration-500"
-            className="h-full bg-gradient-to-r from-[#FF7A00] to-[#FFB347] rounded-full transition-all duration-500"
+              className="h-full bg-gradient-to-r from-[#FF7A00] to-[#FFB347] rounded-full transition-all duration-500"
               style={{ width: `${(page / count) * 100}%` }}
             />
           </div>
         </div>
       </div>
-
-      <style jsx global>{`
-        @keyframes fadeSlideUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-      `}</style>
     </>
   );
 };
 
-// ─── NavButton sub-component ─────────────────────────────────────────────────
-function NavButton({
+// ─── NavButton — memoized to prevent re-renders on unrelated page changes ─────
+const NavButton = memo(function NavButton({
   label,
   active,
   onClick,
@@ -276,16 +222,15 @@ function NavButton({
       className={`
         shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide
         border transition-all duration-200
-        ${
-          active
-            ? "bg-[#FF7A00] border-[#FF7A00] text-black shadow-[0_0_12px_rgba(255,122,0,0.5)]"
-            : accent
-            ? "bg-white/5 border-white/20 text-white/70 hover:border-[#FF7A00]/50 hover:text-white"
-            : "bg-white/5 border-white/10 text-white/50 hover:border-white/30 hover:text-white"
+        ${active
+          ? "bg-[#FF7A00] border-[#FF7A00] text-black shadow-[0_0_12px_rgba(255,122,0,0.5)]"
+          : accent
+          ? "bg-white/5 border-white/20 text-white/70 hover:border-[#FF7A00]/50 hover:text-white"
+          : "bg-white/5 border-white/10 text-white/50 hover:border-white/30 hover:text-white"
         }
       `}
     >
       {label}
     </button>
   );
-}
+});

@@ -7,9 +7,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { pageAtom, pages } from "./UI";
 
-// FIX: Use a picsum placeholder for roughness — tiny PNG, loads instantly.
-// The original "/textures/roughness.jpg" was a local asset that could 404.
-const DUMMY_ROUGHNESS = "https://picsum.photos/seed/roughness/8/8"; // 8×8 is enough for roughness
+// ─────────────────────────────────────────────────────────────────────────────
+// FIX #1 — Replace external picsum roughness URL with an inline data URI.
+//
+// OLD:  "https://picsum.photos/seed/roughness/8/8"
+//       → extra HTTP round-trip on every page load, no guaranteed caching,
+//         adds latency before the book cover can render.
+//
+// NEW:  1×1 white PNG as base64 — loaded synchronously from memory, no network.
+// ─────────────────────────────────────────────────────────────────────────────
+const DUMMY_ROUGHNESS =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAABjE+ibYAAAAASUVORK5CYII=";
 
 const easingFactor         = 0.5;
 const easingFactorFold     = 0.3;
@@ -20,8 +28,17 @@ const turningCurveStrength = 0.09;
 export const PAGE_WIDTH  = 1.28;
 export const PAGE_HEIGHT = 1.71;
 const PAGE_DEPTH         = 0.003;
-const PAGE_SEGMENTS      = 30;
-const SEGMENT_WIDTH      = PAGE_WIDTH / PAGE_SEGMENTS;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FIX #2 — Reduce PAGE_SEGMENTS from 30 → 20.
+//
+// Each segment adds one bone to the skinned mesh.  30 bones × 2 visible pages
+// = 60 matrix multiplications + skinning interpolations per useFrame call.
+// 20 segments still produces a smooth page-curl arc — the reduction is
+// imperceptible at normal viewing distance but saves ~33 % of skinning cost.
+// ─────────────────────────────────────────────────────────────────────────────
+const PAGE_SEGMENTS  = 20;
+const SEGMENT_WIDTH  = PAGE_WIDTH / PAGE_SEGMENTS;
 
 // ─── Shared geometry (built once, reused across all Page instances) ───────────
 const pageGeometry = new THREE.BoxGeometry(
@@ -46,10 +63,7 @@ for (let i = 0; i < _pos.count; i++) {
 pageGeometry.setAttribute("skinIndex",  new THREE.Uint16BufferAttribute(skinIndexes, 4));
 pageGeometry.setAttribute("skinWeight", new THREE.Float32BufferAttribute(skinWeights, 4));
 
-// const whiteColor    = new THREE.Color("white");
-// const emissiveColor = new THREE.Color("#FF7A00");
-
-const whiteColor    = new THREE.Color("#b3b3b3"); 
+const whiteColor    = new THREE.Color("#b3b3b3");
 const emissiveColor = new THREE.Color("#FF7A00");
 const pageMaterials = [
   new THREE.MeshStandardMaterial({ color: whiteColor }),
@@ -57,17 +71,6 @@ const pageMaterials = [
   new THREE.MeshStandardMaterial({ color: whiteColor }),
   new THREE.MeshStandardMaterial({ color: whiteColor }),
 ];
-
-/*
-  FIX: REMOVED the module-level `pages.forEach(p => useTexture.preload(...))`
-  block that was in the original file. Those preload calls fire at module parse
-  time — i.e. the moment the JS bundle executes — and aggressively fetch ALL
-  book textures before the user ever scrolls to the book section. This caused:
-    1. Network congestion competing with hero images.
-    2. Browser decode work on the main thread blocking animation.
-  Textures now load on-demand inside the <Page> component via useTexture(),
-  which R3F/Suspense handles correctly with the <Loader> overlay.
-*/
 
 interface PageProps {
   number:      number;
@@ -102,48 +105,7 @@ const Page = ({
   const lastOpened     = useRef<boolean>(opened);
   const skinnedMeshRef = useRef<THREE.SkinnedMesh>(null);
 
-//   const manualSkinnedMesh = useMemo(() => {
-//     const bones: THREE.Bone[] = [];
-//     for (let i = 0; i <= PAGE_SEGMENTS; i++) {
-//       const bone = new THREE.Bone();
-//       bones.push(bone);
-//       bone.position.x = i === 0 ? 0 : SEGMENT_WIDTH;
-//       if (i > 0) bones[i - 1].add(bone);
-//     }
-//     const skeleton = new THREE.Skeleton(bones);
-
-//     const materials = [
-//       ...pageMaterials,
-//       new THREE.MeshStandardMaterial({
-//         color:     whiteColor,
-//         map:       picture,
-//         ...(isFirstPage && pictureRoughness
-//           ? { roughnessMap: pictureRoughness }
-//           : { roughness: 0.1 }),
-//         emissive:          emissiveColor,
-//         emissiveIntensity: 0,
-//       }),
-//       new THREE.MeshStandardMaterial({
-//         color:     whiteColor,
-//         map:       picture2,
-//         ...(isLastPage && pictureRoughness
-//           ? { roughnessMap: pictureRoughness }
-//           : { roughness: 0.1 }),
-//         emissive:          emissiveColor,
-//         emissiveIntensity: 0,
-//       }),
-//     ];
-
-//     const mesh = new THREE.SkinnedMesh(pageGeometry, materials);
-//     mesh.castShadow    = true;
-//     mesh.receiveShadow = true;
-//     mesh.frustumCulled = false;
-//     mesh.add(skeleton.bones[0]);
-//     mesh.bind(skeleton);
-//     return mesh;
-//   }, [picture, picture2, pictureRoughness, isFirstPage, isLastPage]);
-
-const manualSkinnedMesh = useMemo(() => {
+  const manualSkinnedMesh = useMemo(() => {
     const bones: THREE.Bone[] = [];
     for (let i = 0; i <= PAGE_SEGMENTS; i++) {
       const bone = new THREE.Bone();
@@ -153,27 +115,24 @@ const manualSkinnedMesh = useMemo(() => {
     }
     const skeleton = new THREE.Skeleton(bones);
 
-    // FIX: Using a soft off-white tint instead of harsh pure white 
-    // to prevent scene lights from blowing out the texture details.
-    // const pageTint = new THREE.Color("#e5e5e5"); 
     const pageTint = new THREE.Color("#999999");
     const materials = [
       ...pageMaterials,
       new THREE.MeshStandardMaterial({
-        color:     pageTint,
-        map:       picture,
+        color: pageTint,
+        map:   picture,
         ...(isFirstPage && pictureRoughness
           ? { roughnessMap: pictureRoughness }
-          : { roughness: 0.8 }), // FIX: Increased from 0.1 to 0.8 so it looks like matte paper, not shiny plastic
+          : { roughness: 0.8 }),
         emissive:          emissiveColor,
         emissiveIntensity: 0,
       }),
       new THREE.MeshStandardMaterial({
-        color:     pageTint,
-        map:       picture2,
+        color: pageTint,
+        map:   picture2,
         ...(isLastPage && pictureRoughness
           ? { roughnessMap: pictureRoughness }
-          : { roughness: 0.8 }), // FIX: Increased from 0.1 to 0.8
+          : { roughness: 0.8 }),
         emissive:          emissiveColor,
         emissiveIntensity: 0,
       }),
@@ -195,7 +154,7 @@ const manualSkinnedMesh = useMemo(() => {
   useFrame((_, delta) => {
     if (!skinnedMeshRef.current || !group.current) return;
 
-    const mats         = skinnedMeshRef.current.material as THREE.MeshStandardMaterial[];
+    const mats           = skinnedMeshRef.current.material as THREE.MeshStandardMaterial[];
     const targetEmissive = highlighted ? 0.28 : 0;
     mats[4].emissiveIntensity = mats[5].emissiveIntensity = THREE.MathUtils.lerp(
       mats[4].emissiveIntensity, targetEmissive, 0.1,
@@ -273,26 +232,36 @@ export const Book = ({ customPages, ...props }: BookProps) => {
   const bookPages  = customPages ?? pages;
   const totalPages = bookPages.length;
 
-  /*
-    FIX: Preload only the FIRST TWO textures (cover front & back) immediately,
-    then preload the rest lazily. This gives the user a visible book almost
-    instantly while the remaining pages load in the background.
-  */
-  useMemo(() => {
+  // ─────────────────────────────────────────────────────────────────────────
+  // FIX #3 — Changed useMemo → useEffect for texture preloading.
+  //
+  // OLD code (BROKEN):
+  //   useMemo(() => {
+  //     const timer = setTimeout(...);
+  //     return () => clearTimeout(timer);   // ← useMemo ignores return values!
+  //   }, [customPages]);                       //   The cleanup never ran → leak.
+  //
+  // useMemo is for computing derived values; it does NOT support cleanup
+  // functions.  useEffect is the correct hook for side-effects with cleanup.
+  // ─────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
     if (!customPages) return;
-    // Preload cover immediately
+
+    // Preload the cover immediately so it appears without delay
     if (customPages[0]) {
       useTexture.preload(customPages[0].front);
       useTexture.preload(customPages[0].back);
     }
-    // Preload remaining pages with a small delay so cover renders first
+
+    // Preload remaining pages after the cover has rendered
     const timer = setTimeout(() => {
       customPages.slice(1).forEach((p) => {
         useTexture.preload(p.front);
         useTexture.preload(p.back);
       });
-    }, 500);
-    return () => clearTimeout(timer);
+    }, 600);
+
+    return () => clearTimeout(timer); // ← cleanup now actually runs
   }, [customPages]);
 
   useEffect(() => {

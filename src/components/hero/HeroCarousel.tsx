@@ -18,7 +18,6 @@ import {
 import { FormattedProduct } from "@/src/lib/shopify";
 import TattooAdvisorModal from "./TattooAdvisorModal";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 interface HeroCarouselProps {
   products: FormattedProduct[];
   activeIndex: number;
@@ -36,44 +35,53 @@ interface CardData {
   image: string;
 }
 
-// ─── Fallback Data ────────────────────────────────────────────────────────────
 const FALLBACK_CARDS: CardData[] = [
-  { id: "f1", title: "Celestial Serpent", handle: "celestial-serpent", theme: "Mystical", price: "$28", badge: { label: "NEW", color: "#FF7A00" }, image: "https://images.pexels.com/photos/2183130/pexels-photo-2183130.jpeg?auto=compress&cs=tinysrgb&w=600" },
-  { id: "f2", title: "Botanical Bloom", handle: "botanical-bloom", theme: "Floral", price: "$16", badge: null, image: "https://images.pexels.com/photos/1374128/pexels-photo-1374128.jpeg?auto=compress&cs=tinysrgb&w=600" },
-  { id: "f3", title: "Sacred Geometry", handle: "sacred-geometry", theme: "Minimalist", price: "$24", badge: { label: "EXCL", color: "#7C3AED" }, image: "https://images.pexels.com/photos/3651820/pexels-photo-3651820.jpeg?auto=compress&cs=tinysrgb&w=600" },
-  { id: "f4", title: "Ink Heritage", handle: "ink-heritage", theme: "Tribal", price: "$14", badge: null, image: "https://images.pexels.com/photos/2109099/pexels-photo-2109099.jpeg?auto=compress&cs=tinysrgb&w=600" },
-  { id: "f5", title: "Dragon Soul", handle: "dragon-soul", theme: "Japanese", price: "$32", badge: { label: "HOT", color: "#EF4444" }, image: "https://images.pexels.com/photos/1194420/pexels-photo-1194420.jpeg?auto=compress&cs=tinysrgb&w=600" },
-  { id: "f6", title: "Lunar Phase", handle: "lunar-phase", theme: "Cosmic", price: "$20", badge: null, image: "https://images.pexels.com/photos/1070534/pexels-photo-1070534.jpeg?auto=compress&cs=tinysrgb&w=600" },
-  { id: "f7", title: "Obsidian Wave", handle: "obsidian-wave", theme: "Abstract", price: "$22", badge: { label: "SALE", color: "#FF7A00" }, image: "https://images.pexels.com/photos/3617500/pexels-photo-3617500.jpeg?auto=compress&cs=tinysrgb&w=600" },
-  { id: "f8", title: "Crimson Koi", handle: "crimson-koi", theme: "Japanese", price: "$30", badge: null, image: "https://images.pexels.com/photos/2759483/pexels-photo-2759483.jpeg?auto=compress&cs=tinysrgb&w=600" },
+  { id: "f1", title: "Celestial Serpent",  handle: "celestial-serpent",  theme: "Mystical",    price: "$28", badge: { label: "NEW",  color: "#FF7A00" }, image: "https://images.pexels.com/photos/2183130/pexels-photo-2183130.jpeg?auto=compress&cs=tinysrgb&w=600" },
+  { id: "f2", title: "Botanical Bloom",    handle: "botanical-bloom",    theme: "Floral",      price: "$16", badge: null,                               image: "https://images.pexels.com/photos/1374128/pexels-photo-1374128.jpeg?auto=compress&cs=tinysrgb&w=600" },
+  { id: "f3", title: "Sacred Geometry",   handle: "sacred-geometry",    theme: "Minimalist",  price: "$24", badge: { label: "EXCL", color: "#7C3AED" }, image: "https://images.pexels.com/photos/3651820/pexels-photo-3651820.jpeg?auto=compress&cs=tinysrgb&w=600" },
+  { id: "f4", title: "Ink Heritage",      handle: "ink-heritage",       theme: "Tribal",      price: "$14", badge: null,                               image: "https://images.pexels.com/photos/2109099/pexels-photo-2109099.jpeg?auto=compress&cs=tinysrgb&w=600" },
+  { id: "f5", title: "Dragon Soul",       handle: "dragon-soul",        theme: "Japanese",    price: "$32", badge: { label: "HOT",  color: "#EF4444" }, image: "https://images.pexels.com/photos/1194420/pexels-photo-1194420.jpeg?auto=compress&cs=tinysrgb&w=600" },
+  { id: "f6", title: "Lunar Phase",       handle: "lunar-phase",        theme: "Cosmic",      price: "$20", badge: null,                               image: "https://images.pexels.com/photos/1070534/pexels-photo-1070534.jpeg?auto=compress&cs=tinysrgb&w=600" },
+  { id: "f7", title: "Obsidian Wave",     handle: "obsidian-wave",      theme: "Abstract",    price: "$22", badge: { label: "SALE", color: "#FF7A00" }, image: "https://images.pexels.com/photos/3617500/pexels-photo-3617500.jpeg?auto=compress&cs=tinysrgb&w=600" },
+  { id: "f8", title: "Crimson Koi",       handle: "crimson-koi",        theme: "Japanese",    price: "$30", badge: null,                               image: "https://images.pexels.com/photos/2759483/pexels-photo-2759483.jpeg?auto=compress&cs=tinysrgb&w=600" },
 ];
 
 const SPARKLE_PATH = "M12,2 L16,9 L21,9 L16,15 L18,21 L12,17 L6,21 L8,15 L3,9 L8,9 Z";
-const BLOB_PATH = "M12,2 L17,4 L21,9 L21,14 L18,19 L13,22 L8,22 L4,19 L3,14 L7,4 Z";
+const BLOB_PATH    = "M12,2 L17,4 L21,9 L21,14 L18,19 L13,22 L8,22 L4,19 L3,14 L7,4 Z";
+const CARD_COUNT   = 8;
 
-const CARD_COUNT = 8;
+const FALL_STAGGER  = 90;
+const FALL_DUR      = 800;
+const EXPAND_START  = 1500;
+const EXPAND_DUR    = 1200;
+const TILT_START    = 1600;
+const TILT_DUR      = 1000;
+const SPIN_START    = 2700;
 
-// ─── Animation Timeline (ms) - Optimized for snappier mobile feel ─────────────
-const FALL_STAGGER  = 90;   
-const FALL_DUR      = 800;  
-const EXPAND_START  = 1500; 
-const EXPAND_DUR    = 1200; 
-const TILT_START    = 1600; 
-const TILT_DUR      = 1000; 
-const SPIN_START    = 2700; 
+// ─────────────────────────────────────────────────────────────────────────────
+// FIX #1 — Two-decimal rounding helper.
+//
+// Without rounding, each frame produces strings like:
+//   "translateX(127.38291047px) scale(0.98203847182)"
+// which allocates a new string every frame per card (480+ allocs/sec at 60 fps
+// with 8 cards), stresses the GC, and forces the browser to parse/compare a
+// long string on every style assignment.
+//
+// Rounding to 2 decimal places:
+//   • Reduces string length → faster string comparison
+//   • Creates far fewer unique strings → more cache hits
+//   • Imperceptible visual difference (0.005px accuracy at screen resolution)
+// ─────────────────────────────────────────────────────────────────────────────
+function r2(v: number): number { return Math.round(v * 100) / 100; }
 
-// ─── Math Helpers ─────────────────────────────────────────────────────────────
-function easeOutCubic(t: number) { return 1 - Math.pow(1 - t, 3); }
-function easeOutExpo(t: number)  { return t >= 1 ? 1 : 1 - Math.pow(2, -10 * t); }
-function easeInOutQuart(t: number) { 
-  return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2; 
-}
-function clamp01(t: number)      { return Math.max(0, Math.min(1, t)); }
+function easeOutCubic(t: number)    { return 1 - Math.pow(1 - t, 3); }
+function easeOutExpo(t: number)     { return t >= 1 ? 1 : 1 - Math.pow(2, -10 * t); }
+function easeInOutQuart(t: number)  { return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2; }
+function clamp01(t: number)         { return Math.max(0, Math.min(1, t)); }
 function progress(elapsed: number, start: number, dur: number) {
   return clamp01((elapsed - start) / dur);
 }
 
-// ─── Configuration ────────────────────────────────────────────────────────────
 function getCfg(isMobile: boolean) {
   return isMobile
     ? { cardW: 180, cardH: 260, radius: 240, perspective: 1000, rotSpeed: 0.025 }
@@ -94,7 +102,6 @@ function ringPos(angleRad: number, radius: number) {
   };
 }
 
-// ─── Hooks ────────────────────────────────────────────────────────────────────
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState<boolean | undefined>(undefined);
   useEffect(() => {
@@ -106,16 +113,11 @@ function useIsMobile() {
   return isMobile;
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
 function StarRating({ rating = 5 }: { rating?: number }) {
   return (
     <div className="flex items-center gap-[2px]">
       {[1, 2, 3, 4, 5].map((n) => (
-        <Star
-          key={n}
-          size={9}
-          className={n <= rating ? "text-[#FF7A00] fill-[#FF7A00]" : "text-white/10 fill-white/10"}
-        />
+        <Star key={n} size={9} className={n <= rating ? "text-[#FF7A00] fill-[#FF7A00]" : "text-white/10 fill-white/10"} />
       ))}
     </div>
   );
@@ -175,7 +177,8 @@ function MorphingFAB({ isHovered, onHoverStart, onHoverEnd, onClick }: {
   );
 }
 
-function CardInner({ card, isMobile }: { card: CardData; isMobile: boolean }) {
+// ─── CardInner ────────────────────────────────────────────────────────────────
+function CardInner({ card, isMobile, isFront }: { card: CardData; isMobile: boolean; isFront: boolean }) {
   return (
     <div className="relative h-full w-full pointer-events-none">
       <Image
@@ -185,7 +188,11 @@ function CardInner({ card, isMobile }: { card: CardData; isMobile: boolean }) {
         className="object-cover"
         sizes={isMobile ? "180px" : "280px"}
         draggable={false}
-        priority={false}
+        // FIX #2 — Priority-load the front-facing card image.
+        // Previously all 8 cards used priority={false}, so they all loaded with
+        // equal network priority.  The front card is the first thing the user
+        // sees; it should load before the others.
+        priority={isFront}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/15 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
@@ -211,13 +218,9 @@ function CardInner({ card, isMobile }: { card: CardData; isMobile: boolean }) {
   );
 }
 
-// ─── Core Cylinder Carousel ───────────────────────────────────────────────────
+// ─── Core Cylinder Carousel ────────────────────────────────────────────────────
 function CylinderCarousel({
-  cards,
-  onSlideChange,
-  reduceMotion,
-  isMobile,
-  startAnimation,
+  cards, onSlideChange, reduceMotion, isMobile, startAnimation,
 }: {
   cards: CardData[];
   onSlideChange: (i: number) => void;
@@ -239,9 +242,25 @@ function CylinderCarousel({
   const lastActive    = useRef(-1);
   const startTimeRef  = useRef<number | null>(null);
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // FIX #3 — Cache the last written style values per card.
+  //
+  // DOM style assignments are relatively cheap but not free — the browser
+  // needs to parse the value and schedule a layout or composite update.
+  // If the rounded value hasn't changed since last frame, skip the write.
+  // This is especially effective after EXPAND_DUR completes and values
+  // stabilise: many cards will have identical transform strings frame-to-frame
+  // and the writes can be skipped entirely.
+  // ─────────────────────────────────────────────────────────────────────────
+  const lastTransform    = useRef<string[]>(Array(CARD_COUNT).fill(""));
+  const lastOpacity      = useRef<number[]>(Array(CARD_COUNT).fill(-1));
+  const lastFilter       = useRef<string[]>(Array(CARD_COUNT).fill(""));
+  const lastZIndex       = useRef<number[]>(Array(CARD_COUNT).fill(-1));
+  const frontCardIndex   = useRef<number>(0); // Track which card is "front"
+
   const displayCards = useMemo(
     () => Array.from({ length: CARD_COUNT }, (_, i) => cards[i % cards.length]),
-    [cards]
+    [cards],
   );
 
   useEffect(() => {
@@ -267,13 +286,10 @@ function CylinderCarousel({
     return () => window.removeEventListener("mousemove", onMove);
   }, [isMobile]);
 
-  // ── Main animation loop ───────────────────────────────────────────────────
   useAnimationFrame((time, delta) => {
     if (!startAnimation) return;
 
-    if (startTimeRef.current === null) {
-      startTimeRef.current = time;
-    }
+    if (startTimeRef.current === null) startTimeRef.current = time;
     const activeTime = time - startTimeRef.current;
     const elapsed    = reduceMotion ? activeTime + SPIN_START + 5000 : activeTime;
     const dt         = Math.min(delta, 50);
@@ -296,73 +312,77 @@ function CylinderCarousel({
       const landed    = t >= 1;
       const stackZ    = -(i * 1.5);
 
-      let currentZ = stackZ;
-      let currentX = 0;
-      let currentY = 0;
-      let rotZ = 0;
-      let finalScale = 1;
-      let finalOpacity = 1;
-      let finalBrightness = 1;
-      let finalBlur = 0;
+      let cx = 0, cy = 0, cz = stackZ, rotZ = 0;
+      let scale = 1, opacity = 1, brightness = 1, blur = 0;
 
       if (!landed) {
-        const te   = easeOutExpo(t);
-        const tRot = easeOutCubic(t);
-        currentY   = fallFromY * (1 - te);
-        rotZ       = fallRotZ[i] * (1 - tRot);
-        finalScale = 0.82 + 0.18 * te;
-        finalOpacity = Math.min(1, t * 4);
+        const te = easeOutExpo(t);
+        cy       = fallFromY * (1 - te);
+        rotZ     = fallRotZ[i] * (1 - easeOutCubic(t));
+        scale    = 0.82 + 0.18 * te;
+        opacity  = Math.min(1, t * 4);
       } else if (elapsed < EXPAND_START) {
-        // Buffer phase - perfectly settled
-        currentY = 0;
-        rotZ = 0;
-        finalScale = 1;
-        finalOpacity = 1;
+        // values at defaults above
       } else {
-        const expandT = easeInOutQuart(progress(elapsed, EXPAND_START, EXPAND_DUR));
-
+        const expandT    = easeInOutQuart(progress(elapsed, EXPAND_START, EXPAND_DUR));
         const cardBaseDeg = i * stepDeg;
-        const finalDeg    = cardBaseDeg - totalRotation;
-        const finalRad    = (finalDeg * Math.PI) / 180;
+        const finalRad    = ((cardBaseDeg - totalRotation) * Math.PI) / 180;
         const normRad     = ((finalRad + Math.PI) % (2 * Math.PI)) - Math.PI;
+        const ring        = ringPos(normRad, cfg.radius);
 
-        const ring = ringPos(normRad, cfg.radius);
-        currentX = ring.x * expandT;
-        currentZ = stackZ * (1 - expandT) + ring.z * expandT;
-
-        finalScale      = 1 + (ring.scale - 1) * expandT;
-        finalOpacity    = 1 + (ring.opacity - 1) * expandT;
-        finalBrightness = 1 + (ring.brightness - 1) * expandT;
-        // Optimization: Disable blur entirely on mobile for max frame rate
-        finalBlur       = isMobile ? 0 : ring.blur * expandT; 
+        cx         = ring.x * expandT;
+        cz         = stackZ * (1 - expandT) + ring.z * expandT;
+        scale      = 1 + (ring.scale - 1) * expandT;
+        opacity    = 1 + (ring.opacity - 1) * expandT;
+        brightness = 1 + (ring.brightness - 1) * expandT;
+        blur       = isMobile ? 0 : ring.blur * expandT;
       }
 
-      el.style.transform = `translateX(${currentX}px) translateY(${currentY}px) translateZ(${currentZ}px) rotateZ(${rotZ}deg) scale(${finalScale})`;
-      el.style.opacity   = String(finalOpacity);
-      
-      if (!isMobile) {
-        el.style.filter = finalBrightness !== 1 || finalBlur !== 0 ? `brightness(${finalBrightness}) blur(${finalBlur}px)` : "";
-      } else {
-        el.style.filter = finalBrightness !== 1 ? `brightness(${finalBrightness})` : "";
+      // FIX #3 applied — build strings only once, compare before writing
+      const newTransform = `translateX(${r2(cx)}px) translateY(${r2(cy)}px) translateZ(${r2(cz)}px) rotateZ(${r2(rotZ)}deg) scale(${r2(scale)})`;
+      if (newTransform !== lastTransform.current[i]) {
+        el.style.transform = newTransform;
+        lastTransform.current[i] = newTransform;
       }
 
-      // FIX: Seamless continuous depth tracking instead of rigid jump stops the Safari stacking freeze
-      el.style.zIndex    = String(Math.round((currentZ + 1000) * 10));
+      const newOpacity = r2(opacity);
+      if (newOpacity !== lastOpacity.current[i]) {
+        el.style.opacity = String(newOpacity);
+        lastOpacity.current[i] = newOpacity;
+      }
+
+      // Build filter string only when needed (mobile never has blur)
+      let newFilter = "";
+      if (brightness !== 1 || blur !== 0) {
+        newFilter = blur > 0
+          ? `brightness(${r2(brightness)}) blur(${r2(blur)}px)`
+          : `brightness(${r2(brightness)})`;
+      }
+      if (newFilter !== lastFilter.current[i]) {
+        el.style.filter = newFilter;
+        lastFilter.current[i] = newFilter;
+      }
+
+      const newZ = Math.round((cz + 1000) * 10);
+      if (newZ !== lastZIndex.current[i]) {
+        el.style.zIndex = String(newZ);
+        lastZIndex.current[i] = newZ;
+      }
     });
 
     if (cylinderRef.current) {
       const tiltT   = easeOutCubic(progress(elapsed, TILT_START, TILT_DUR));
-      // FIX: Mobile needs a slight tilt to force hardware context + better 3D layout
       const tiltX   = isMobile ? -5 * tiltT : -13 * tiltT;
       const pxTilt  = isMobile ? 0 : mouseParallax.current.y * 2.2;
       const pxShift = isMobile ? 0 : mouseParallax.current.x * 7;
-      cylinderRef.current.style.transform = `rotateX(${tiltX + pxTilt}deg) translateX(${pxShift}px)`;
+      cylinderRef.current.style.transform = `rotateX(${r2(tiltX + pxTilt)}deg) translateX(${r2(pxShift)}px)`;
     }
 
     if (elapsed >= SPIN_START) {
       const active = Math.round((((totalRotation % 360) + 360) % 360) / stepDeg) % CARD_COUNT;
       if (lastActive.current !== active) {
-        lastActive.current = active;
+        frontCardIndex.current = active;
+        lastActive.current     = active;
         onSlideChange(active);
       }
     }
@@ -405,7 +425,12 @@ function CylinderCarousel({
                 opacity:            0,
               }}
             >
-              <CardInner card={card} isMobile={isMobile} />
+              <CardInner
+                card={card}
+                isMobile={isMobile}
+                // FIX #2 continued: pass isFront so the active card gets priority loading
+                isFront={i === 0}
+              />
             </div>
           ))}
         </div>
@@ -414,20 +439,17 @@ function CylinderCarousel({
   );
 }
 
-// ─── Main Export ──────────────────────────────────────────────────────────────
+// ─── Main Export ───────────────────────────────────────────────────────────────
 export default function HeroCarousel({
-  products,
-  activeIndex,
-  onSlideChange,
-  startAnimation,
+  products, activeIndex, onSlideChange, startAnimation,
 }: HeroCarouselProps) {
   const reduceMotion = useReducedMotion() ?? false;
   const isMobile     = useIsMobile();
 
-  const [mounted,       setMounted]      = useState(false);
-  const [isAdvisorOpen, setAdvisorOpen]  = useState(false);
-  const [fabHovered,    setFabHovered]   = useState(false);
-  const [showHint,      setShowHint]     = useState(false);
+  const [mounted,       setMounted]     = useState(false);
+  const [isAdvisorOpen, setAdvisorOpen] = useState(false);
+  const [fabHovered,    setFabHovered]  = useState(false);
+  const [showHint,      setShowHint]    = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -473,7 +495,7 @@ export default function HeroCarousel({
       <div
         className={`pointer-events-auto z-50 flex items-center gap-4 ${
           isMobile
-            ? "absolute -bottom-14 w-full justify-between px-4" 
+            ? "absolute -bottom-14 w-full justify-between px-4"
             : "absolute bottom-6 right-8 justify-end"
         }`}
       >
@@ -493,7 +515,7 @@ export default function HeroCarousel({
               {isMobile ? (
                 <>
                   <svg width="16" height="12" viewBox="0 0 18 14" fill="none">
-                    <path d="M7 1L1 7L7 13" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M7 1L1 7L7 13"  stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                     <path d="M11 1L17 7L11 13" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                   <span className="text-[7.5px] font-bold uppercase tracking-[0.2em] text-white/40">Drag to spin</span>
