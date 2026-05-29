@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import HeroContent from "./HeroContent";
 import HeroCarousel from "./HeroCarousel";
 import HeroMarquee from "./HeroMarquee";
 import HeroBackground from "./HeroBackground";
 import { FormattedProduct } from "@/src/lib/shopify";
-import { useEffect } from "react";
 
 interface HeroProps {
   initialProducts: FormattedProduct[];
@@ -73,7 +72,8 @@ export default function Hero({ initialProducts }: HeroProps) {
               lg:mt-0 z-20
             "
           >
-            <HeroContent />
+            {/* FIX: Passed startAnimation down to HeroContent */}
+            <HeroContent startAnimation={startAnimation} />
           </div>
 
           {/* ── Right column: Carousel ── */}

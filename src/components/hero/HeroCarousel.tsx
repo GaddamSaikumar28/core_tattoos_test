@@ -1,11 +1,6 @@
 "use client";
 
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useMemo,
-} from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import { Star, ChevronDown } from "lucide-react";
 import {
@@ -50,34 +45,43 @@ const SPARKLE_PATH = "M12,2 L16,9 L21,9 L16,15 L18,21 L12,17 L6,21 L8,15 L3,9 L8
 const BLOB_PATH    = "M12,2 L17,4 L21,9 L21,14 L18,19 L13,22 L8,22 L4,19 L3,14 L7,4 Z";
 const CARD_COUNT   = 8;
 
-const FALL_STAGGER  = 90;
-const FALL_DUR      = 800;
-const EXPAND_START  = 1500;
-const EXPAND_DUR    = 1200;
-const TILT_START    = 1600;
-const TILT_DUR      = 1000;
-const SPIN_START    = 2700;
+// ─── TIMING CONSTANTS ──────────────────────────────────────────────────────────
+const FALL_STAGGER  = 55;
+const FALL_DUR      = 520;
+// FIX: Start expansion strictly AFTER all cards hit the bottom (905ms + 55ms buffer)
+const EXPAND_START  = 960;   
+const EXPAND_DUR    = 600;
+const TILT_START    = 980;   
+const TILT_DUR      = 420;
+const SPIN_START    = 1750;  
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FIX #1 — Two-decimal rounding helper.
-//
-// Without rounding, each frame produces strings like:
-//   "translateX(127.38291047px) scale(0.98203847182)"
-// which allocates a new string every frame per card (480+ allocs/sec at 60 fps
-// with 8 cards), stresses the GC, and forces the browser to parse/compare a
-// long string on every style assignment.
-//
-// Rounding to 2 decimal places:
-//   • Reduces string length → faster string comparison
-//   • Creates far fewer unique strings → more cache hits
-//   • Imperceptible visual difference (0.005px accuracy at screen resolution)
-// ─────────────────────────────────────────────────────────────────────────────
+const FALL_ROT_Z = Object.freeze(
+  Array.from({ length: CARD_COUNT }, (_, i) => (i - CARD_COUNT / 2) * 3.0),
+);
+
+// ─── KEYFRAME INJECTION ───────────────────────────────────────────────────────
+const HERO_CAROUSEL_STYLE_ID = "hero-carousel-keyframes";
+function useHeroCarouselKeyframes() {
+  useEffect(() => {
+    if (document.getElementById(HERO_CAROUSEL_STYLE_ID)) return;
+    const s = document.createElement("style");
+    s.id = HERO_CAROUSEL_STYLE_ID;
+    s.textContent = `
+      @keyframes heroChevronBounce {
+        0%, 100% { transform: translateY(0px); }
+        50%       { transform: translateY(5px); }
+      }
+    `;
+    document.head.appendChild(s);
+    return () => { document.getElementById(HERO_CAROUSEL_STYLE_ID)?.remove(); };
+  }, []);
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function r2(v: number): number { return Math.round(v * 100) / 100; }
-
-function easeOutCubic(t: number)    { return 1 - Math.pow(1 - t, 3); }
-function easeOutExpo(t: number)     { return t >= 1 ? 1 : 1 - Math.pow(2, -10 * t); }
-function easeInOutQuart(t: number)  { return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2; }
-function clamp01(t: number)         { return Math.max(0, Math.min(1, t)); }
+function easeOutCubic(t: number)  { return 1 - Math.pow(1 - t, 3); }
+function easeOutExpo(t: number)   { return t >= 1 ? 1 : 1 - Math.pow(2, -10 * t); }
+function clamp01(t: number)       { return Math.max(0, Math.min(1, t)); }
 function progress(elapsed: number, start: number, dur: number) {
   return clamp01((elapsed - start) / dur);
 }
@@ -93,17 +97,21 @@ function ringPos(angleRad: number, radius: number) {
   const sinA  = Math.sin(angleRad);
   const depth = (cosA + 1) / 2;
   return {
-    x:          sinA * radius,
-    z:          cosA * radius - radius,
-    scale:      0.58 + depth * 0.42,
-    opacity:    0.25 + depth * 0.75,
-    brightness: 0.32 + depth * 0.72,
-    blur:       Math.max(0, (1 - depth) * 2.2),
+    x:       sinA * radius,
+    z:       cosA * radius - radius,
+    scale:   0.65 + depth * 0.35,
+    opacity: 0.42 + depth * 0.58,
   };
 }
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState<boolean | undefined>(undefined);
+// ─── useIsMobile ─────────────────────────────────────────────────────────────
+// FIX: Synchronous evaluation on client avoids the undefined flash -> CLS issue
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window !== "undefined") return window.innerWidth < 1024;
+    return false;
+  });
+  
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
     check();
@@ -117,14 +125,22 @@ function StarRating({ rating = 5 }: { rating?: number }) {
   return (
     <div className="flex items-center gap-[2px]">
       {[1, 2, 3, 4, 5].map((n) => (
-        <Star key={n} size={9} className={n <= rating ? "text-[#FF7A00] fill-[#FF7A00]" : "text-white/10 fill-white/10"} />
+        <Star
+          key={n}
+          size={9}
+          className={n <= rating ? "text-[#FF7A00] fill-[#FF7A00]" : "text-white/10 fill-white/10"}
+        />
       ))}
     </div>
   );
 }
 
+// ─── MorphingFAB ─────────────────────────────────────────────────────────────
 function MorphingFAB({ isHovered, onHoverStart, onHoverEnd, onClick }: {
-  isHovered: boolean; onHoverStart: () => void; onHoverEnd: () => void; onClick: () => void;
+  isHovered: boolean;
+  onHoverStart: () => void;
+  onHoverEnd: () => void;
+  onClick: () => void;
 }) {
   return (
     <motion.button
@@ -136,30 +152,24 @@ function MorphingFAB({ isHovered, onHoverStart, onHoverEnd, onClick }: {
         boxShadow: isHovered
           ? "0 0 56px rgba(255,122,0,0.85), 0 0 100px rgba(255,122,0,0.4)"
           : "0 0 22px rgba(255,122,0,0.38)",
+        transition: "box-shadow 0.3s ease",
       }}
       initial={{ opacity: 0, scale: 0, width: "52px" }}
       animate={{ opacity: 1, scale: 1, width: isHovered ? "190px" : "52px" }}
-      transition={{ type: "spring", stiffness: 320, damping: 30 }}
+      transition={{ type: "spring", stiffness: 320, damping: 28 }}
       whileTap={{ scale: 0.91 }}
       onHoverStart={onHoverStart}
       onHoverEnd={onHoverEnd}
     >
-      <motion.div
-        className="flex flex-shrink-0 items-center justify-center"
-        style={{ width: "52px", height: "52px" }}
-        animate={{ rotate: isHovered ? 0 : 360 }}
-        transition={isHovered
-          ? { duration: 0.4, ease: "easeOut" }
-          : { repeat: Infinity, duration: 9, ease: "linear" }}
-      >
+      <div className="flex flex-shrink-0 items-center justify-center w-[52px] h-[52px]">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
           <motion.path
             fill="currentColor"
             animate={{ d: isHovered ? BLOB_PATH : SPARKLE_PATH }}
-            transition={{ duration: 0.55, ease: [0.19, 1, 0.22, 1] }}
+            transition={{ duration: 0.35, ease: [0.19, 1, 0.22, 1] }}
           />
         </svg>
-      </motion.div>
+      </div>
       <AnimatePresence>
         {isHovered && (
           <motion.span
@@ -167,7 +177,7 @@ function MorphingFAB({ isHovered, onHoverStart, onHoverEnd, onClick }: {
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -6 }}
-            transition={{ duration: 0.2, delay: 0.12 }}
+            transition={{ duration: 0.2, delay: 0.1 }}
           >
             Tattoo Advisor
           </motion.span>
@@ -178,7 +188,8 @@ function MorphingFAB({ isHovered, onHoverStart, onHoverEnd, onClick }: {
 }
 
 // ─── CardInner ────────────────────────────────────────────────────────────────
-function CardInner({ card, isMobile, isFront }: { card: CardData; isMobile: boolean; isFront: boolean }) {
+// FIX: Only the first 3 front-facing cards get priority image loading.
+function CardInner({ card, isMobile, cardIndex }: { card: CardData; isMobile: boolean; cardIndex: number }) {
   return (
     <div className="relative h-full w-full pointer-events-none">
       <Image
@@ -188,11 +199,7 @@ function CardInner({ card, isMobile, isFront }: { card: CardData; isMobile: bool
         className="object-cover"
         sizes={isMobile ? "180px" : "280px"}
         draggable={false}
-        // FIX #2 — Priority-load the front-facing card image.
-        // Previously all 8 cards used priority={false}, so they all loaded with
-        // equal network priority.  The front card is the first thing the user
-        // sees; it should load before the others.
-        priority={isFront}
+        priority={cardIndex < 3}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/15 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
@@ -228,35 +235,26 @@ function CylinderCarousel({
   isMobile: boolean;
   startAnimation: boolean;
 }) {
-  const cfg     = useMemo(() => getCfg(isMobile), [isMobile]);
-  const stepDeg = 360 / CARD_COUNT;
+  const cfg      = useMemo(() => getCfg(isMobile), [isMobile]);
+  const stepDeg  = 360 / CARD_COUNT;
 
   const cylinderRef   = useRef<HTMLDivElement>(null);
   const cardRefs      = useRef<(HTMLDivElement | null)[]>([]);
   const containerRef  = useRef<HTMLDivElement>(null);
 
-  const dragX         = useMotionValue(0);
-  const autoRotation  = useRef(0);
-  const isDragging    = useRef(false);
-  const mouseParallax = useRef({ x: 0, y: 0 });
-  const lastActive    = useRef(-1);
-  const startTimeRef  = useRef<number | null>(null);
+  const dragX          = useMotionValue(0);
+  const autoRotation   = useRef(0);
+  const isDragging     = useRef(false);
+  const mouseParallax  = useRef({ x: 0, y: 0 });
+  const lastActive     = useRef(-1);
+  const startTimeRef   = useRef<number | null>(null);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // FIX #3 — Cache the last written style values per card.
-  //
-  // DOM style assignments are relatively cheap but not free — the browser
-  // needs to parse the value and schedule a layout or composite update.
-  // If the rounded value hasn't changed since last frame, skip the write.
-  // This is especially effective after EXPAND_DUR completes and values
-  // stabilise: many cards will have identical transform strings frame-to-frame
-  // and the writes can be skipped entirely.
-  // ─────────────────────────────────────────────────────────────────────────
-  const lastTransform    = useRef<string[]>(Array(CARD_COUNT).fill(""));
-  const lastOpacity      = useRef<number[]>(Array(CARD_COUNT).fill(-1));
-  const lastFilter       = useRef<string[]>(Array(CARD_COUNT).fill(""));
-  const lastZIndex       = useRef<number[]>(Array(CARD_COUNT).fill(-1));
-  const frontCardIndex   = useRef<number>(0); // Track which card is "front"
+  const fallFromYRef = useRef(isMobile ? -480 : -720);
+  useEffect(() => { fallFromYRef.current = isMobile ? -480 : -720; }, [isMobile]);
+
+  const lastTransform = useRef<string[]>(Array(CARD_COUNT).fill(""));
+  const lastOpacity   = useRef<number[]>(Array(CARD_COUNT).fill(-1));
+  const lastZIndex    = useRef<number[]>(Array(CARD_COUNT).fill(-1));
 
   const displayCards = useMemo(
     () => Array.from({ length: CARD_COUNT }, (_, i) => cards[i % cards.length]),
@@ -286,6 +284,7 @@ function CylinderCarousel({
     return () => window.removeEventListener("mousemove", onMove);
   }, [isMobile]);
 
+  // FIX: RAF loop strictly aborts early until startAnimation flips.
   useAnimationFrame((time, delta) => {
     if (!startAnimation) return;
 
@@ -300,9 +299,7 @@ function CylinderCarousel({
 
     const currentDragOffset = dragX.get() * (isMobile ? 0.45 : 0.28);
     const totalRotation     = autoRotation.current - currentDragOffset;
-
-    const fallFromY  = isMobile ? -480 : -720;
-    const fallRotZ   = Array.from({ length: CARD_COUNT }, (_, i) => (i - CARD_COUNT / 2) * 3.0);
+    const fallFromY         = fallFromYRef.current;
 
     cardRefs.current.forEach((el, i) => {
       if (!el) return;
@@ -312,34 +309,28 @@ function CylinderCarousel({
       const landed    = t >= 1;
       const stackZ    = -(i * 1.5);
 
-      let cx = 0, cy = 0, cz = stackZ, rotZ = 0;
-      let scale = 1, opacity = 1, brightness = 1, blur = 0;
+      let cx = 0, cy = 0, cz = stackZ, rotZ = 0, scale = 1, opacity = 1;
 
       if (!landed) {
         const te = easeOutExpo(t);
         cy       = fallFromY * (1 - te);
-        rotZ     = fallRotZ[i] * (1 - easeOutCubic(t));
+        rotZ     = FALL_ROT_Z[i] * (1 - easeOutCubic(t));
         scale    = 0.82 + 0.18 * te;
         opacity  = Math.min(1, t * 4);
-      } else if (elapsed < EXPAND_START) {
-        // values at defaults above
-      } else {
-        const expandT    = easeInOutQuart(progress(elapsed, EXPAND_START, EXPAND_DUR));
+      } else if (elapsed >= EXPAND_START) {
+        const expandT    = easeOutExpo(progress(elapsed, EXPAND_START, EXPAND_DUR));
         const cardBaseDeg = i * stepDeg;
         const finalRad    = ((cardBaseDeg - totalRotation) * Math.PI) / 180;
         const normRad     = ((finalRad + Math.PI) % (2 * Math.PI)) - Math.PI;
         const ring        = ringPos(normRad, cfg.radius);
 
-        cx         = ring.x * expandT;
-        cz         = stackZ * (1 - expandT) + ring.z * expandT;
-        scale      = 1 + (ring.scale - 1) * expandT;
-        opacity    = 1 + (ring.opacity - 1) * expandT;
-        brightness = 1 + (ring.brightness - 1) * expandT;
-        blur       = isMobile ? 0 : ring.blur * expandT;
+        cx      = ring.x * expandT;
+        cz      = stackZ * (1 - expandT) + ring.z * expandT;
+        scale   = 1 + (ring.scale - 1)   * expandT;
+        opacity = 1 + (ring.opacity - 1) * expandT;
       }
 
-      // FIX #3 applied — build strings only once, compare before writing
-      const newTransform = `translateX(${r2(cx)}px) translateY(${r2(cy)}px) translateZ(${r2(cz)}px) rotateZ(${r2(rotZ)}deg) scale(${r2(scale)})`;
+      const newTransform = `translate3d(${r2(cx)}px,${r2(cy)}px,${r2(cz)}px) rotateZ(${r2(rotZ)}deg) scale(${r2(scale)})`;
       if (newTransform !== lastTransform.current[i]) {
         el.style.transform = newTransform;
         lastTransform.current[i] = newTransform;
@@ -351,18 +342,6 @@ function CylinderCarousel({
         lastOpacity.current[i] = newOpacity;
       }
 
-      // Build filter string only when needed (mobile never has blur)
-      let newFilter = "";
-      if (brightness !== 1 || blur !== 0) {
-        newFilter = blur > 0
-          ? `brightness(${r2(brightness)}) blur(${r2(blur)}px)`
-          : `brightness(${r2(brightness)})`;
-      }
-      if (newFilter !== lastFilter.current[i]) {
-        el.style.filter = newFilter;
-        lastFilter.current[i] = newFilter;
-      }
-
       const newZ = Math.round((cz + 1000) * 10);
       if (newZ !== lastZIndex.current[i]) {
         el.style.zIndex = String(newZ);
@@ -371,7 +350,7 @@ function CylinderCarousel({
     });
 
     if (cylinderRef.current) {
-      const tiltT   = easeOutCubic(progress(elapsed, TILT_START, TILT_DUR));
+      const tiltT   = easeOutExpo(progress(elapsed, TILT_START, TILT_DUR));
       const tiltX   = isMobile ? -5 * tiltT : -13 * tiltT;
       const pxTilt  = isMobile ? 0 : mouseParallax.current.y * 2.2;
       const pxShift = isMobile ? 0 : mouseParallax.current.x * 7;
@@ -381,68 +360,61 @@ function CylinderCarousel({
     if (elapsed >= SPIN_START) {
       const active = Math.round((((totalRotation % 360) + 360) % 360) / stepDeg) % CARD_COUNT;
       if (lastActive.current !== active) {
-        frontCardIndex.current = active;
-        lastActive.current     = active;
+        lastActive.current = active;
         onSlideChange(active);
       }
     }
   });
 
   return (
-    <motion.div
+    // FIX: Removed dangerous onMouseDown/Up that caused permanent frozen state.
+    <div
       ref={containerRef}
       className="relative flex h-full w-full cursor-grab items-center justify-center active:cursor-grabbing"
       style={{ touchAction: "pan-y" }}
-      onPanStart={() => { isDragging.current = true; }}
-      onPan={(_, info) => { dragX.set(info.offset.x); }}
-      onPanEnd={(_, info) => {
-        isDragging.current = false;
-        autoRotation.current -= info.offset.x * (isMobile ? 0.45 : 0.28);
-        dragX.set(0);
-      }}
     >
-      <div
-        className="flex h-full w-full items-center justify-center"
-        style={{ perspective: `${cfg.perspective}px` }}
-      >
+      <div className="flex h-full w-full items-center justify-center" style={{ perspective: `${cfg.perspective}px` }}>
         <div
           ref={cylinderRef}
           className="relative h-0 w-0"
-          style={{ transformStyle: "preserve-3d" }}
+          style={{ transformStyle: "preserve-3d", willChange: "transform" }}
         >
           {displayCards.map((card, i) => (
             <div
               key={`card-${i}`}
               ref={(el) => { cardRefs.current[i] = el; }}
-              className="absolute overflow-hidden border border-white/10 shadow-xl will-change-transform"
+              className="absolute overflow-hidden border border-white/10 shadow-xl"
               style={{
-                width:              `${cfg.cardW}px`,
-                height:             `${cfg.cardH}px`,
-                left:               `${-cfg.cardW / 2}px`,
-                top:                `${-cfg.cardH / 2}px`,
-                borderRadius:       isMobile ? "12px" : "16px",
-                backfaceVisibility: "hidden",
-                opacity:            0,
+                width: `${cfg.cardW}px`, height: `${cfg.cardH}px`,
+                left: `${-cfg.cardW / 2}px`, top: `${-cfg.cardH / 2}px`,
+                borderRadius: isMobile ? "12px" : "16px",
+                backfaceVisibility: "hidden", opacity: 0,
+                willChange: "transform", transformOrigin: "center center", transform: "translateZ(0)",
               }}
             >
-              <CardInner
-                card={card}
-                isMobile={isMobile}
-                // FIX #2 continued: pass isFront so the active card gets priority loading
-                isFront={i === 0}
-              />
+              <CardInner card={card} isMobile={isMobile} cardIndex={i} />
             </div>
           ))}
         </div>
       </div>
-    </motion.div>
+
+      <motion.div
+        className="absolute inset-0"
+        onPanStart={() => { isDragging.current = true; }}
+        onPan={(_, info) => { dragX.set(info.offset.x); }}
+        onPanEnd={(_, info) => {
+          isDragging.current = false;
+          autoRotation.current -= info.offset.x * (isMobile ? 0.45 : 0.28);
+          dragX.set(0);
+        }}
+        style={{ touchAction: "pan-y" }}
+      />
+    </div>
   );
 }
 
 // ─── Main Export ───────────────────────────────────────────────────────────────
-export default function HeroCarousel({
-  products, activeIndex, onSlideChange, startAnimation,
-}: HeroCarouselProps) {
+export default function HeroCarousel({ products, activeIndex, onSlideChange, startAnimation }: HeroCarouselProps) {
   const reduceMotion = useReducedMotion() ?? false;
   const isMobile     = useIsMobile();
 
@@ -450,6 +422,8 @@ export default function HeroCarousel({
   const [isAdvisorOpen, setAdvisorOpen] = useState(false);
   const [fabHovered,    setFabHovered]  = useState(false);
   const [showHint,      setShowHint]    = useState(false);
+
+  useHeroCarouselKeyframes();
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -476,7 +450,8 @@ export default function HeroCarousel({
     });
   }, [products]);
 
-  if (!mounted || isMobile === undefined) {
+  // Hydration safety check only
+  if (!mounted) {
     return <div className="pointer-events-none relative flex h-full w-full flex-col justify-center bg-transparent" />;
   }
 
@@ -506,11 +481,7 @@ export default function HeroCarousel({
               initial={{ opacity: 0 }}
               animate={{ opacity: isMobile ? [0, 0.55, 0] : 0.55 }}
               exit={{ opacity: 0 }}
-              transition={
-                isMobile
-                  ? { duration: 2.4, repeat: 3, ease: "easeInOut" }
-                  : { duration: 0.8 }
-              }
+              transition={isMobile ? { duration: 2.4, repeat: 3, ease: "easeInOut" } : { duration: 0.8 }}
             >
               {isMobile ? (
                 <>
@@ -523,9 +494,12 @@ export default function HeroCarousel({
               ) : (
                 <>
                   <span className="text-[7.5px] font-bold uppercase tracking-[0.28em] text-white/45">Drag or Scroll</span>
-                  <motion.div animate={{ y: [0, 4, 0] }} transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}>
-                    <ChevronDown size={13} strokeWidth={2.5} className="text-white/45" />
-                  </motion.div>
+                  <ChevronDown
+                    size={13}
+                    strokeWidth={2.5}
+                    className="text-white/45"
+                    style={{ animation: "heroChevronBounce 1.6s ease-in-out infinite" }}
+                  />
                 </>
               )}
             </motion.div>
