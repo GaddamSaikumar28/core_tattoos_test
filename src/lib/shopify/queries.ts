@@ -64,7 +64,7 @@ export const productFragment = /* GraphQL */ `
     }
     
    
-    variants(first: 250) {
+    variants(first: 5) {
       edges {
         node {
           id

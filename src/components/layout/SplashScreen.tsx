@@ -21,7 +21,6 @@ const containerVariants: Variants = {
   exit: {
     opacity: 0,
     scale: 1.05, // Slightly deeper scale-out for a cinematic fade
-    filter: "blur(20px)", // Heavier blur as it fades into the dark site
     transition: { duration: 1.2, ease: luxuryEase }, 
   },
 };
@@ -62,7 +61,6 @@ const butterflyRightVariants: Variants = {
 };
 
 // Continuous floating effect for the butterflies once they land
-// Fixed TypeScript error by explicitly typing as TargetAndTransition
 const floatAnimation: TargetAndTransition = {
   y: [0, -12, 0], // Smooth medium-slow travel distance
   transition: {
@@ -92,6 +90,8 @@ export default function SplashScreen({
     // Lock scrolling while splash is active
     document.body.style.overflow = "hidden";
 
+    let scrollTimer: NodeJS.Timeout;
+
     // 6.8 second premium pacing timeline
     const completeTimer = setTimeout(() => {
       setShowIntro(false);
@@ -99,15 +99,15 @@ export default function SplashScreen({
       window.dispatchEvent(new Event("splashComplete"));
       
       // Let the exit fade animation finish completely before releasing scroll
-      const scrollTimer = setTimeout(() => {
+      scrollTimer = setTimeout(() => {
         document.body.style.overflow = "";
       }, 1200);
-
-      return () => clearTimeout(scrollTimer);
     }, 6800);
 
+    // FIX: Scope level cleanup safely handles clearing both running timers
     return () => {
       clearTimeout(completeTimer);
+      if (scrollTimer) clearTimeout(scrollTimer);
       document.body.style.overflow = "";
     };
   }, []);
@@ -132,7 +132,6 @@ export default function SplashScreen({
           animate="visible"
           exit="exit"
           aria-hidden="true"
-          // Ultra-dark background: #050505 gives a richer OLED-style black than standard black
           className="splash-wrapper fixed inset-0 z-[100] flex items-center justify-center bg-[#050505] overflow-hidden pointer-events-auto select-none"
         >
           <div className="relative w-full h-full max-w-[1440px] mx-auto flex items-center justify-center">
@@ -149,7 +148,6 @@ export default function SplashScreen({
                   width={240}
                   height={240}
                   sizes="(max-width: 768px) 100px, 240px"
-                  // Added a subtle white/gray drop shadow to separate from the black background
                   className="w-[100px] md:w-[150px] lg:w-[200px] xl:w-[240px] h-auto drop-shadow-[0_0_15px_rgba(255,255,255,0.08)]"
                   priority
                 />
@@ -187,7 +185,7 @@ export default function SplashScreen({
               </motion.div>
             </motion.div>
             
-            {/* Optional: Subtle ambient radial glow behind the logo to create depth on black */}
+            {/* Ambient radial glow behind the logo to create depth on black */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40vw] h-[40vw] rounded-full bg-white/5 blur-[100px] pointer-events-none z-0" />
 
           </div>
