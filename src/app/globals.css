@@ -1,38 +1,33 @@
-
 @import "tailwindcss";
 
 @theme {
   /* --- 1. Refined Dark Mode Color Palette --- */
-  /* Backgrounds */
-  --color-bg-base: #050505; /* Deepest black for the main body */
-  --color-bg-surface: #121212; /* Slightly lighter for cards/dropdowns */
+  --color-bg-base: #050505;
+  --color-bg-surface: #121212;
   
-  /* Text */
-  --color-text-primary: #F3F4F6; /* Off-white to reduce eye strain against dark bg */
-  --color-text-secondary: #9CA3AF; /* Muted gray for descriptions/subtitles */
+  --color-text-primary: #F3F4F6;
+  --color-text-secondary: #9CA3AF;
   
-  /* Accents based on the new design */
-  --color-brand-orange: #FF7A00; /* Vibrant orange for primary CTAs & highlights */
-  --color-brand-purple: #2D1B4E; /* Deep purple for AI/Custom background */
-  --color-brand-purple-light: #9D72FF; /* Neon purple for glowing text/icons */
+  --color-brand-orange: #FF7A00;
+  --color-brand-purple: #2D1B4E;
+  --color-brand-purple-light: #9D72FF;
   
-  /* Utilities */
   --color-white: #ffffff;
   --color-black: #000000;
   --color-border: #2A2A2A;
 
   /* --- 2. Font Families --- */
-  /* Keep your structure, assuming Montserrat is your clean sans-serif */
   --font-sans: var(--font-montserrat), ui-sans-serif, system-ui;
   --font-montserrat: var(--font-montserrat), sans-serif;
-  --font-almarena: var(--font-almarena), serif; /* Assuming this is the stylized wide font from the design */
+  --font-almarena: var(--font-almarena), serif;
 
   /* --- 3. Shadows & Glows --- */
   --shadow-card: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
   --shadow-glow-purple: 0 0 15px rgba(157, 114, 255, 0.3);
 
-   --animate-marquee: marquee 30s linear infinite;
-
+   /* Aligned variable for uniform speed control */
+   --marquee-speed: 22s;
+   --animate-marquee: marquee var(--marquee-speed) linear infinite;
    --animate-fade-in-up : fade-in-up 0.4s ease-out forwards;
 }
 
@@ -46,27 +41,26 @@
   100% { opacity: 1; transform: translateY(0); }
 }
 
-
+/* Added missing chevron bounce animation */
+@keyframes heroChevronBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(10px); }
+}
 
 @layer base {
-  /* --- Global Resets & Theming --- */
   :root {
-    /* FLIPPED to Dark Mode */
     background-color: var(--color-bg-base);
     color: var(--color-text-primary);
     font-family: var(--font-montserrat);
-    color-scheme: dark; /* Helps browsers render default scrollbars/inputs correctly */
+    color-scheme: dark;
   }
 
   body {
     @apply antialiased;
     line-height: 1.6;
-    overflow-x: hidden; /* Prevents horizontal scroll breakage */
+    overflow-x: hidden;
   }
 
-  /* --- Typography System (Strict Uniformity) --- */
-  
-  /* Body Text */
   p, .text-body {
     font-weight: 400;
     font-size: clamp(0.875rem, 0.5vw + 0.75rem, 1rem); 
@@ -87,8 +81,6 @@
     color: var(--color-text-secondary);
   }
 
-  /* Headings: The new design uses a very wide, bold stylized font. 
-     I am mapping this to your Almarena font variable assuming that's it. */
   h1, h2, h3, h4, h5, h6, .font-heading {
     font-family: var(--font-almarena); 
     font-weight: 700; 
@@ -111,13 +103,11 @@
     text-transform: uppercase;
   }
 
-  /* Form Elements */
   input, select, textarea {
     font-family: var(--font-montserrat);
     @apply text-base bg-[--color-bg-surface] border border-[--color-border] rounded-md px-4 py-2 text-[--color-text-primary] focus:outline-none focus:border-[--color-brand-orange] transition-colors;
   }
 
-  /* Dark mode Chrome Autofill fix */
   input:-webkit-autofill,
   input:-webkit-autofill:hover, 
   input:-webkit-autofill:focus, 
@@ -129,31 +119,24 @@
 }
 
 @layer components {
-  /* --- Reusable Uniform Components --- */
-  
-  /* Base Button - Guarantees uniform padding, typography, and transitions everywhere */
   .btn {
     @apply inline-flex items-center justify-center px-6 py-3 rounded-full font-semibold uppercase tracking-wider transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed;
     font-family: var(--font-montserrat);
     font-size: clamp(0.75rem, 0.5vw + 0.6rem, 0.875rem);
   }
 
-  /* Primary Orange Button */
   .btn-primary {
     @apply bg-[--color-brand-orange] text-white hover:brightness-110 active:scale-95;
   }
 
-  /* Outline/Secondary Button */
   .btn-outline {
     @apply border-2 border-[--color-border] text-[--color-text-primary] hover:border-[--color-text-primary] bg-transparent active:scale-95;
   }
 
-  /* AI / Tech Purple Button (Pill shape) */
   .btn-tech {
     @apply bg-[--color-brand-purple] text-[--color-brand-purple-light] border border-transparent hover:border-[--color-brand-purple-light] hover:shadow-[var(--shadow-glow-purple)] active:scale-95;
   }
 
-  /* --- Splash Screen (Kept your logic intact, updated colors) --- */
   .splash-completed .splash-wrapper {
     display: none !important;
     pointer-events: none !important;
@@ -167,7 +150,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--color-bg-base); /* Flipped to dark */
+    background-color: var(--color-bg-base); 
     overflow: hidden;
   }
 
