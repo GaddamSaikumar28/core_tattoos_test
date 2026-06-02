@@ -1,6 +1,4 @@
-"use client";
-
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import {
@@ -27,281 +25,54 @@ import {
   Focus,
 } from "lucide-react";
 import clsx from "clsx";
-import { toast } from "sonner";
-import { useCart } from "@/src/context/CartContext";
-import { FormattedProduct, Variant } from "@/src/lib/shopify";
 
-// Bypass React's strict custom element checks for Model Viewer
+import { TattooProductDetailProps } from "./types";
+import { useProductDetail }         from "./useProductDetail";
+import InteractiveTattoo            from "./InteractiveTattoo";
+import AccordionItem                from "./AccordionItem";
+
+// Bypass React's strict custom element checks for Model Viewer.
 const ModelViewer = "model-viewer" as any;
 
-interface TattooProductDetailProps {
-  product: FormattedProduct;
-}
-
-// =========================================================
-// TOUCH GESTURE HELPERS (for 2D AR Overlay)
-// =========================================================
-const getDistance = (touches: React.TouchList) => {
-  const dx = touches[0].clientX - touches[1].clientX;
-  const dy = touches[0].clientY - touches[1].clientY;
-  return Math.sqrt(dx * dx + dy * dy);
-};
-
-const getAngle = (touches: React.TouchList) => {
-  const dx = touches[0].clientX - touches[1].clientX;
-  const dy = touches[0].clientY - touches[1].clientY;
-  return Math.atan2(dy, dx) * (180 / Math.PI);
-};
-
-// =========================================================
-// INTERACTIVE 2D AR TATTOO OVERLAY
-// =========================================================
-const InteractiveTattoo = ({ src }: { src: string }) => {
-  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1, rotate: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const pinchRef = useRef({ initialDist: 0, initialScale: 1, initialAngle: 0, initialRotate: 0 });
-  const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0 });
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      dragRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, initialX: transform.x, initialY: transform.y };
-      setIsDragging(true);
-    } else if (e.touches.length === 2) {
-      pinchRef.current = { initialDist: getDistance(e.touches), initialScale: transform.scale, initialAngle: getAngle(e.touches), initialRotate: transform.rotate };
-    }
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 1 && isDragging) {
-      const dx = e.touches[0].clientX - dragRef.current.startX;
-      const dy = e.touches[0].clientY - dragRef.current.startY;
-      setTransform((prev) => ({ ...prev, x: dragRef.current.initialX + dx, y: dragRef.current.initialY + dy }));
-    } else if (e.touches.length === 2) {
-      const scaleDelta = getDistance(e.touches) / pinchRef.current.initialDist;
-      const angleDelta = getAngle(e.touches) - pinchRef.current.initialAngle;
-      setTransform((prev) => ({ ...prev, scale: pinchRef.current.initialScale * scaleDelta, rotate: pinchRef.current.initialRotate + angleDelta }));
-    }
-  };
-
-  const onTouchEnd = () => setIsDragging(false);
-
-  return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden pointer-events-none">
-      <div
-        className="pointer-events-auto touch-none"
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        style={{ transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${transform.scale}) rotate(${transform.rotate}deg)`, transformOrigin: "center center" }}
-      >
-        <Image
-          src={src}
-          alt="AR Tattoo Overlay"
-          width={350}
-          height={350}
-          draggable={false}
-          className="w-auto h-auto max-w-[350px] opacity-90 mix-blend-multiply drop-shadow-2xl filter contrast-125"
-        />
-      </div>
-    </div>
-  );
-};
-
-// =========================================================
-// VIEW STATE TYPE
-// =========================================================
-type ViewState =
-  | { type: "3d"; source: any }
-  | { type: "skintone"; source: any }
-  | { type: "gallery"; source: any; index: number };
-
-// =========================================================
-// MAIN COMPONENT
 // =========================================================
 export default function TattooProductDetail({ product }: TattooProductDetailProps) {
-  const { addToCart, buyNow } = useCart();
-  // console.log(product,"in the product detail page");
-  // ── Data Parsing ──────────────────────────────────────────
-  const models = product.media?.models || [];
-  const swatches = product.skinToneSwatches || [];
-  const rawGallery = product.media?.gallery || [];
-  const featuredUrl = product.media?.featuredImage;
 
-  const swatchUrls = swatches.map((s: any) => s.imageUrl);
-  const filteredGallery = rawGallery.filter(
-    (img: any) => img.url !== featuredUrl && !swatchUrls.includes(img.url),
-  );
-  const standardImages = [
-    ...(featuredUrl ? [{ url: featuredUrl, altText: product.title }] : []),
-    ...filteredGallery,
-  ];
+  // Pull everything from the hook — this component only renders.
+  console.log(product);
+  const {
+    models, swatches, standardImages,
+    isMounted,
+    viewState, setViewState,
+    activeSkinTone, setActiveSkinTone,
+    currentImageSrc, thumbnails,
+    isZoomed, setIsZoomed,
+    isCameraAROpen, setIsCameraAROpen,
+    modelViewerRef, videoRef,
+    modelLoaded,
+    activeAccordion,
+    isWishlisted, setIsWishlisted,
+    quantity, isAdding, isBuyingNow,
+    variants, selectedVariant, setSelectedVariant,
+    price, compareAtPrice, isOnSale, discount, savingsAmount,
+    viewingNow, stockLevel, soldThisWeek, scarcityPct,
+    handleQuantityChange,
+    handleAddToCart,
+    handleBuyNow,
+    handleTriggerAR,
+    toggleAccordion,
+  } = useProductDetail(product);
 
-  const getInitialViewState = (): ViewState => {
-    if (models.length > 0) return { type: "3d", source: models[0] };
-    if (swatches.length > 0) return { type: "skintone", source: swatches[0] };
-    if (standardImages.length > 0) return { type: "gallery", source: standardImages[0], index: 0 };
-    return { type: "gallery", source: { url: "/placeholder.png" }, index: 0 };
-  };
-
-  // ── State ──────────────────────────────────────────────────
-  const [isMounted, setIsMounted] = useState(false);
-  const [viewState, setViewState] = useState<ViewState>(getInitialViewState());
-  const [activeSkinTone, setActiveSkinTone] = useState<string | null>(swatches[0]?.hexCode || null);
-  const [isZoomed, setIsZoomed] = useState(false);
-  const [activeAccordion, setActiveAccordion] = useState<string | null>("description");
-  const [isWishlisted, setIsWishlisted] = useState(false);
-
-  // 3D & AR
-  const [modelLoaded, setModelLoaded] = useState(false);
-  const [arSupported, setArSupported] = useState(false);
-  const [isCameraAROpen, setIsCameraAROpen] = useState(false);
-  const modelViewerRef = useRef<HTMLElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  // Cart & Variants
-  const [quantity, setQuantity] = useState(1);
-  const [isAdding, setIsAdding] = useState(false);
-  const [isBuyingNow, setIsBuyingNow] = useState(false);
-  const variants = product.allVariants || [];
-  const [selectedVariant, setSelectedVariant] = useState<Variant | null>(
-    variants.find((v) => v.availableForSale) || variants[0] || null,
-  );
-
-  // Pricing
-  const price = selectedVariant ? Number(selectedVariant.price) : product.checkout.price;
-  const compareAtPrice = selectedVariant?.compareAtPrice
-    ? Number(selectedVariant.compareAtPrice)
-    : product.checkout.compareAtPrice;
-  const isOnSale = compareAtPrice && compareAtPrice > price;
-  const discount =
-    product.checkout.discountPercentage ||
-    (isOnSale && compareAtPrice > 0 ? Math.round(((compareAtPrice - price) / compareAtPrice) * 100) : 0);
-  const savingsAmount = isOnSale ? (compareAtPrice - price).toFixed(0) : 0;
-
-  // Social Proof / Scarcity
-  const viewingNow = useMemo(() => Math.floor(Math.random() * (3000 - 1500 + 1) + 1500), []);
-  const stockLevel = product.inventory?.stockLevel ?? 153;
-  const soldThisWeek = Math.max(100, 1000 - stockLevel);
-  const scarcityPct = Math.min((soldThisWeek / (soldThisWeek + stockLevel)) * 100, 95);
-
-  // Thumbnails
-  const thumbnails: any[] = [];
-  if (models.length > 0) {
-    thumbnails.push({ type: "3d", thumbUrl: standardImages[0]?.url || "/placeholder.png", source: models[0] });
-  }
-  if (swatches.length > 0) {
-    const activeSwatch = swatches.find((s: any) => s.hexCode === activeSkinTone) || swatches[0];
-    thumbnails.push({ type: "skintone", thumbUrl: activeSwatch.imageUrl, source: activeSwatch });
-  }
-  standardImages.forEach((img, index) => {
-    thumbnails.push({ type: "gallery", thumbUrl: img.url || "/placeholder.png", source: img, index });
-  });
-
-  // ── Effects ───────────────────────────────────────────────
-  useEffect(() => {
-    setIsMounted(true);
-    if (models.length > 0) {
-      import("@google/model-viewer").then(() => {
-        customElements.whenDefined("model-viewer").then(() => {
-          const mv = modelViewerRef.current as any;
-          if (mv) {
-            mv.addEventListener("load", () => setModelLoaded(true));
-            if (typeof mv.canActivateAR !== "undefined") setArSupported(mv.canActivateAR);
-          }
-        });
-      });
-    }
-  }, [models]);
-
-  useEffect(() => {
-    document.body.style.overflow = isZoomed || isCameraAROpen ? "hidden" : "unset";
-    return () => { document.body.style.overflow = "unset"; };
-  }, [isZoomed, isCameraAROpen]);
-
-  useEffect(() => {
-    let activeStream: MediaStream | null = null;
-    const startCamera = async () => {
-      if (!isCameraAROpen || !videoRef.current) return;
-      if (!navigator?.mediaDevices?.getUserMedia) {
-        toast.error("Camera access requires a secure connection (HTTPS).");
-        setIsCameraAROpen(false);
-        return;
-      }
-      try {
-        activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        if (videoRef.current) videoRef.current.srcObject = activeStream;
-      } catch {
-        toast.error("Unable to access camera. Please check permissions.");
-        setIsCameraAROpen(false);
-      }
-    };
-    startCamera();
-    return () => { if (activeStream) activeStream.getTracks().forEach((t) => t.stop()); };
-  }, [isCameraAROpen]);
-
-  // ── Handlers ──────────────────────────────────────────────
-  const handleQuantityChange = (type: "increase" | "decrease") => {
-    setQuantity((prev) => (type === "increase" ? prev + 1 : prev > 1 ? prev - 1 : 1));
-  };
-
-  const handleAddToCart = async () => {
-    if (!selectedVariant?.variantId) return toast.error("Please select an option");
-    setIsAdding(true);
-    try {
-      await addToCart(selectedVariant.variantId, quantity);
-      toast.success("Added to cart!");
-    } catch {
-      toast.error("Failed to add to cart");
-    } finally {
-      setIsAdding(false);
-    }
-  };
-
-  const handleBuyNow = async () => {
-    if (!selectedVariant?.variantId) return toast.error("Please select an option");
-    setIsBuyingNow(true);
-    try {
-      const checkoutUrl = await buyNow(selectedVariant.variantId, quantity);
-      if (checkoutUrl) window.location.href = checkoutUrl;
-    } finally {
-      setIsBuyingNow(false);
-    }
-  };
-
-  const handleTriggerAR = () => {
-    if (viewState.type === "3d") {
-      const mv = modelViewerRef.current as any;
-      if (mv?.canActivateAR) {
-        mv.activateAR();
-      } else {
-        toast.error("3D AR is not supported on this device.");
-      }
-    } else {
-      if (product.media?.arOverlayImage) {
-        setIsCameraAROpen(true);
-      } else {
-        toast.info("Stay tuned! AR Try-On for this product is coming soon.", {
-          position: "bottom-center",
-          duration: 4000,
-          style: { background: "#111", color: "#fff", border: "1px solid rgba(255,255,255,0.1)" },
-        });
-      }
-    }
-  };
-
-  const toggleAccordion = (id: string) => setActiveAccordion((prev) => (prev === id ? null : id));
-
+  // Prevent SSR/hydration mismatch — render nothing until client-mounted.
   if (!isMounted) return null;
 
-  // ── Current image src for modals ──────────────────────────
-  const currentImageSrc =
-    viewState.type === "skintone" ? viewState.source.imageUrl : viewState.source.url;
-
+  // =========================================================
   return (
     <div className="bg-[#080808] min-h-screen pt-[130px] lg:pt-[150px] pb-12 selection:bg-[#fe8204] selection:text-white">
       <div className="container max-w-[1400px] mx-auto px-4 lg:px-8">
 
-        {/* BREADCRUMBS */}
+        {/* ══════════════════════════════════════════════════
+            BREADCRUMBS
+        ══════════════════════════════════════════════════ */}
         <nav className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-neutral-600 mb-8">
           <a href="/" className="hover:text-white transition-colors">Home</a>
           <span className="text-neutral-700">/</span>
@@ -310,25 +81,32 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
           <span className="text-neutral-400 truncate max-w-[160px] sm:max-w-none">{product.title}</span>
         </nav>
 
+        {/* ══════════════════════════════════════════════════
+            TWO-COLUMN GRID
+        ══════════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-12 xl:gap-20 items-start">
 
-          {/* ══════════════════════════════════════════════════
+          {/* ════════════════════════════════════════════════
               LEFT — MEDIA VIEWER
-          ══════════════════════════════════════════════════ */}
+          ════════════════════════════════════════════════ */}
           <div className="flex flex-col gap-5 lg:sticky lg:top-28">
 
-            {/* ── Main Canvas ─────────────────────────────── */}
+            {/* ── MAIN CANVAS ─────────────────────────────── */}
             <div className="relative w-full aspect-[4/5] rounded-3xl bg-[#0d0d0d] border border-white/[0.06] overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.6)]">
 
-              {/* ── Top floating row: social proof + wishlist ─ */}
+              {/* ── Floating top row: social proof + wishlist ─ */}
               <div className="absolute top-5 left-5 right-5 z-20 flex justify-between items-start pointer-events-none">
                 <div className="flex flex-col gap-2.5">
-                  {/* Live viewers badge */}
+
+                  {/* Live viewer count */}
                   <div className="bg-black/70 backdrop-blur-md rounded-full px-3.5 py-2 flex items-center gap-2 border border-white/10 w-fit shadow-lg pointer-events-auto">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#4ade80]" />
-                    <span className="text-[10px] font-semibold text-neutral-300">{viewingNow.toLocaleString()} viewing now</span>
+                    <span className="text-[10px] font-semibold text-neutral-300">
+                      {viewingNow.toLocaleString()} viewing now
+                    </span>
                   </div>
-                  {/* Limited drop + product badges */}
+
+                  {/* "Limited Drop" pill + product badges */}
                   <div className="flex flex-col gap-1.5">
                     <div className="bg-[#fe8204] text-black px-3.5 py-1.5 rounded-full text-[9px] font-black tracking-[0.15em] uppercase w-fit shadow-[0_4px_14px_rgba(254,130,4,0.35)] pointer-events-auto">
                       Limited Drop
@@ -344,16 +122,22 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                     ))}
                   </div>
                 </div>
-                {/* Wishlist */}
+
+                {/* Wishlist toggle */}
                 <button
                   onClick={() => setIsWishlisted((w) => !w)}
                   className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-black/80 transition-colors shadow-lg pointer-events-auto"
                 >
-                  <Heart className={clsx("w-4 h-4 transition-all duration-300", isWishlisted ? "fill-[#fe8204] text-[#fe8204]" : "text-white")} />
+                  <Heart
+                    className={clsx(
+                      "w-4 h-4 transition-all duration-300",
+                      isWishlisted ? "fill-[#fe8204] text-[#fe8204]" : "text-white",
+                    )}
+                  />
                 </button>
               </div>
 
-              {/* ── Dynamic media ─────────────────────────── */}
+              {/* ── DYNAMIC MEDIA PANEL ───────────────────── */}
               <AnimatePresence mode="wait">
                 <motion.div
                   key={viewState.type + (viewState.type === "gallery" ? viewState.index : "")}
@@ -363,7 +147,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                   transition={{ duration: 0.35 }}
                   className="relative w-full h-full"
                 >
-                  {/* 3D Model */}
+                  {/* ── 3D Model panel ────────────────────── */}
                   {viewState.type === "3d" && (
                     <div className="w-full h-full">
                       {!modelLoaded && (
@@ -390,7 +174,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                     </div>
                   )}
 
-                  {/* 2D Image (skin tone or gallery) */}
+                  {/* ── 2D Image panel (skin-tone or gallery) */}
                   {(viewState.type === "skintone" || viewState.type === "gallery") && (
                     <div
                       className="w-full h-full cursor-zoom-in"
@@ -409,10 +193,10 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                 </motion.div>
               </AnimatePresence>
 
-              {/* Bottom vignette */}
+              {/* Bottom vignette overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-transparent to-transparent opacity-80 pointer-events-none" />
 
-              {/* ── Scarcity bar ────────────────────────── */}
+              {/* ── SCARCITY PROGRESS BAR ─────────────────── */}
               <div className="absolute bottom-[68px] left-5 right-5 z-20 pointer-events-none">
                 <div className="flex justify-between text-[10px] font-semibold text-neutral-500 mb-1.5">
                   <span>{soldThisWeek.toLocaleString()} sold this week</span>
@@ -428,7 +212,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                 </div>
               </div>
 
-              {/* ── Bottom action row: AR + Zoom ─────────── */}
+              {/* ── BOTTOM ACTION ROW: AR button + zoom ───── */}
               <div className="absolute bottom-5 left-5 right-5 z-20 flex items-center justify-between">
                 <button
                   onClick={handleTriggerAR}
@@ -449,44 +233,20 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                 )}
               </div>
             </div>
+            {/* END MAIN CANVAS */}
 
-            {/* ── Skin-tone swatch bar ─────────────────────── */}
-            {/* {swatches.length > 0 && (
-              <div className="flex items-center justify-center gap-4">
-                <span className="text-[9px] font-bold tracking-[0.15em] uppercase text-neutral-600 shrink-0">Skin Tone</span>
-                <div className="flex items-center gap-2.5">
-                  {swatches.map((swatch: any) => (
-                    <button
-                      key={swatch.hexCode}
-                      onClick={() => {
-                        setActiveSkinTone(swatch.hexCode);
-                        setViewState({ type: "skintone", source: swatch });
-                      }}
-                      className={clsx(
-                        "w-7 h-7 rounded-full border-2 transition-all duration-300",
-                        activeSkinTone === swatch.hexCode
-                          ? "border-white scale-110 shadow-[0_0_12px_rgba(255,255,255,0.2)]"
-                          : "border-transparent hover:scale-110 hover:border-white/40 opacity-60 hover:opacity-100",
-                      )}
-                      style={{ backgroundColor: swatch.hexCode }}
-                      aria-label={`Skin tone ${swatch.hexCode}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            )} */}
-          {/* ── UNIFIED THUMBNAILS & SKIN TONE SWATCHES ROW ────────────────── */}
-            {((thumbnails.length > 1) || (swatches.length > 0)) && (
+            {/* ── THUMBNAIL STRIP + SKIN-TONE SWATCHES ROW ─ */}
+            {(thumbnails.length > 1 || swatches.length > 0) && (
               <div className="flex flex-row items-center gap-6 overflow-x-auto no-scrollbar pb-2 mt-2 w-full">
-                
-                {/* Left: Thumbnails Strip */}
+
+                {/* Left: thumbnail buttons */}
                 {thumbnails.length > 1 && (
                   <div className="flex flex-row gap-2.5 shrink-0">
                     {thumbnails.map((thumb: any, idx: number) => {
                       const isActive =
-                        (thumb.type === "3d" && viewState.type === "3d") ||
+                        (thumb.type === "3d"       && viewState.type === "3d") ||
                         (thumb.type === "skintone" && viewState.type === "skintone") ||
-                        (thumb.type === "gallery" && viewState.type === "gallery" && viewState.index === thumb.index);
+                        (thumb.type === "gallery"  && viewState.type === "gallery" && viewState.index === thumb.index);
 
                       return (
                         <button
@@ -505,6 +265,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                               : "border-white/[0.07] hover:border-white/20 opacity-60 hover:opacity-100",
                           )}
                         >
+                          {/* 3D icon overlay */}
                           {thumb.type === "3d" && (
                             <div className="absolute inset-0 bg-black/50 z-10 flex flex-col items-center justify-center gap-1">
                               <Box className="w-4 h-4 text-[#fe8204]" />
@@ -524,7 +285,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                   </div>
                 )}
 
-                {/* Right: Skin Tone Swatches */}
+                {/* Right: skin-tone swatch circles */}
                 {swatches.length > 0 && (
                   <div className="flex flex-row items-center gap-3 shrink-0 ml-2">
                     {swatches.map((swatch: any) => (
@@ -546,64 +307,23 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                     ))}
                   </div>
                 )}
-
               </div>
             )}
+            {/* END THUMBNAIL STRIP */}
 
-            {/* ── Thumbnails strip ──────────────────────────── */}
-            {/* {thumbnails.length > 1 && (
-              <div className="flex flex-row gap-2.5 overflow-x-auto no-scrollbar pb-1">
-                {thumbnails.map((thumb: any, idx: number) => {
-                  const isActive =
-                    (thumb.type === "3d" && viewState.type === "3d") ||
-                    (thumb.type === "skintone" && viewState.type === "skintone") ||
-                    (thumb.type === "gallery" && viewState.type === "gallery" && viewState.index === thumb.index);
-
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() =>
-                        setViewState(
-                          thumb.type === "gallery"
-                            ? { type: "gallery", source: thumb.source, index: thumb.index }
-                            : { type: thumb.type as any, source: thumb.source },
-                        )
-                      }
-                      className={clsx(
-                        "relative w-[72px] h-[90px] shrink-0 rounded-xl overflow-hidden bg-[#111] border-2 transition-all duration-300",
-                        isActive
-                          ? "border-[#fe8204] shadow-[0_0_12px_rgba(254,130,4,0.25)]"
-                          : "border-white/[0.07] hover:border-white/20 opacity-60 hover:opacity-100",
-                      )}
-                    >
-                      {thumb.type === "3d" && (
-                        <div className="absolute inset-0 bg-black/50 z-10 flex flex-col items-center justify-center gap-1">
-                          <Box className="w-4 h-4 text-[#fe8204]" />
-                          <span className="text-[7px] font-black text-white uppercase tracking-wider">3D</span>
-                        </div>
-                      )}
-                      <Image
-                        src={thumb.thumbUrl}
-                        alt="Thumbnail"
-                        fill
-                        className="object-cover"
-                        sizes="72px"
-                      />
-                    </button>
-                  );
-                })}
-              </div>
-            )} */}
           </div>
+          {/* END LEFT COLUMN */}
 
-          {/* ══════════════════════════════════════════════════
+          {/* ════════════════════════════════════════════════
               RIGHT — PRODUCT INFO
-          ══════════════════════════════════════════════════ */}
+          ════════════════════════════════════════════════ */}
           <div className="flex flex-col py-2">
 
-            {/* ── Header ──────────────────────────────────── */}
+            {/* ── HEADER: vendor · stars · title · description */}
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
+
+                {/* Vendor + color-type pills */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-[9px] font-black text-[#fe8204] uppercase tracking-[0.15em] bg-[#fe8204]/10 px-2.5 py-1 rounded-md border border-[#fe8204]/15">
                     {product.vendor}
@@ -614,6 +334,8 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                     </span>
                   )}
                 </div>
+
+                {/* Star rating */}
                 <div className="flex items-center gap-1">
                   {[...Array(5)].map((_, i) => (
                     <Star key={i} className="w-3 h-3 fill-[#fe8204] text-[#fe8204]" />
@@ -625,20 +347,18 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
               <h1 className="text-[32px] md:text-[40px] lg:text-[42px] font-bold text-white leading-[1.1] tracking-tight mb-2">
                 {product.title}
               </h1>
-
-              {/* Short description */}
               <p className="text-[14px] text-neutral-500 leading-relaxed font-medium line-clamp-3">
                 {product.description}
               </p>
             </div>
 
-            {/* ── Trust micro-badges ───────────────────────── */}
+            {/* ── TRUST MICRO-BADGES ───────────────────────── */}
             <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/[0.06]">
               {[
-                { icon: Lock, label: "Secure Pay" },
-                { icon: Truck, label: "Ships in 24h" },
+                { icon: Lock,      label: "Secure Pay"   },
+                { icon: Truck,     label: "Ships in 24h" },
                 { icon: RotateCcw, label: "Free Returns" },
-                { icon: Leaf, label: "Plant-Based" },
+                { icon: Leaf,      label: "Plant-Based"  },
               ].map((badge, i) => (
                 <div key={i} className="flex items-center gap-1.5 text-neutral-600">
                   <badge.icon className="w-3.5 h-3.5" />
@@ -647,7 +367,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
               ))}
             </div>
 
-            {/* ── Price & Inventory ────────────────────────── */}
+            {/* ── PRICE & INVENTORY STATUS ─────────────────── */}
             <div className="mb-4 pb-4 border-b border-white/[0.06]">
               {isOnSale && (
                 <div className="mb-1.5">
@@ -656,15 +376,16 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                   </span>
                 </div>
               )}
+
               <div className="flex items-end gap-4 flex-wrap">
                 <span className="text-[44px] font-bold text-white tracking-tight leading-none">
                   ${price.toFixed(2)}
                 </span>
                 {isOnSale && (
                   <>
-                    <span className="text-2xl font-medium text-neutral-600 line-through mb-1">
+                    {/* <span className="text-2xl font-medium text-neutral-600 line-through mb-1">
                       ${compareAtPrice.toFixed(2)}
-                    </span>
+                    </span> */}
                     <span className="bg-red-500/15 text-red-400 px-3 py-1 text-[11px] font-black uppercase tracking-widest rounded-full mb-1.5 border border-red-500/20">
                       {discount}% OFF
                     </span>
@@ -672,6 +393,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                 )}
               </div>
 
+              {/* Stock status */}
               <div className="mt-1.5">
                 {stockLevel > 0 && stockLevel < 10 ? (
                   <div className="flex items-center gap-1.5 text-red-400">
@@ -688,7 +410,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
               </div>
             </div>
 
-            {/* ── Variants ─────────────────────────────────── */}
+            {/* ── VARIANT SELECTOR ─────────────────────────── */}
             {variants.length > 1 && (
               <div className="mb-5">
                 <div className="flex items-center justify-between mb-1.5">
@@ -696,7 +418,9 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                     Select Option
                   </h3>
                   {selectedVariant && !selectedVariant.availableForSale && (
-                    <span className="text-[10px] font-bold text-red-400 uppercase tracking-widest">Out of Stock</span>
+                    <span className="text-[10px] font-bold text-red-400 uppercase tracking-widest">
+                      Out of Stock
+                    </span>
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2.5">
@@ -718,13 +442,13 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
               </div>
             )}
 
-            {/* ── Feature grid ─────────────────────────────── */}
+            {/* ── FEATURE GRID (4 icons) ────────────────────── */}
             <div className="grid grid-cols-2 gap-3 mb-4 pb-4 border-b border-white/[0.06]">
               {[
-                { icon: Droplets, text: "Waterproof 12–14 Days" },
-                { icon: Clock, text: "Lasts 1–2 Weeks" },
-                { icon: ShieldCheck, text: "Skin Safe Formula" },
-                { icon: Sparkles, text: "Realistic Look" },
+                { icon: Droplets,   text: "Waterproof 12–14 Days" },
+                { icon: Clock,      text: "Lasts 1–2 Weeks"       },
+                { icon: ShieldCheck,text: "Skin Safe Formula"      },
+                { icon: Sparkles,   text: "Realistic Look"         },
               ].map((feat, idx) => (
                 <div
                   key={idx}
@@ -736,7 +460,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
               ))}
             </div>
 
-            {/* ── Tattoo specs row ─────────────────────────── */}
+            {/* ── TATTOO SPECS ROW ──────────────────────────── */}
             {(product.attributes?.placements?.length > 0 || product.styling?.tattooColorType) && (
               <div className="flex items-center justify-between py-4 border-b border-white/[0.06] mb-2">
                 {product.styling?.tattooColorType && (
@@ -762,12 +486,13 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
               </div>
             )}
 
-            {/* ── Quantity + CTA ───────────────────────────── */}
+            {/* ── QUANTITY + CTA BUTTONS ───────────────────── */}
             <div className="flex flex-col gap-2 mb-5">
 
-              {/* Row: qty selector + add to cart */}
+              {/* Row: quantity stepper + Add to Cart */}
               <div className="flex items-stretch gap-3">
-                {/* Quantity */}
+
+                {/* Quantity stepper */}
                 <div className="flex items-center justify-between border border-white/10 bg-white/[0.03] rounded-xl h-[56px] w-[130px] shrink-0">
                   <button
                     onClick={() => handleQuantityChange("decrease")}
@@ -784,18 +509,21 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                   </button>
                 </div>
 
-                {/* Add to cart */}
+                {/* Add to Cart */}
                 <button
                   onClick={handleAddToCart}
                   disabled={isAdding || !selectedVariant?.availableForSale}
                   className="flex-1 h-[56px] border-2 border-white text-white rounded-xl text-[13px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300 flex items-center justify-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingBag className="w-4 h-4" />}
+                  {isAdding
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <ShoppingBag className="w-4 h-4" />
+                  }
                   Add to Cart
                 </button>
               </div>
 
-              {/* Buy now */}
+              {/* Buy Now */}
               <button
                 onClick={handleBuyNow}
                 disabled={isBuyingNow || !selectedVariant?.availableForSale}
@@ -805,7 +533,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                 {selectedVariant?.availableForSale ? "Buy It Now →" : "Out of Stock"}
               </button>
 
-              {/* AR Camera try-on (always visible if overlay exists) */}
+              {/* AR Try-On button (only if overlay image exists) */}
               {product.media?.arOverlayImage && (
                 <button
                   onClick={() => setIsCameraAROpen(true)}
@@ -817,8 +545,10 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
               )}
             </div>
 
-            {/* ── Accordions ───────────────────────────────── */}
+            {/* ── ACCORDION PANELS ─────────────────────────── */}
             <div className="border-t border-white/[0.06]">
+
+              {/* Description */}
               <AccordionItem
                 title="Description"
                 isOpen={activeAccordion === "description"}
@@ -830,6 +560,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                 />
               </AccordionItem>
 
+              {/* Tattoo Details */}
               <AccordionItem
                 title="Tattoo Details"
                 isOpen={activeAccordion === "details"}
@@ -841,7 +572,9 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                       <span className="block text-[9px] font-black uppercase tracking-widest text-neutral-600 mb-1">Themes</span>
                       <div className="flex flex-wrap gap-2">
                         {product.attributes.themes.map((theme: string, i: number) => (
-                          <span key={i} className="bg-white/[0.06] text-neutral-300 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase border border-white/[0.06]">{theme}</span>
+                          <span key={i} className="bg-white/[0.06] text-neutral-300 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase border border-white/[0.06]">
+                            {theme}
+                          </span>
                         ))}
                       </div>
                     </div>
@@ -851,7 +584,9 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                       <span className="block text-[9px] font-black uppercase tracking-widest text-neutral-600 mb-1">Best Placements</span>
                       <div className="flex flex-wrap gap-2">
                         {product.attributes.placements.map((p: string, i: number) => (
-                          <span key={i} className="bg-white/[0.06] text-neutral-300 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase border border-white/[0.06]">{p}</span>
+                          <span key={i} className="bg-white/[0.06] text-neutral-300 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase border border-white/[0.06]">
+                            {p}
+                          </span>
                         ))}
                       </div>
                     </div>
@@ -861,7 +596,9 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                       <span className="block text-[9px] font-black uppercase tracking-widest text-neutral-600 mb-2.5">Tags</span>
                       <div className="flex flex-wrap gap-1.5">
                         {product.attributes.tags.map((tag: string, i: number) => (
-                          <span key={i} className="border border-white/10 text-neutral-500 px-2.5 py-1 rounded text-[10px] font-bold uppercase">{tag}</span>
+                          <span key={i} className="border border-white/10 text-neutral-500 px-2.5 py-1 rounded text-[10px] font-bold uppercase">
+                            {tag}
+                          </span>
                         ))}
                       </div>
                     </div>
@@ -869,6 +606,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                 </div>
               </AccordionItem>
 
+              {/* How To Apply */}
               <AccordionItem
                 title="How To Apply"
                 isOpen={activeAccordion === "apply"}
@@ -883,6 +621,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                 </ol>
               </AccordionItem>
 
+              {/* Shipping & Returns */}
               <AccordionItem
                 title="Shipping & Returns"
                 isOpen={activeAccordion === "shipping"}
@@ -894,12 +633,18 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
                 </p>
               </AccordionItem>
             </div>
+            {/* END ACCORDION PANELS */}
+
           </div>
+          {/* END RIGHT COLUMN */}
+
         </div>
+        {/* END TWO-COLUMN GRID */}
+
       </div>
 
       {/* ══════════════════════════════════════════════════════
-          ZOOM MODAL
+          ZOOM LIGHTBOX MODAL
       ══════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {isZoomed && (viewState.type === "skintone" || viewState.type === "gallery") && (
@@ -910,12 +655,15 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
             className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 md:p-10 cursor-zoom-out"
             onClick={() => setIsZoomed(false)}
           >
+            {/* Close button */}
             <button
               onClick={(e) => { e.stopPropagation(); setIsZoomed(false); }}
               className="absolute top-7 right-7 z-10 w-12 h-12 bg-white/[0.07] hover:bg-white/15 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
+
+            {/* Full-size image */}
             <div className="relative flex items-center justify-center w-full h-full max-h-[88vh]">
               <Image
                 src={currentImageSrc}
@@ -932,7 +680,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
       </AnimatePresence>
 
       {/* ══════════════════════════════════════════════════════
-          2D CAMERA AR MODAL (WebRTC Virtual Try-On)
+          2D CAMERA AR MODAL  (WebRTC Virtual Try-On)
       ══════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {isCameraAROpen && (
@@ -942,6 +690,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[99999] bg-black flex flex-col items-center justify-center overflow-hidden"
           >
+            {/* Close button */}
             <button
               onClick={() => setIsCameraAROpen(false)}
               className="absolute top-7 right-7 z-50 w-12 h-12 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/15 hover:bg-black/70 transition-colors"
@@ -949,7 +698,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
               <X className="w-6 h-6" />
             </button>
 
-            {/* Live feed */}
+            {/* Live camera feed */}
             <video
               ref={videoRef}
               autoPlay
@@ -958,12 +707,12 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
               className="absolute inset-0 w-full h-full object-cover"
             />
 
-            {/* Interactive tattoo overlay */}
+            {/* Interactive tattoo overlay (drag / pinch / rotate) */}
             {product.media?.arOverlayImage && (
               <InteractiveTattoo src={product.media.arOverlayImage} />
             )}
 
-            {/* HUD instructions */}
+            {/* HUD instruction pill */}
             <div className="absolute bottom-12 left-0 w-full z-20 flex justify-center pointer-events-none">
               <div className="bg-black/70 backdrop-blur-md border border-white/15 px-6 py-3 rounded-full flex items-center gap-2.5 shadow-xl">
                 <Sparkles className="w-3.5 h-3.5 text-[#fe8204]" />
@@ -975,50 +724,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
 
-// =========================================================
-// ACCORDION COMPONENT
-// =========================================================
-function AccordionItem({
-  title,
-  isOpen,
-  onToggle,
-  children,
-}: {
-  title: string;
-  isOpen: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="border-b border-white/[0.06] last:border-0">
-      <button
-        onClick={onToggle}
-        className="w-full py-3 flex items-center justify-between group outline-none"
-      >
-        <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-neutral-400 group-hover:text-white transition-colors duration-200">
-          {title}
-        </span>
-        <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronDown className="w-4 h-4 text-neutral-600 group-hover:text-neutral-300 transition-colors duration-200" />
-        </motion.div>
-      </button>
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.28, ease: "easeInOut" }}
-            className="overflow-hidden"
-          >
-            <div className="pb-3">{children}</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
