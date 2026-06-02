@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import { useCart } from "@/src/context/CartContext";
 import { FormattedProduct, Variant } from "@/src/lib/shopify";
-import { ViewState } from "./types";
+import { ViewState, AngleView } from "./types";
+import { getHexLuminance } from "./touchHelpers";
 
 export function useProductDetail(product: FormattedProduct) {
   const { addToCart, buyNow } = useCart();
@@ -15,14 +16,14 @@ export function useProductDetail(product: FormattedProduct) {
   // These values never change after mount (product is stable).
   // ─────────────────────────────────────────────────────────
 
-  const models       = product.media?.models        || [];
-  const swatches     = product.skinToneSwatches      || [];
-  const rawGallery   = product.media?.gallery        || [];
-  const featuredUrl  = product.media?.featuredImage;
+  const models      = product.media?.models        || [];
+  const swatches    = product.skinToneSwatches      || [];
+  const rawGallery  = product.media?.gallery        || [];
+  const featuredUrl = product.media?.featuredImage;
 
   // Remove swatch images and the featured image from the gallery
   // to avoid showing duplicates in the thumbnail strip.
-  const swatchUrls     = swatches.map((s: any) => s.imageUrl);
+  const swatchUrls      = swatches.map((s: any) => s.imageUrl);
   const filteredGallery = rawGallery.filter(
     (img: any) => img.url !== featuredUrl && !swatchUrls.includes(img.url),
   );
@@ -32,6 +33,27 @@ export function useProductDetail(product: FormattedProduct) {
     ...(featuredUrl ? [{ url: featuredUrl, altText: product.title }] : []),
     ...filteredGallery,
   ];
+
+  // ── Angle Views (Fixed TS Type Mismatch Error) ───────────
+  const has3DModel = models.length > 0;
+
+  // Runtime type-guard filter ensuring null urls are omitted and types align
+  const rawAngleViews: AngleView[] = useMemo(() => {
+    return (product.media?.angleViews || []).filter(
+      (view: any): view is AngleView => typeof view?.imageUrl === "string"
+    );
+  }, [product.media?.angleViews]);
+
+  /**
+   * Angle view thumbnails are available only if:
+   * 1. A 3D model file exists (has3DModel)
+   * 2. The product has at least one angle view entry
+   * Otherwise this is an empty array and the UI hides the section.
+   */
+  const angleViews: AngleView[] = useMemo(() => {
+    if (!has3DModel || rawAngleViews.length === 0) return [];
+    return rawAngleViews;
+  }, [has3DModel, rawAngleViews]);
 
   // Determine the default active panel based on available media.
   const getInitialViewState = (): ViewState => {
@@ -66,17 +88,26 @@ export function useProductDetail(product: FormattedProduct) {
   const [isWishlisted, setIsWishlisted] = useState(false);
 
   // ── 3D Model & AR ────────────────────────────────────────
-  const [modelLoaded, setModelLoaded]   = useState(false); // hides spinner once model resolves
-  const [arSupported, setArSupported]   = useState(false); // set by model-viewer capability check
-  const [isCameraAROpen, setIsCameraAROpen] = useState(false); // 2D camera AR modal
+  const [modelLoaded, setModelLoaded]       = useState(false);
+  const [arSupported, setArSupported]       = useState(false);
+  const [isCameraAROpen, setIsCameraAROpen] = useState(false);
 
-  const modelViewerRef = useRef<HTMLElement>(null);     // ref to <model-viewer> element
-  const videoRef       = useRef<HTMLVideoElement>(null); // ref to camera <video> element
+  /**
+   * Camera facing mode — "environment" = back camera (default for AR),
+   * "user" = front camera (selfie mode).
+   */
+  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
+
+  const modelViewerRef = useRef<HTMLElement>(null);
+  const videoRef       = useRef<HTMLVideoElement>(null);
+
+  // Tracks the currently active MediaStream so we can restart it on camera switch.
+  const activeStreamRef = useRef<MediaStream | null>(null);
 
   // ── Cart & Variants ──────────────────────────────────────
   const [quantity, setQuantity]       = useState(1);
-  const [isAdding, setIsAdding]       = useState(false);       // spinner on "Add to Cart"
-  const [isBuyingNow, setIsBuyingNow] = useState(false);       // spinner on "Buy Now"
+  const [isAdding, setIsAdding]       = useState(false);
+  const [isBuyingNow, setIsBuyingNow] = useState(false);
 
   const variants = product.allVariants || [];
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(
@@ -107,18 +138,27 @@ export function useProductDetail(product: FormattedProduct) {
   const savingsAmount = isOnSale ? (compareAtPrice - price).toFixed(0) : 0;
 
   // ── Social Proof / Scarcity ───────────────────────────────
-  // Random "viewing now" number is stable for the component lifetime (useMemo []).
-  const viewingNow = useMemo(
-    () => Math.floor(Math.random() * (3000 - 1500 + 1) + 1500),
-    [],
+  const [viewingNow, setViewingNow] = useState(1500); 
+  
+  useEffect(() => {
+    setViewingNow(Math.floor(Math.random() * (3000 - 1500 + 1) + 1500));
+  }, []);
+
+  const stockLevel   = product.inventory?.stockLevel ?? 153;
+  const soldThisWeek = Math.max(100, 1000 - stockLevel);
+  const scarcityPct  = Math.min((soldThisWeek / (soldThisWeek + stockLevel)) * 100, 95);
+
+  // ── Sorted Skin Tone Swatches (light → dark) ──────────────
+  const sortedSwatches = useMemo(
+    () =>
+      [...swatches].sort(
+        (a: any, b: any) =>
+          getHexLuminance(b.hexCode) - getHexLuminance(a.hexCode),
+      ),
+    [swatches],
   );
 
-  const stockLevel    = product.inventory?.stockLevel ?? 153;
-  const soldThisWeek  = Math.max(100, 1000 - stockLevel);
-  const scarcityPct   = Math.min((soldThisWeek / (soldThisWeek + stockLevel)) * 100, 95);
-
   // ── Thumbnail Strip ───────────────────────────────────────
-  // Re-derives whenever activeSkinTone changes (swatch thumb updates).
   const thumbnails: any[] = useMemo(() => {
     const list: any[] = [];
 
@@ -140,6 +180,16 @@ export function useProductDetail(product: FormattedProduct) {
       });
     }
 
+    // Inject Angle Views into thumbnails list
+    // angleViews.forEach((view, index) => {
+    //   list.push({
+    //     type: "angle",
+    //     thumbUrl: view.imageUrl,
+    //     source: view,
+    //     index,
+    //   });
+    // });
+
     standardImages.forEach((img, index) => {
       list.push({
         type: "gallery",
@@ -150,19 +200,20 @@ export function useProductDetail(product: FormattedProduct) {
     });
 
     return list;
-  }, [activeSkinTone, models, swatches, standardImages]);
+  }, [activeSkinTone, models, swatches, standardImages, angleViews]);
 
   // ── Current image source (used by zoom modal) ─────────────
-  const currentImageSrc =
-    viewState.type === "skintone"
-      ? viewState.source.imageUrl
-      : viewState.source.url;
+  const currentImageSrc = useMemo(() => {
+    if (viewState.type === "skintone" || viewState.type === "angle") {
+      return viewState.source.imageUrl;
+    }
+    return viewState.source?.url || "/placeholder.png";
+  }, [viewState]);
 
   // ─────────────────────────────────────────────────────────
   // D. EFFECTS
   // ─────────────────────────────────────────────────────────
 
-  // Flip isMounted → triggers first render + lazy-loads model-viewer.
   useEffect(() => {
     setIsMounted(true);
     if (models.length > 0) {
@@ -178,56 +229,63 @@ export function useProductDetail(product: FormattedProduct) {
     }
   }, [models]);
 
-  // Lock body scroll when the zoom lightbox or camera AR modal is open.
   useEffect(() => {
     document.body.style.overflow = isZoomed || isCameraAROpen ? "hidden" : "unset";
-    return () => { document.body.style.overflow = "unset"; };
+    return () => {
+      document.body.style.overflow = "unset";
+    };
   }, [isZoomed, isCameraAROpen]);
 
-  // Start / stop the back camera stream when the AR modal opens / closes.
+  const startCameraStream = useCallback(async () => {
+    if (!videoRef.current) return;
+
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      toast.error("Camera access requires a secure connection (HTTPS).");
+      setIsCameraAROpen(false);
+      return;
+    }
+
+    if (activeStreamRef.current) {
+      activeStreamRef.current.getTracks().forEach((t) => t.stop());
+      activeStreamRef.current = null;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode },
+        audio: false,
+      });
+      activeStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch {
+      toast.error("Unable to access camera. Please check permissions.");
+      setIsCameraAROpen(false);
+    }
+  }, [facingMode]);
+
   useEffect(() => {
-    let activeStream: MediaStream | null = null;
-
-    const startCamera = async () => {
-      if (!isCameraAROpen || !videoRef.current) return;
-
-      if (!navigator?.mediaDevices?.getUserMedia) {
-        toast.error("Camera access requires a secure connection (HTTPS).");
-        setIsCameraAROpen(false);
-        return;
+    if (isCameraAROpen) {
+      startCameraStream();
+    } else {
+      if (activeStreamRef.current) {
+        activeStreamRef.current.getTracks().forEach((t) => t.stop());
+        activeStreamRef.current = null;
       }
-
-      try {
-        activeStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-        });
-        if (videoRef.current) videoRef.current.srcObject = activeStream;
-      } catch {
-        toast.error("Unable to access camera. Please check permissions.");
-        setIsCameraAROpen(false);
-      }
-    };
-
-    startCamera();
-
-    // Cleanup: stop all tracks to release the camera on unmount / modal close.
-    return () => {
-      if (activeStream) activeStream.getTracks().forEach((t) => t.stop());
-    };
-  }, [isCameraAROpen]);
+    }
+  }, [isCameraAROpen, startCameraStream]);
 
   // ─────────────────────────────────────────────────────────
   // E. HANDLERS
   // ─────────────────────────────────────────────────────────
 
-  /** Increment or decrement quantity (minimum 1). */
   const handleQuantityChange = (type: "increase" | "decrease") => {
     setQuantity((prev) =>
       type === "increase" ? prev + 1 : prev > 1 ? prev - 1 : 1,
     );
   };
 
-  /** Add selected variant × quantity to the Shopify cart. */
   const handleAddToCart = async () => {
     if (!selectedVariant?.variantId) return toast.error("Please select an option");
     setIsAdding(true);
@@ -241,7 +299,6 @@ export function useProductDetail(product: FormattedProduct) {
     }
   };
 
-  /** Create a Shopify checkout and redirect immediately. */
   const handleBuyNow = async () => {
     if (!selectedVariant?.variantId) return toast.error("Please select an option");
     setIsBuyingNow(true);
@@ -253,11 +310,6 @@ export function useProductDetail(product: FormattedProduct) {
     }
   };
 
-  /**
-   * Trigger AR experience.
-   *   • 3D panel  → activates native WebXR / Quick Look via model-viewer
-   *   • 2D panels → opens the camera AR modal (or shows "coming soon" toast)
-   */
   const handleTriggerAR = () => {
     if (viewState.type === "3d") {
       const mv = modelViewerRef.current as any;
@@ -279,72 +331,65 @@ export function useProductDetail(product: FormattedProduct) {
     }
   };
 
-  /** Toggle a single accordion open; clicking the open one collapses it. */
+  const handleSwitchCamera = useCallback(() => {
+    setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
+  }, []);
+
+  useEffect(() => {
+    if (isCameraAROpen) {
+      startCameraStream();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facingMode]);
+
   const toggleAccordion = (id: string) =>
     setActiveAccordion((prev) => (prev === id ? null : id));
 
   // ─────────────────────────────────────────────────────────
-  // RETURN — everything the JSX layer needs
+  // RETURN
   // ─────────────────────────────────────────────────────────
 
   return {
-    // Parsed data
     models,
     swatches,
+    sortedSwatches,
     standardImages,
-
-    // Mount guard
+    angleViews,
     isMounted,
-
-    // Media panel state
     viewState,
     setViewState,
     activeSkinTone,
     setActiveSkinTone,
     currentImageSrc,
     thumbnails,
-
-    // Lightbox / modals
     isZoomed,
     setIsZoomed,
     isCameraAROpen,
     setIsCameraAROpen,
-
-    // Refs (passed down to JSX elements)
     modelViewerRef,
     videoRef,
-
-    // 3D model
     modelLoaded,
     arSupported,
-
-    // Product info UI state
+    facingMode,
+    handleSwitchCamera,
     activeAccordion,
     isWishlisted,
     setIsWishlisted,
-
-    // Cart state
     quantity,
     isAdding,
     isBuyingNow,
     variants,
     selectedVariant,
     setSelectedVariant,
-
-    // Computed pricing
     price,
     compareAtPrice,
     isOnSale,
     discount,
     savingsAmount,
-
-    // Social proof / scarcity
     viewingNow,
     stockLevel,
     soldThisWeek,
     scarcityPct,
-
-    // Handlers
     handleQuantityChange,
     handleAddToCart,
     handleBuyNow,

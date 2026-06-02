@@ -48,7 +48,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function GlobalProductPage({ params }: Props) {
   const resolvedParams = await params;
   const product = await getProduct(resolvedParams.handle);
-
+console.log(product);
   if (!product) notFound();
 
   const relatedProducts = await getProductRecommendations(product.id);
@@ -86,10 +86,14 @@ export default async function GlobalProductPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
       />
-
+       
 
       <TattooProductDetail product={product} />
-      <TattooProductAngleView product={product} />
+      {/* <TattooProductAngleView product={product} /> */}
+      {product.media?.angleViews && product.media.angleViews.length > 0 && 
+        product.media?.models && product.media.models.length > 0 && (
+          <TattooProductAngleView product={product} />
+      )}
       {relatedProducts && relatedProducts.length > 0 && (
         <RelatedProducts products={relatedProducts} />
       )}
