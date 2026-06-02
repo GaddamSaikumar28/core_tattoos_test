@@ -114,6 +114,7 @@ export default function MobileDrawer({
                       )}>
                         <Link
                           href={generateHref(item)}
+                          prefetch={true}
                           className={cn(
                             "text-[16px] font-medium capitalize flex items-center gap-2.5 transition-colors",
                             isAIStudio ? "text-purple-400" : 

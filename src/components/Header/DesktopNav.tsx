@@ -106,6 +106,7 @@ export default function DesktopNav({ menuItems, closeProfileMenu }: DesktopNavPr
             ) : (
               <Link
                 href={generateHref(item)}
+                prefetch={true}
                 onClick={() => setActiveDropdown(null)}
                 className={cn(
                   "relative z-10 font-medium text-[14px] lg:text-[15px] transition-colors duration-300 flex items-center gap-1.5 capitalize",
@@ -152,6 +153,7 @@ export default function DesktopNav({ menuItems, closeProfileMenu }: DesktopNavPr
                         <Link
                           href={generateHref(item)}
                           onClick={() => setActiveDropdown(null)}
+                          prefetch={true}
                           className="text-[10px] font-bold text-white/50 hover:text-white uppercase tracking-[0.2em] transition-colors"
                         >
                           View All →
