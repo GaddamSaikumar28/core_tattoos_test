@@ -26,7 +26,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import clsx from "clsx";
-
+import { createPortal } from "react-dom";
 import { TattooProductDetailProps } from "./types";
 import { useProductDetail } from "./useProductDetail";
 import InteractiveTattoo from "./InteractiveTattoo";
@@ -34,7 +34,87 @@ import AccordionItem from "./AccordionItem";
 
 // Bypass React's strict custom element checks for Model Viewer.
 const ModelViewer = "model-viewer" as any;
+interface CameraStateOverlayProps {
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  isCameraOpen: boolean;
+  facingMode: "user" | "environment";
+}
 
+function CameraStateOverlay({ videoRef, isCameraOpen, facingMode }: CameraStateOverlayProps) {
+  const [status, setStatus] = React.useState<"checking" | "active" | "denied" | "unsupported">("checking");
+
+  React.useEffect(() => {
+    if (!isCameraOpen) return;
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setStatus("unsupported");
+      return;
+    }
+
+    setStatus("checking");
+
+    // Intercept permission check to update UI states dynamically
+    navigator.mediaDevices.getUserMedia({ video: { facingMode } })
+      .then((stream) => {
+        setStatus("active");
+        // Ensure stream tracks are cleaned up after checking
+        stream.getTracks().forEach(track => track.stop());
+      })
+      .catch((err) => {
+        console.warn("Camera access state warning:", err);
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          setStatus("denied");
+        } else {
+          setStatus("unsupported");
+        }
+      });
+  }, [isCameraOpen, facingMode]);
+
+  if (status === "active") return null;
+
+  return (
+    <div className="absolute inset-0 z-40 bg-neutral-900 flex flex-col items-center justify-center p-6 text-center select-none">
+      <div className="max-w-sm w-full space-y-6">
+        {status === "checking" && (
+          <div className="flex flex-col items-center space-y-4">
+            <Loader2 className="w-8 h-8 text-[#FF5A24] animate-spin" />
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">
+              Initializing Secure Camera Stream...
+            </p>
+          </div>
+        )}
+
+        {status === "denied" && (
+          <div className="flex flex-col items-center space-y-4 animate-fadeIn">
+            <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-2">
+              <Camera className="w-5 h-5" />
+            </div>
+            <h3 className="text-white font-black uppercase tracking-wider text-[14px]">
+              Camera Access Blocked
+            </h3>
+            <p className="text-neutral-400 text-[12px] leading-relaxed">
+              To use the Virtual Try-On studio, please click the camera/lock icon in your browser's URL address bar and change the permission toggle to <span className="text-white font-semibold">"Allow"</span>.
+            </p>
+          </div>
+        )}
+
+        {status === "unsupported" && (
+          <div className="flex flex-col items-center space-y-4 animate-fadeIn">
+            <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-2">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <h3 className="text-white font-black uppercase tracking-wider text-[14px]">
+              Hardware Initialization Failed
+            </h3>
+            <p className="text-neutral-400 text-[12px] leading-relaxed">
+              Could not secure a video track feed. Please verify your device camera is turned on, unblocked by system privacy hardware toggles, and running through a secure connection (<span className="text-white">HTTPS</span>).
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 // =========================================================
 export default function TattooProductDetail({ product }: TattooProductDetailProps) {
 
@@ -63,8 +143,18 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
     toggleAccordion,
   } = useProductDetail(product);
 
+  React.useEffect(() => {
+    if (!isCameraAROpen && videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((track) => track.stop());
+      videoRef.current.srcObject = null;
+    }
+  }, [isCameraAROpen, videoRef]);
+
   // Prevent SSR/hydration mismatch — render nothing until client-mounted.
   if (!isMounted) return null;
+
+
 
   // =========================================================
   return (
@@ -688,19 +778,85 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
           </motion.div>
         )}
       </AnimatePresence>
+      {/* ── Fullscreen AR Camera Overlay ──────────────── */}
+      {isMounted && typeof document !== 'undefined' && createPortal(
+        <AnimatePresence mode="wait">
+          {isCameraAROpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[99999] bg-neutral-950 flex flex-col overflow-hidden select-none"
+            >
+              {/* ── Camera State Watcher & Permission UI ────── */}
+              <CameraStateOverlay 
+                videoRef={videoRef} 
+                isCameraOpen={isCameraAROpen}
+                facingMode={facingMode}
+              />
+
+              {/* ── AR Modal Header ───────────────────────────── */}
+              <div className="absolute top-0 left-0 w-full h-[96px] bg-gradient-to-b from-black/90 via-black/50 to-transparent z-50 flex items-center justify-between px-6 pt-4 pointer-events-none">
+                <button
+                  onClick={() => setIsCameraAROpen(false)}
+                  className="px-5 py-2.5 bg-black/40 hover:bg-black/60 backdrop-blur-xl rounded-full flex items-center justify-center gap-2 text-white border border-white/10 transition-colors pointer-events-auto shadow-lg"
+                >
+                  <X className="w-4 h-4" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Back</span>
+                </button>
+
+                <span className="text-white font-black uppercase tracking-[0.3em] text-[10px] drop-shadow-md">
+                  Studio AR
+                </span>
+
+                <button
+                  onClick={handleSwitchCamera}
+                  className="w-11 h-11 bg-black/40 hover:bg-black/60 backdrop-blur-xl rounded-full flex items-center justify-center text-white border border-white/10 transition-colors pointer-events-auto shadow-lg"
+                  aria-label="Switch Camera"
+                >
+                  <RefreshCcw className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* ── Live camera feed ──────────────────────────── */}
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={clsx(
+                  "absolute inset-0 w-full h-full object-cover z-10",
+                  facingMode === "user" ? "scale-x-[-1]" : ""
+                )}
+              />
+
+              {/* ── Interactive tattoo overlay ────────────────── */}
+              {product.media?.arOverlayImage && (
+                <div className="absolute inset-0 z-20">
+                  <InteractiveTattoo
+                    src={product.media.arOverlayImage}
+                    videoRef={videoRef}
+                  />
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* ══════════════════════════════════════════════════════
           2D CAMERA AR MODAL  (WebRTC Virtual Try-On)
       ══════════════════════════════════════════════════════ */}
-      <AnimatePresence>
-        {isCameraAROpen && (
+      {/* <AnimatePresence>
+        {isCameraAROpen && isMounted && typeof document !== 'undefined' && createPortal(
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[99999] bg-black flex flex-col overflow-hidden"
           >
-            {/* ── AR Modal Header ───────────────────────────── */}
+            
             <div className="absolute top-0 left-0 w-full h-[88px] bg-gradient-to-b from-black/90 to-transparent z-50 flex items-center justify-between px-6 pt-safe pointer-events-none">
 
               <button
@@ -725,7 +881,7 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
 
             </div>
 
-            {/* ── Live camera feed ──────────────────────────── */}
+          
             <video
               ref={videoRef}
               autoPlay
@@ -737,7 +893,6 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
               )}
             />
 
-            {/* ── Interactive tattoo overlay ────────────────── */}
             {product.media?.arOverlayImage && (
               <InteractiveTattoo
                 src={product.media.arOverlayImage}
@@ -745,8 +900,65 @@ export default function TattooProductDetail({ product }: TattooProductDetailProp
               />
             )}
           </motion.div>
+          document.body
         )}
-      </AnimatePresence>
+      </AnimatePresence> */}
+      {/* ── Fullscreen AR Camera Overlay ──────────────── */}
+      {/* <AnimatePresence>
+        {isCameraAROpen && isMounted && typeof document !== 'undefined' && createPortal(
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[99999] bg-black flex flex-col overflow-hidden"
+          >
+            
+            <div className="absolute top-0 left-0 w-full h-[88px] bg-gradient-to-b from-black/90 to-transparent z-50 flex items-center justify-between px-6 pt-safe pointer-events-none">
+
+              <button
+                onClick={() => setIsCameraAROpen(false)}
+                className="px-5 py-2.5 bg-black/40 hover:bg-black/60 backdrop-blur-xl rounded-full flex items-center justify-center gap-2 text-white border border-white/10 transition-colors pointer-events-auto shadow-lg"
+              >
+                <X className="w-4 h-4" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Back</span>
+              </button>
+
+              <span className="text-white font-black uppercase tracking-[0.3em] text-[10px] drop-shadow-md">
+                Studio AR
+              </span>
+
+              <button
+                onClick={handleSwitchCamera}
+                className="w-11 h-11 bg-black/40 hover:bg-black/60 backdrop-blur-xl rounded-full flex items-center justify-center text-white border border-white/10 transition-colors pointer-events-auto shadow-lg"
+                aria-label="Switch Camera"
+              >
+                <RefreshCcw className="w-4 h-4" />
+              </button>
+
+            </div>
+
+      
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className={clsx(
+                "absolute inset-0 w-full h-full object-cover",
+                facingMode === "user" ? "scale-x-[-1]" : ""
+              )}
+            />
+
+            {product.media?.arOverlayImage && (
+              <InteractiveTattoo
+                src={product.media.arOverlayImage}
+                videoRef={videoRef}
+              />
+            )}
+          </motion.div>,
+          document.body
+        )}
+      </AnimatePresence> */}
 
     </div>
   );

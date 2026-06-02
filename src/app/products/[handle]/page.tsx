@@ -48,7 +48,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function GlobalProductPage({ params }: Props) {
   const resolvedParams = await params;
   const product = await getProduct(resolvedParams.handle);
-console.log(product);
   if (!product) notFound();
 
   const relatedProducts = await getProductRecommendations(product.id);
