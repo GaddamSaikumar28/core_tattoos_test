@@ -593,7 +593,7 @@ export async function updateCartBuyerIdentity(cartId: string, customerAccessToke
       cartId, 
       buyerIdentity
     },
-    //cache: 'no-store',
+    cache: 'no-store',
   });
   return reshapeCart(res.body.data.cartBuyerIdentityUpdate.cart);
 }
@@ -611,7 +611,7 @@ export async function getHomePageNewArrivals(limit: number = 4): Promise<Formatt
         handle: collectionHandle,
         first: limit,
       },
-      //cache: 'no-store',
+      cache: 'no-store',
     });
 
     // The data shape for a collection query nests the products array
@@ -647,7 +647,7 @@ export async function getHomePageCollections(limit: number = 15): Promise<Format
         handle: collectionHandle,
         first: limit,
       },
-      //cache: 'no-store',
+      cache: 'no-store',
     });
 
     // Extract the nested products array from the collection response
@@ -671,22 +671,54 @@ export async function getHomePageCollections(limit: number = 15): Promise<Format
 
 
 
+// export async function getHomePageHeroCollections(limit: number = 15): Promise<FormattedProduct[]> {
+//   // The exact handle of your new collection
+//   const collectionHandle = 'home-page-hero-collections'; 
+
+//   try {
+//     const res = await shopifyFetch<any>({
+//       query: getCollectionProductsQuery,
+//       tags: ['collections', 'products', collectionHandle], // Caches based on this specific collection
+//       variables: {
+//         handle: collectionHandle,
+//         first: limit,
+//       },
+//       cache: 'no-store',
+//     });
+
+//     // Extract the nested products array from the collection response
+//     const productsData = res.body?.data?.collection?.products;
+
+//     if (!productsData?.edges) {
+//       console.warn(`No products found in collection: ${collectionHandle}`);
+//       return [];
+//     }
+
+//     // Run the raw Shopify data through your production mapper
+//     const formattedProducts = await mapShopifyProductsForProduction(productsData);
+    
+//     return formattedProducts as FormattedProduct[];
+
+//   } catch (error) {
+//     console.error(`Error fetching collection ${collectionHandle}:`, error);
+//     return [];
+//   }
+// }
+// Paste this into your NEW index.ts file
 export async function getHomePageHeroCollections(limit: number = 15): Promise<FormattedProduct[]> {
-  // The exact handle of your new collection
-  const collectionHandle = 'home-page-hero-collections'; 
+  const collectionHandle = 'home-page-collections'; 
 
   try {
     const res = await shopifyFetch<any>({
       query: getCollectionProductsQuery,
-      tags: ['collections', 'products', collectionHandle], // Caches based on this specific collection
+      tags: ['collections', 'products', collectionHandle], 
       variables: {
         handle: collectionHandle,
         first: limit,
       },
-       //cache: 'no-store',
+      cache: 'no-store',
     });
 
-    // Extract the nested products array from the collection response
     const productsData = res.body?.data?.collection?.products;
 
     if (!productsData?.edges) {
@@ -694,9 +726,7 @@ export async function getHomePageHeroCollections(limit: number = 15): Promise<Fo
       return [];
     }
 
-    // Run the raw Shopify data through your production mapper
     const formattedProducts = await mapShopifyProductsForProduction(productsData);
-    
     return formattedProducts as FormattedProduct[];
 
   } catch (error) {

@@ -16,21 +16,24 @@
   --color-black: #000000;
   --color-border: #2A2A2A;
 
-  /* --- 2. Font Families --- */
-  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui;
-  --font-montserrat: var(--font-montserrat), sans-serif;
-  --font-almarena: var(--font-almarena), serif;
+  /* --- 2. Font Families (Fixed recursive bug) --- */
+  --font-sans: var(--font-montserrat, ui-sans-serif, system-ui);
+  --font-heading: var(--font-almarena, serif);
 
   /* --- 3. Shadows & Glows --- */
   --shadow-card: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
   --shadow-glow-purple: 0 0 15px rgba(157, 114, 255, 0.3);
 
-   /* Aligned variable for uniform speed control */
-   --marquee-speed: 22s;
-   --animate-marquee: marquee var(--marquee-speed) linear infinite;
-   --animate-fade-in-up : fade-in-up 0.4s ease-out forwards;
+  /* --- 4. Animations --- */
+  --marquee-speed: 22s;
+  --animate-marquee: marquee var(--marquee-speed) linear infinite;
+  --animate-fade-in-up: fade-in-up 0.4s ease-out forwards;
+  --animate-hero-chevron-bounce: heroChevronBounce 2s infinite;
 }
 
+/* -----------------------------------------
+   KEYFRAMES
+----------------------------------------- */
 @keyframes marquee {
   0%   { transform: translateX(0%); }
   100% { transform: translateX(-50%); }
@@ -41,12 +44,14 @@
   100% { opacity: 1; transform: translateY(0); }
 }
 
-/* Added missing chevron bounce animation */
 @keyframes heroChevronBounce {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(10px); }
 }
 
+/* -----------------------------------------
+   BASE HTML ELEMENTS
+----------------------------------------- */
 @layer base {
   :root {
     background-color: var(--color-bg-base);
@@ -56,7 +61,8 @@
   }
 
   body {
-    @apply antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     line-height: 1.6;
     overflow-x: hidden;
   }
@@ -73,7 +79,7 @@
     font-size: clamp(1.125rem, 1.5vw + 0.5rem, 1.5rem);
     line-height: 1.4;
     color: var(--color-text-primary);
-    @apply tracking-tight;
+    letter-spacing: -0.025em;
   }
 
   small, .text-small {
@@ -82,10 +88,10 @@
   }
 
   h1, h2, h3, h4, h5, h6, .font-heading {
-    font-family: var(--font-almarena); 
+    font-family: var(--font-heading); 
     font-weight: 700; 
     color: var(--color-text-primary);
-    @apply tracking-tight;
+    letter-spacing: -0.025em;
     line-height: 1.2;
     margin-bottom: 1rem;
   }
@@ -95,7 +101,7 @@
     font-weight: 800; 
     line-height: 0.95;
     text-transform: uppercase;
-    @apply tracking-tighter;
+    letter-spacing: -0.05em;
   }
 
   h2, .text-h2 { 
@@ -105,58 +111,87 @@
 
   input, select, textarea {
     font-family: var(--font-montserrat);
-    @apply text-base bg-[--color-bg-surface] border border-[--color-border] rounded-md px-4 py-2 text-[--color-text-primary] focus:outline-none focus:border-[--color-brand-orange] transition-colors;
+    font-size: 1rem;
+    line-height: 1.5rem;
+    background-color: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    padding: 0.5rem 1rem;
+    color: var(--color-text-primary);
+    transition: border-color 0.2s, color 0.2s;
+  }
+  
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--color-brand-orange);
   }
 
+  /* Autofill dark mode fix */
   input:-webkit-autofill,
   input:-webkit-autofill:hover, 
   input:-webkit-autofill:focus, 
-  input:-webkit-autofill:active{
+  input:-webkit-autofill:active {
       -webkit-box-shadow: 0 0 0 30px var(--color-bg-surface) inset !important;
       -webkit-text-fill-color: var(--color-text-primary) !important;
       transition: background-color 5000s ease-in-out 0s;
   }
 }
 
+/* -----------------------------------------
+   COMPONENTS
+----------------------------------------- */
 @layer components {
+  
+  /* Base Button Setup */
   .btn {
-    @apply inline-flex items-center justify-center px-6 py-3 rounded-full font-semibold uppercase tracking-wider transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed;
-    font-family: var(--font-montserrat);
-    font-size: clamp(0.75rem, 0.5vw + 0.6rem, 0.875rem);
-  }
-
-  .btn-primary {
-    @apply bg-[--color-brand-orange] text-white hover:brightness-110 active:scale-95;
-  }
-
-  .btn-outline {
-    @apply border-2 border-[--color-border] text-[--color-text-primary] hover:border-[--color-text-primary] bg-transparent active:scale-95;
-  }
-
-  .btn-tech {
-    @apply bg-[--color-brand-purple] text-[--color-brand-purple-light] border border-transparent hover:border-[--color-brand-purple-light] hover:shadow-[var(--shadow-glow-purple)] active:scale-95;
-  }
-
-  .splash-completed .splash-wrapper {
-    display: none !important;
-    pointer-events: none !important;
-    visibility: hidden !important;
-  }
-
-  .splash-wrapper {
-    position: fixed;
-    inset: 0;
-    z-index: 100;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--color-bg-base); 
-    overflow: hidden;
+    padding: 0.75rem 1.5rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: all 0.3s ease;
+    font-family: var(--font-montserrat);
+    font-size: clamp(0.75rem, 0.5vw + 0.6rem, 0.875rem);
+    cursor: pointer;
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn:active:not(:disabled) {
+    transform: scale(0.95);
   }
 
-  .splash-exit-active {
-    filter: blur(10px);
-    opacity: 0;
-    transition: opacity 0.8s ease, filter 0.8s ease;
+  /* Primary Button */
+  .btn-primary {
+    background-color: var(--color-brand-orange);
+    color: var(--color-white);
+  }
+  .btn-primary:hover:not(:disabled) {
+    filter: brightness(1.1);
+  }
+
+  /* Outline Button */
+  .btn-outline {
+    border: 2px solid var(--color-border);
+    color: var(--color-text-primary);
+    background-color: transparent;
+  }
+  .btn-outline:hover:not(:disabled) {
+    border-color: var(--color-text-primary);
+  }
+
+  /* Tech/Purple Button */
+  .btn-tech {
+    background-color: var(--color-brand-purple);
+    color: var(--color-brand-purple-light);
+    border: 1px solid transparent;
+  }
+  .btn-tech:hover:not(:disabled) {
+    border-color: var(--color-brand-purple-light);
+    box-shadow: var(--shadow-glow-purple);
   }
 }

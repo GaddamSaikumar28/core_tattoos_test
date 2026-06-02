@@ -11,12 +11,17 @@ import DynamicReviews          from "../components/home/DynamicReviews";
 import FaqSection              from "../components/home/FaqSection";
 import NewsletterSection       from "../components/home/NewsletterSection";
 import TattooStudio            from "../components/home/TattooStudio";
-import Hero                    from "../components/hero";
 import CommunityGallerySection from "@/src/components/home/CommunityGallery";
 import HowItWorks              from "@/src/components/home/HowItWorks";
 import SafeForSkinSection      from "@/src/components/home/SafeForSkin";
 import BookWrapper             from "@/src/components/3DBook/BookWrapper";
 import type { TattooProduct }  from "@/src/components/3DBook/UI";
+
+// Old Hero Import (Commented out)
+// import Hero from "../components/hero";
+
+// New Cinematic Hero Import
+import CinematicHero from "../components/layout/CinematicHero";
 
 const getHeroCollections = cache(getHomePageHeroCollections);
 
@@ -36,6 +41,7 @@ function toBookProduct(p: any): TattooProduct {
   };
 }
 
+/* --- OLD HERO WRAPPER COMMENTED OUT ---
 async function HeroWithData() {
   try {
     const products = await getHeroCollections();
@@ -43,6 +49,18 @@ async function HeroWithData() {
   } catch (error) {
     console.error("Failed to fetch hero products:", error);
     return <Hero initialProducts={[]} />;
+  }
+}
+---------------------------------------- */
+
+// --- NEW CINEMATIC HERO WRAPPER ---
+async function CinematicHeroWithData() {
+  try {
+    const products = await getHeroCollections();
+    return <CinematicHero initialProducts={products} />;
+  } catch (error) {
+    console.error("Failed to fetch cinematic hero products:", error);
+    return <CinematicHero initialProducts={[]} />;
   }
 }
 
@@ -116,6 +134,7 @@ export default function HomePage() {
   async function fetchNewArrivalsAction() {
     "use server";
     return getHomePageNewArrivals(10);
+    
   }
 
   async function fetchCollectionsAction() {
@@ -125,8 +144,16 @@ export default function HomePage() {
 
   return (
     <div className="w-full flex flex-col items-center overflow-visible bg-[var(--color-bg-base)]">
+      
+      {/* OLD HERO IMPLEMENTATION
       <Suspense fallback={<HeroSkeleton />}>
         <HeroWithData />
+      </Suspense>
+      */}
+
+      {/* NEW CINEMATIC HERO IMPLEMENTATION */}
+      <Suspense fallback={<HeroSkeleton />}>
+        <CinematicHeroWithData />
       </Suspense>
 
       <Suspense fallback={<BookSkeleton />}>
