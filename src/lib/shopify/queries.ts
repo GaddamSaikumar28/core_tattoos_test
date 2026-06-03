@@ -1076,6 +1076,8 @@ export const getCollectionProductsQuery = /* GraphQL */ `
     $handle: String!
     $first: Int!
     $after: String
+    $sortKey: ProductCollectionSortKeys
+    $reverse: Boolean
   ) {
     collection(handle: $handle) {
       image {
@@ -1084,7 +1086,10 @@ export const getCollectionProductsQuery = /* GraphQL */ `
         width
         height
       }
-      products(first: $first, after: $after) {
+      products(first: $first, 
+      after: $after, 
+      sortKey: $sortKey, 
+      reverse: $reverse) {
         pageInfo {
           hasNextPage
           endCursor

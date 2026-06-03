@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { SlidersHorizontal, LayoutGrid, List, X, RefreshCcw, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
@@ -44,6 +43,9 @@ function SaleContent({ collection }: { collection?: any }) {
     sizes: searchParams.get('sizes')?.split(',') || [],
     placements: searchParams.get('placements')?.split(',') || []
   });
+
+  // 🚀 FIX: Track if we are paginating a fallback query so we don't cross-contaminate cursors
+  const fallbackModeRef = useRef<'none' | 'all_products' | 'general_filtered'>('none');
 
   // 2. FETCH ALL DYNAMIC DATA
   useEffect(() => {
@@ -108,6 +110,9 @@ function SaleContent({ collection }: { collection?: any }) {
 
   // 3. HYBRID PRODUCT FETCHING WITH FALLBACK LOGIC
   const fetchProducts = useCallback(async (cursor: string | null = null) => {
+    // Reset fallback mode if this is a fresh fetch (not a pagination load)
+    if (!cursor) fallbackModeRef.current = 'none';
+
     if (cursor) setIsLoadingMore(true);
     else setIsLoading(true);
 
@@ -121,25 +126,31 @@ function SaleContent({ collection }: { collection?: any }) {
       let result;
 
       if (!hasFilters) {
-        // SCENARIO A: Strict 'Sale' Collection Fetch
-        result = await getCollectionProducts({
-          handle: 'sale', 
-          first: itemsPerPage,
-          after: cursor || undefined
-        });
-        
-        // UPDATE BANNER IMAGE IF IT EXISTS
-        if (!cursor && result.collectionImage?.url) {
-          setBannerImage(result.collectionImage.url);
-        } else if (!cursor && !result.collectionImage?.url) {
-          // Fallback if the collection has no specific image
-          setBannerImage('/assets/images/SaleBanner.png'); 
-        }
+        // SCENARIO A: No Filters
+        if (fallbackModeRef.current === 'all_products') {
+          // If we fell back previously, continue paginating the fallback query
+          result = await getProducts({ first: itemsPerPage, after: cursor || undefined });
+        } else {
+          // Standard 'Sale' Collection Fetch
+          result = await getCollectionProducts({
+            handle: 'sale', 
+            first: itemsPerPage,
+            after: cursor || undefined
+          });
+          
+          // UPDATE BANNER IMAGE IF IT EXISTS
+          if (!cursor && result.collectionImage?.url) {
+            setBannerImage(result.collectionImage.url);
+          } else if (!cursor && !result.collectionImage?.url) {
+            setBannerImage('/assets/images/SaleBanner.png'); 
+          }
 
-        // 🚨 FALLBACK: If 'sale' is empty or doesn't exist, fetch general products
-        if (result.formattedData.length === 0 && !cursor) {
-            console.warn("Sale collection is empty. Falling back to all products.");
-            result = await getProducts({ first: itemsPerPage });
+          // 🚨 FALLBACK: If 'sale' is empty or doesn't exist, fetch general products
+          if (result.formattedData.length === 0 && !cursor) {
+              console.warn("Sale collection is empty. Falling back to all products.");
+              fallbackModeRef.current = 'all_products';
+              result = await getProducts({ first: itemsPerPage });
+          }
         }
 
       } else {
@@ -160,22 +171,34 @@ function SaleContent({ collection }: { collection?: any }) {
         if (activeFilters.sizes.length > 0) queryParts.push(`(${buildGroup(activeFilters.sizes)})`);
         if (activeFilters.placements.length > 0) queryParts.push(`(${buildGroup(activeFilters.placements)})`);
 
-        result = await getProducts({
-          query: queryParts.join(' AND '),
-          first: itemsPerPage,
-          after: cursor || undefined,
-          sortKey: 'CREATED_AT',
-          reverse: true
-        });
+        if (fallbackModeRef.current === 'general_filtered') {
+          // If we fell back previously, continue paginating the fallback filtered query
+          const fallbackQuery = queryParts.filter(part => part !== `collection:'sale'`).join(' AND ');
+          result = await getProducts({
+              query: fallbackQuery || undefined,
+              first: itemsPerPage,
+              after: cursor || undefined
+          });
+        } else {
+          // Standard Filtered Fetch
+          result = await getProducts({
+            query: queryParts.join(' AND '),
+            first: itemsPerPage,
+            after: cursor || undefined,
+            sortKey: 'CREATED_AT',
+            reverse: true
+          });
 
-        // 🚨 FALLBACK: If the filtered sale query returns nothing, try fetching just the filters without the 'sale' restriction
-        if (result.formattedData.length === 0 && !cursor) {
-            console.warn("Filtered sale query is empty. Falling back to general filtered products.");
-            const fallbackQuery = queryParts.filter(part => part !== `collection:'sale'`).join(' AND ');
-            result = await getProducts({
-                query: fallbackQuery || undefined,
-                first: itemsPerPage
-            });
+          // 🚨 FALLBACK: If the filtered sale query returns nothing, try fetching just the filters without the 'sale' restriction
+          if (result.formattedData.length === 0 && !cursor) {
+              console.warn("Filtered sale query is empty. Falling back to general filtered products.");
+              fallbackModeRef.current = 'general_filtered';
+              const fallbackQuery = queryParts.filter(part => part !== `collection:'sale'`).join(' AND ');
+              result = await getProducts({
+                  query: fallbackQuery || undefined,
+                  first: itemsPerPage
+              });
+          }
         }
       }
 

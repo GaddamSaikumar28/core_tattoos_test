@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { SlidersHorizontal, LayoutGrid, List, X, RefreshCcw, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
@@ -44,6 +43,9 @@ function NewArrivalsContent({ collection }: { collection?: any }) {
     sizes: searchParams.get('sizes')?.split(',') || [],
     placements: searchParams.get('placements')?.split(',') || []
   });
+
+  // 🚀 FIX: Track if we are paginating a fallback query to prevent cursor contamination
+  const fallbackModeRef = useRef<'none' | 'global_fallback'>('none');
 
   // 2. FETCH ALL DYNAMIC DATA
   useEffect(() => {
@@ -109,7 +111,13 @@ function NewArrivalsContent({ collection }: { collection?: any }) {
 
   // 3. HYBRID PRODUCT FETCHING LOGIC
   const fetchProducts = useCallback(async (cursor: string | null = null) => {
-    if (cursor) setIsLoadingMore(true);
+    // Defensively sanitize the cursor
+    const safeCursor = cursor && cursor !== 'undefined' && cursor !== 'null' && cursor.trim() !== '' ? cursor : undefined;
+    
+    // Reset fallback mode if this is a fresh fetch (not a pagination load)
+    if (!safeCursor) fallbackModeRef.current = 'none';
+
+    if (safeCursor) setIsLoadingMore(true);
     else setIsLoading(true);
 
     try {
@@ -126,20 +134,40 @@ function NewArrivalsContent({ collection }: { collection?: any }) {
       let result;
 
       if (!hasSecondaryFilters) {
-        // SCENARIO A: Strict Collection Fetch
-        result = await getCollectionProducts({
-          handle: baseHandle, 
-          first: itemsPerPage,
-          after: cursor || undefined
-        });
+        // SCENARIO A: Strict Collection Fetch OR Fallback
+        if (fallbackModeRef.current === 'global_fallback') {
+          // If we fell back previously, continue paginating the fallback query (Newest First)
+          result = await getProducts({ 
+            first: itemsPerPage, 
+            after: safeCursor,
+            sortKey: 'CREATED_AT',
+            reverse: true 
+          });
+        } else {
+          result = await getCollectionProducts({
+            handle: baseHandle, 
+            first: itemsPerPage,
+            after: safeCursor
+          });
 
-        // UPDATE BANNER IMAGE IF IT EXISTS
-        if (!cursor && result.collectionImage?.url) {
-          setBannerImage(result.collectionImage.url);
-        } else if (!cursor && !result.collectionImage?.url) {
-          setBannerImage('/assets/images/temporary_tattoos.webp'); 
+          // UPDATE BANNER IMAGE IF IT EXISTS
+          if (!safeCursor && result.collectionImage?.url) {
+            setBannerImage(result.collectionImage.url);
+          } else if (!safeCursor && !result.collectionImage?.url) {
+            setBannerImage('/assets/images/temporary_tattoos.webp'); 
+          }
+
+          // 🚨 FALLBACK: If collection is empty, fetch general products sorted by newest
+          if (result.formattedData.length === 0 && !safeCursor) {
+            console.warn(`Collection '${baseHandle}' is empty. Falling back to global latest products.`);
+            fallbackModeRef.current = 'global_fallback';
+            result = await getProducts({ 
+              first: itemsPerPage,
+              sortKey: 'CREATED_AT',
+              reverse: true 
+            });
+          }
         }
-
       } else {
         // SCENARIO B: Filtered Search Query within the target collection
         const queryParts = [`collection:'${baseHandle}'`];
@@ -152,13 +180,25 @@ function NewArrivalsContent({ collection }: { collection?: any }) {
         result = await getProducts({
           query: queryParts.join(' AND '),
           first: itemsPerPage,
-          after: cursor || undefined,
+          after: safeCursor,
           sortKey: 'CREATED_AT',
           reverse: true
         });
+
+        // 🚨 FALLBACK: If the filtered collection query returns nothing, try general filters without strict collection binding
+        if (result.formattedData.length === 0 && !safeCursor) {
+          console.warn("Filtered collection query is empty. Falling back to general filtered products.");
+          const fallbackQuery = queryParts.filter(part => part !== `collection:'${baseHandle}'`).join(' AND ');
+          result = await getProducts({
+              query: fallbackQuery || undefined,
+              first: itemsPerPage,
+              sortKey: 'CREATED_AT',
+              reverse: true
+          });
+        }
       }
       
-      if (cursor) {
+      if (safeCursor) {
         setProducts(prev => [...prev, ...result.formattedData]);
       } else {
         setProducts(result.formattedData);

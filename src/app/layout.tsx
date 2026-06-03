@@ -11,7 +11,7 @@ import { CartProvider } from "../context/CartContext";
 import FooterWrapper from "../components/layout/FooterWrapper";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AuthProvider } from "../context/AuthContext";
-import Script from "next/script";
+import Script from "next/script"; // Required for performance
 import { getGlobalSettingsData } from "@/src/lib/shopify";
 import CartDrawerWrapper from "../components/cart/CartDrawerWrapper";
 import MetaPixel from "../components/shared/MetaPixel";
@@ -100,9 +100,19 @@ export default async function RootLayout({
         <link rel="apple-touch-icon" href="/favicon.svg?v=1" />
         <link rel="preconnect" href="https://cdn.shopify.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn.shopify.com" />
-
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-98T2GW3HED"></script>
-        <script
+        {/* Removed blocking GTM scripts from here */}
+      </head>
+      
+      <body className="antialiased flex flex-col min-h-screen bg-[var(--color-bg-base)] text-[var(--color-text-primary)] selection:bg-[var(--color-brand-orange)] selection:text-white">
+        
+        {/* OPTIMIZATION 1: Non-blocking GTM Scripts */}
+        <Script 
+          src="https://www.googletagmanager.com/gtag/js?id=G-98T2GW3HED" 
+          strategy="afterInteractive" 
+        />
+        <Script
+          id="google-analytics"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               window.dataLayer = window.dataLayer || [];
@@ -112,11 +122,25 @@ export default async function RootLayout({
             `,
           }}
         />
-      </head>
-      
-      <body className="antialiased flex flex-col min-h-screen bg-[var(--color-bg-base)] text-[var(--color-text-primary)] selection:bg-[var(--color-brand-orange)] selection:text-white">
+
+        {/* OPTIMIZATION 2: Next.js Script for inline logic to prevent hydration mismatch */}
+        <Script
+          id="splash-screen-logic"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+                (function() {
+                  if (sessionStorage.getItem('hasSeenSplash') === 'true') {
+                    document.documentElement.classList.add('splash-completed');
+                  }
+                })();
+              `,
+          }}
+        />
+
         <SpeedInsights />
         
+        {/* JSON-LD Schema remains standard script to avoid Next.js Script parsing issues */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -149,19 +173,7 @@ export default async function RootLayout({
             }),
           }}
         />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-                (function() {
-                  if (sessionStorage.getItem('hasSeenSplash') === 'true') {
-                    document.documentElement.classList.add('splash-completed');
-                  }
-                })();
-              `,
-          }}
-        />
 
-        {/* Removed duplicate inline FB Pixel initialization. Component handles it. */}
         <MetaPixel />
         
         <CartProvider>
@@ -191,8 +203,6 @@ export default async function RootLayout({
 
           <Toaster position="bottom-right" richColors theme="dark" />
         </CartProvider>
-        
-        {/* Removed 404 messaging app widget that was blocking lazyOnload phase */}
       </body>
     </html>
   );

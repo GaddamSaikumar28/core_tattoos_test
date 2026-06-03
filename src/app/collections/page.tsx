@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { SlidersHorizontal, LayoutGrid, List, X, RefreshCcw, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
@@ -43,6 +43,9 @@ function ShopAllContent() {
     sizes: searchParams.get('sizes')?.split(',') || [],
     placements: searchParams.get('placements')?.split(',') || [],
   });
+
+  // 🚀 FIX: Track if we are paginating a fallback query to prevent cursor contamination
+  const fallbackModeRef = useRef<'none' | 'global_fallback'>('none');
 
   // ── Load filter options ───────────────────────────────────────────────────
   useEffect(() => {
@@ -119,27 +122,59 @@ function ShopAllContent() {
   // ── Fetch products ────────────────────────────────────────────────────────
   const fetchProducts = useCallback(
     async (cursor: string | null = null) => {
-      if (cursor) setIsLoadingMore(true);
+      // Defensively sanitize the cursor
+      const safeCursor = cursor && cursor !== 'undefined' && cursor !== 'null' && cursor.trim() !== '' ? cursor : undefined;
+      
+      if (!safeCursor) fallbackModeRef.current = 'none';
+
+      if (safeCursor) setIsLoadingMore(true);
       else setIsLoading(true);
 
       try {
-        const selectedCollection = activeFilters.collections[0];
-        const handle = collectionMap[selectedCollection];
-        const isShopAll = activeFilters.collections.length === 0;
+        const hasNoFilters = 
+          activeFilters.collections.length === 0 &&
+          activeFilters.styles.length === 0 &&
+          activeFilters.sizes.length === 0 &&
+          activeFilters.placements.length === 0;
+
         const isPureCollection =
           activeFilters.collections.length === 1 &&
           activeFilters.styles.length === 0 &&
           activeFilters.sizes.length === 0 &&
           activeFilters.placements.length === 0;
 
+        const selectedCollection = activeFilters.collections[0];
+        const handle = collectionMap[selectedCollection];
+
         let result;
-        if (!isShopAll && isPureCollection && handle) {
-          result = await getCollectionProducts({ handle, first: itemsPerPage, after: cursor || undefined });
-        } else {
-          result = await getProducts({ query: buildShopifyQuery(), first: itemsPerPage, after: cursor || undefined });
+
+        // SCENARIO 1: Pure Shop All (No Filters)
+        if (hasNoFilters) {
+          if (fallbackModeRef.current === 'global_fallback') {
+             // Continue paginating the fallback query
+             result = await getProducts({ first: itemsPerPage, after: safeCursor });
+          } else {
+            // 🚀 FIX: Use Shopify's default 'all' collection to respect standard sorting rules
+            result = await getCollectionProducts({ handle: 'all', first: itemsPerPage, after: safeCursor });
+            
+            // Fallback just in case the merchant manually deleted the 'all' collection
+            if (result.formattedData.length === 0 && !safeCursor) {
+              console.warn("The 'all' collection is empty or missing. Falling back to global getProducts.");
+              fallbackModeRef.current = 'global_fallback';
+              result = await getProducts({ first: itemsPerPage });
+            }
+          }
+        } 
+        // SCENARIO 2: Pure specific collection (e.g., 'Animal' or 'Floral')
+        else if (isPureCollection && handle) {
+          result = await getCollectionProducts({ handle, first: itemsPerPage, after: safeCursor });
+        } 
+        // SCENARIO 3: Complex Multi-Filter Search
+        else {
+          result = await getProducts({ query: buildShopifyQuery(), first: itemsPerPage, after: safeCursor });
         }
 
-        if (cursor) {
+        if (safeCursor) {
           setProducts((prev) => [...prev, ...result.formattedData]);
         } else {
           setProducts(result.formattedData);

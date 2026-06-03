@@ -1386,23 +1386,48 @@ export async function getMenu(handle: string) {
 export async function getCollectionProducts({
   handle,
   first = 12,
-  after
+  after,
+  sortKey,
+  reverse
 }: {
   handle: string;
   first?: number;
   after?: string;
+  sortKey?: string;
+  reverse?: boolean;
 }) {
+  // 1. Safe cursor check for production Next.js route params
+  const safeAfter = (after && after !== 'undefined' && after !== 'null' && after.trim() !== '') 
+    ? after 
+    : undefined;
+
+  // 2. Build the variables object dynamically. 
+  // If sortKey or reverse are missing, they simply won't exist in this object, 
+  // and GraphQL will safely ignore them since they are optional.
+  const queryVariables: any = {
+    handle,
+    first,
+  };
+
+  if (safeAfter) queryVariables.after = safeAfter;
+  if (sortKey) queryVariables.sortKey = sortKey;
+  if (reverse !== undefined) queryVariables.reverse = reverse;
 
   const res = await shopifyFetch<any>({
     query: getCollectionProductsQuery,
-    variables: { handle, first, after },
-    ////cache: 'no-store'
+    variables: queryVariables,
+    cache: 'no-store'
   });
+
   const collectionData = res.body?.data?.collection;
   const productsData = res.body?.data?.collection?.products;
 
   if (!productsData?.edges) {
-    return { formattedData: [], pageInfo: { hasNextPage: false, endCursor: null }, collectionImage: collectionData?.image || null };
+    return { 
+      formattedData: [], 
+      pageInfo: { hasNextPage: false, endCursor: null }, 
+      collectionImage: collectionData?.image || null 
+    };
   }
 
   return {
@@ -1411,6 +1436,43 @@ export async function getCollectionProducts({
     collectionImage: collectionData?.image || null
   };
 }
+// export async function getCollectionProducts({
+//   handle,
+//   first = 12,
+//   after,
+//   sortKey,
+//   reverse
+// }: {
+//   handle: string;
+//   first?: number;
+//   after?: string;
+//   sortKey?: string;
+//   reverse?: boolean;
+// }) {
+// const safeAfter = (after && after !== 'undefined' && after !== 'null' && after.trim() !== '') 
+//     ? after 
+//     : undefined;
+
+//   const res = await shopifyFetch<any>({
+//     query: getCollectionProductsQuery,
+//     variables: { handle, first, after: safeAfter,
+//       ...(sortKey && { sortKey }),
+//       ...(reverse !== undefined && { reverse }) },
+//     cache: 'no-store'
+//   });
+//   const collectionData = res.body?.data?.collection;
+//   const productsData = res.body?.data?.collection?.products;
+
+//   if (!productsData?.edges) {
+//     return { formattedData: [], pageInfo: { hasNextPage: false, endCursor: null }, collectionImage: collectionData?.image || null };
+//   }
+
+//   return {
+//     formattedData: await mapShopifyProductsForProduction(productsData),
+//     pageInfo: productsData.pageInfo,
+//     collectionImage: collectionData?.image || null
+//   };
+// }
 
 import { getCollectionQuery } from './queries';
 

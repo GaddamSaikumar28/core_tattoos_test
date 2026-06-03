@@ -145,7 +145,7 @@ const Page = ({
     );
 
     if (lastOpened.current !== opened) {
-      turnedAt.current   = +new Date();
+      turnedAt.current   = performance.now();
       lastOpened.current = opened;
     }
 
@@ -217,8 +217,29 @@ export const Book = ({ customPages, ...props }: BookProps) => {
   const totalPages = bookPages.length;
 
   // Swapped useMemo out for useEffect to execute texture pre-cache clear safely
+  // useEffect(() => {
+  //   if (!customPages) return;
+
+  //   if (customPages[0]) {
+  //     useTexture.preload(customPages[0].front);
+  //     useTexture.preload(customPages[0].back);
+  //   }
+
+  //   const timer = setTimeout(() => {
+  //     customPages.slice(1).forEach((p) => {
+  //       useTexture.preload(p.front);
+  //       useTexture.preload(p.back);
+  //     });
+  //   }, 600);
+
+  //   return () => clearTimeout(timer);
+  // }, [customPages]);
+  const customPagesCacheKey = useMemo(() => {
+    return customPages ? JSON.stringify(customPages) : "";
+  }, [customPages]);
+
   useEffect(() => {
-    if (!customPages) return;
+    if (!customPages || customPages.length === 0) return;
 
     if (customPages[0]) {
       useTexture.preload(customPages[0].front);
@@ -233,7 +254,7 @@ export const Book = ({ customPages, ...props }: BookProps) => {
     }, 600);
 
     return () => clearTimeout(timer);
-  }, [customPages]);
+  }, [customPagesCacheKey]);
 
   useEffect(() => {
     let timeout: NodeJS.Timeout;
