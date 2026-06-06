@@ -193,7 +193,7 @@ export default function SearchOverlay({ isSearchOpen, closeSearch }: SearchOverl
                         {/* View All Results Footer */}
                         <div className="p-4 border-t border-white/5 bg-black/40">
                            <Link 
-                             href={`/search?q=${encodeURIComponent(searchQuery)}`}
+                             href={`/collections`}
                              onClick={closeSearch}
                              className="w-full py-3 flex items-center justify-center text-[14px] font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-all"
                            >

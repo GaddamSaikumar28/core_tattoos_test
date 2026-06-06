@@ -1,5 +1,24 @@
 @import "tailwindcss";
 
+/* -----------------------------------------
+   CUSTOM FONT FACES
+----------------------------------------- */
+@font-face {
+  font-family: 'Almarena';
+  src: url('/assets/fonts/Almarena-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Almarena';
+  src: url('/assets/fonts/Almarena-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   /* --- 1. Refined Dark Mode Color Palette --- */
   --color-bg-base: #050505;
@@ -16,9 +35,9 @@
   --color-black: #000000;
   --color-border: #2A2A2A;
 
-  /* --- 2. Font Families (Fixed recursive bug) --- */
-  --font-sans: var(--font-montserrat, ui-sans-serif, system-ui);
-  --font-heading: var(--font-almarena, serif);
+  /* --- 2. Font Families (Forced Almarena Globally) --- */
+  --font-sans: 'Almarena', ui-sans-serif, system-ui;
+  --font-heading: 'Almarena', serif;
 
   /* --- 3. Shadows & Glows --- */
   --shadow-card: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
@@ -56,7 +75,7 @@
   :root {
     background-color: var(--color-bg-base);
     color: var(--color-text-primary);
-    font-family: var(--font-montserrat);
+    font-family: var(--font-sans); /* Now points to Almarena */
     color-scheme: dark;
   }
 
@@ -110,7 +129,7 @@
   }
 
   input, select, textarea {
-    font-family: var(--font-montserrat);
+    font-family: var(--font-sans); /* Changed from Montserrat */
     font-size: 1rem;
     line-height: 1.5rem;
     background-color: var(--color-bg-surface);
@@ -153,7 +172,7 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     transition: all 0.3s ease;
-    font-family: var(--font-montserrat);
+    font-family: var(--font-sans); /* Changed from Montserrat */
     font-size: clamp(0.75rem, 0.5vw + 0.6rem, 0.875rem);
     cursor: pointer;
   }

@@ -79,11 +79,20 @@ function BackgroundFX() {
 
 function BookScene({ products }: BookSceneProps) {
   const [cameraZ, setCameraZ] = useState(5.0);
-
+  const [positionY, setPositionY] = useState(0);
   useBackgroundKeyframes();
 
   useEffect(() => {
-    const update = () => setCameraZ(window.innerWidth > 800 ? 5.0 : 7.5);
+    const update = () => {
+      const isMobile = window.innerWidth <= 800;
+      
+      // Keep your existing camera zoom logic
+      setCameraZ(isMobile ? 6.0 : 4.0);
+      
+      // Shift the 3D group downwards to close the gap to the UI
+      setPositionY(isMobile ? -0.8 : -0.3); // <-- ADD THIS
+    };
+    
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
@@ -141,7 +150,7 @@ function BookScene({ products }: BookSceneProps) {
       >
         <color attach="background" args={["#050505"]} />
         <fog attach="fog" args={["#050505", 8, 20]} />
-        <group position-y={0} scale={0.95}>
+        <group position-y={positionY} scale={0.9}>
           <Suspense fallback={null}>
             <Experience products={products} customPages={builtPages} />
           </Suspense>

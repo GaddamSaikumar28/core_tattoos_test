@@ -4,52 +4,45 @@ import { motion, useReducedMotion, Variants } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 
-/* ─────────────────────────────────────────────────────────────
-   DATA
-───────────────────────────────────────────────────────────── */
 const DATA = [
-  "/assets/hero/card1.png",
-  "/assets/hero/card2.png",
-  "/assets/hero/card3.png",
-  "/assets/hero/card5.png",
-  "/assets/hero/card6.png",
-  "/assets/hero/card7.png",
-  "/assets/hero/card8.png",
-  "/assets/hero/card9.png",
+    "/assets/BookImages/card1.webp",
+    "/assets/BookImages/card2.webp",
+    "/assets/BookImages/card3.webp",
+    "/assets/BookImages/card4.webp",
+    "/assets/BookImages/card5.webp",
+    "/assets/BookImages/card14.webp",
+    "/assets/BookImages/card7.webp",
+    "/assets/BookImages/card8.webp",
+    "/assets/BookImages/card9.webp",
+    "/assets/BookImages/card10.webp",
+    "/assets/BookImages/card11.webp",
+    "/assets/BookImages/card12.webp",
+    "/assets/BookImages/card13.webp",
+    "/assets/BookImages/card14.webp",
+    "/assets/BookImages/card5.webp",
+    "/assets/BookImages/card8.webp",
 ];
-const CAROUSEL_ITEMS = [...DATA, ...DATA];
+const CAROUSEL_ITEMS = [...DATA];
 
 const STATS = [
-  { value: "50K+",    label: "Customers"  },
-  { value: "14 Days", label: "Skin Wear"  },
-  { value: "1000+",   label: "Designs"    },
-  { value: "4.9★",   label: "Rating"     },
+    { value: "50K+", label: "Customers" },
+    { value: "14 Days", label: "Skin Wear" },
+    { value: "1000+", label: "Designs" },
+    { value: "4.9★", label: "Rating" },
 ];
 
 const MARQUEE = [
-  "Premium Ink","✦","No Needles","✦","Up To 14 Days","✦",
-  "Waterproof","✦","Skin Safe","✦","1000+ Designs","✦",
-  "Premium Ink","✦","No Needles","✦","Up To 14 Days","✦",
-  "Waterproof","✦","Skin Safe","✦","1000+ Designs","✦",
+    "Premium Ink", "✦", "No Needles", "✦", "Up To 14 Days", "✦",
+    "Waterproof", "✦", "Skin Safe", "✦", "1000+ Designs", "✦",
+    "Premium Ink", "✦", "No Needles", "✦", "Up To 14 Days", "✦",
+    "Waterproof", "✦", "Skin Safe", "✦", "1000+ Designs", "✦",
 ];
 
 /* ─────────────────────────────────────────────────────────────
    LAYOUT STRATEGY
-   ┌──────────────────────────────────┐  ← section h-[100dvh] relative
-   │  [TOP OVERLAY z-20]              │     absolute top-0
-   │    badges + headline + subtext   │
-   │                                  │
-   │  [CAROUSEL SCENE z-10]           │     absolute inset-0 (shifted down)
-   │       3D rotating ring           │     centered via flex
-   │                                  │
-   │  [BOTTOM OVERLAY z-20]           │     absolute bottom-0
-   │    marquee + CTA + stats         │
-   └──────────────────────────────────┘
 ───────────────────────────────────────────────────────────── */
 
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,600;0,9..40,800;1,9..40,400&display=swap');
-
   /* ── Root tokens ──────────────────────────────────────────── */
   .hero-root {
     --accent:      #FF7A00;
@@ -61,7 +54,7 @@ const CSS = `
     --ch-ratio: calc(10 / 6);                /* aspect 6:10 */
     --cgap: clamp(0.4rem, 0.6vw, 0.6rem);
     --persp: clamp(32rem, 52vw, 72rem);
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--font-sans), sans-serif; /* Forced Almarena */
   }
 
   /* ── Grain ────────────────────────────────────────────────── */
@@ -83,7 +76,8 @@ const CSS = `
 
   /* ── 3D Headline ─────────────────────────────────────────── */
   .h-title {
-    font-family:'Bebas Neue',sans-serif;
+    font-family: var(--font-heading), serif; /* Forced Almarena Bold */
+    font-weight: 700;
     /* Reduced max font-size to prevent collision on PC */
     font-size: clamp(3rem, 7.5vw, 6rem);
     line-height:.87;
@@ -140,7 +134,6 @@ const CSS = `
   @keyframes pdPing { 75%,100% { transform:scale(2.3); opacity:0; } }
 
   /* ── CAROUSEL SCENE ──────────────────────────────────────── */
-  /* Shifted top slightly down to close the gap at bottom and allow header space */
   .h-scene {
     position:absolute; 
     top:clamp(2.5rem, 8vh, 6rem); left:0; right:0; bottom:0; 
@@ -188,20 +181,17 @@ const CSS = `
   }
 
   /* ── TOP OVERLAY ─────────────────────────────────────────── */
-  /* Sits in the dead space above the carousel ring */
   .h-top {
     position:absolute;
     top:0; left:0; right:0;
     z-index:20;
     display:flex; flex-direction:column; align-items:center;
     text-align:center;
-    /* Added significant top padding specifically to clear the header */
     padding: clamp(5rem, 12vh, 7rem) clamp(1rem,5vw,3rem) 0;
     pointer-events:auto;
   }
 
   /* ── BOTTOM OVERLAY ──────────────────────────────────────── */
-  /* Sits in the dead space below the carousel ring */
   .h-bot {
     position:absolute;
     bottom:0; left:0; right:0;
@@ -216,7 +206,7 @@ const CSS = `
   .h-cta {
     display:inline-flex; align-items:center; gap:.45rem;
     background:var(--accent); color:#000;
-    font-family:'DM Sans',sans-serif;
+    font-family: var(--font-sans), sans-serif;
     font-weight:800; text-transform:uppercase;
     letter-spacing:.12em;
     font-size:clamp(.72rem,1.7vw,.92rem);
@@ -238,25 +228,26 @@ const CSS = `
   .h-arrow { display:inline-block; transition:transform .2s; }
   .h-cta:hover .h-arrow { transform:translateX(4px); }
 
-  /* ── Stats ───────────────────────────────────────────────── */
+/* ── Stats ───────────────────────────────────────────────── */
   .h-stats {
     display:flex; align-items:center; justify-content:center;
-    gap:clamp(.7rem,2.5vw,1.5rem); flex-wrap:wrap; width:100%;
+    gap:clamp(0.5rem,2vw,1.1rem); flex-wrap:wrap; width:100%;
   }
   .h-stat { display:flex; flex-direction:column; align-items:center; }
   .h-sval {
-    font-family:'Bebas Neue',sans-serif;
-    font-size:clamp(1.5rem,4vw,2.4rem);
+    font-family: var(--font-heading), serif;
+    font-weight: 700;
+    font-size: clamp(1.2rem, 3.5vw, 2rem); /* Reduced from 2.4rem */
     letter-spacing:.03em; color:#fff; line-height:1;
   }
   .h-slbl {
-    font-size:clamp(.55rem,1.2vw,.68rem);
+    font-size: clamp(0.5rem, 1vw, 0.62rem); /* Reduced from 0.68rem */
     color:rgba(255,255,255,.38);
     text-transform:uppercase; letter-spacing:.15em;
     font-weight:600; margin-top:.18rem;
   }
   .h-sep {
-    width:1px; height:1.8rem;
+    width:1px; height: 1.3rem; /* Reduced height from 1.8rem */
     background:linear-gradient(to bottom,transparent,rgba(255,255,255,.18),transparent);
     flex-shrink:0;
   }
@@ -273,7 +264,8 @@ const CSS = `
     to   { transform:translateX(-50%); }
   }
   .h-mq-item {
-    font-family:'Bebas Neue',sans-serif;
+    font-family: var(--font-heading), serif;
+    font-weight: 700;
     font-size:clamp(.68rem,1.3vw,.82rem);
     letter-spacing:.2em; color:rgba(255,255,255,.17);
     white-space:nowrap; flex-shrink:0;
@@ -285,186 +277,181 @@ const CSS = `
    COMPONENT
 ───────────────────────────────────────────────────────────── */
 export default function HeroCardCarousel() {
-  const prefersReducedMotion = useReducedMotion();
-  const N = CAROUSEL_ITEMS.length;
+    const prefersReducedMotion = useReducedMotion();
+    const N = CAROUSEL_ITEMS.length;
 
-  /* Framer variants */
-  const stagger: Variants = {
-    hidden: {},
-    show:   { transition: { staggerChildren: 0.1 } },
-  };
-  const up: Variants = {
-    hidden:  { opacity: 0, y: 22 },
-    show:    { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } },
-  };
-  const fadeIn: Variants = {
-    hidden:  { opacity: 0 },
-    show:    { opacity: 1, transition: { duration: 0.7, delay: 0.25 } },
-  };
+    /* Framer variants */
+    const stagger: Variants = {
+        hidden: {},
+        show: { transition: { staggerChildren: 0.1 } },
+    };
+    const up: Variants = {
+        hidden: { opacity: 0, y: 22 },
+        show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } },
+    };
+    const fadeIn: Variants = {
+        hidden: { opacity: 0 },
+        show: { opacity: 1, transition: { duration: 0.7, delay: 0.25 } },
+    };
 
-  return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+    return (
+        <>
+            <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
-      {/*
-        SECTION = full viewport, no scroll, position:relative
-        Everything inside is either absolute or doesn't overflow.
-      */}
-      <section
-        className="hero-root relative w-full bg-black text-white overflow-hidden"
-        style={{ height: "100dvh" }}
-      >
-        {/* ── Background atmosphere ── */}
-        <div className="h-glow" />
-        <div className="h-grain" />
+            <section
+                className="hero-root relative w-full bg-black text-white overflow-hidden"
+                style={{ height: "100dvh" }}
+            >
+                {/* ── Background atmosphere ── */}
+                <div className="h-glow" />
+                <div className="h-grain" />
 
-        {/* ════════════════════════════════════════════════
+                {/* ════════════════════════════════════════════════
             CAROUSEL SCENE
         ════════════════════════════════════════════════ */}
-        <motion.div
-          className="h-scene"
-          variants={fadeIn}
-          initial="hidden"
-          animate="show"
-        >
-          <motion.div
-            className="h-ring"
-            animate={{ rotateY: [0, 360] }}
-            transition={{
-              duration: prefersReducedMotion ? 120 : 26,
-              repeat:   Infinity,
-              ease:     "linear",
-            }}
-          >
-            {CAROUSEL_ITEMS.map((src, i) => (
-              <div
-                key={`${src}-${i}`}
-                className="h-card"
-                style={{
-                  transform: `
+                <motion.div
+                    className="h-scene"
+                    variants={fadeIn}
+                    initial="hidden"
+                    animate="show"
+                >
+                    <motion.div
+                        className="h-ring"
+                        animate={{ rotateY: [0, 360] }}
+                        transition={{
+                            duration: prefersReducedMotion ? 120 : 26,
+                            repeat: Infinity,
+                            ease: "linear",
+                        }}
+                    >
+                        {CAROUSEL_ITEMS.map((src, i) => (
+                            <div
+                                key={`${src}-${i}`}
+                                className="h-card"
+                                style={{
+                                    transform: `
                     rotateY(calc(${i} * 1turn / ${N}))
                     translateZ(calc(
                       -1 * (0.5 * var(--cw) + var(--cgap))
                          / tan(0.5 * 1turn / ${N})
                     ))
                   `,
-                }}
-              >
-                <Image
-                  src={src}
-                  alt={`Showcase card ${(i % DATA.length) + 1}`}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width:480px) 9rem, (max-width:768px) 11rem, 14rem"
-                  priority={i < 7}
-                />
-                <div className="h-shine" />
-              </div>
-            ))}
-          </motion.div>
-        </motion.div>
+                                }}
+                            >
+                                <Image
+                                    src={src}
+                                    alt={`Showcase card ${(i % DATA.length) + 1}`}
+                                    fill
+                                    className="object-cover"
+                                    sizes="(max-width:480px) 9rem, (max-width:768px) 11rem, 14rem"
+                                    priority={i < 7}
+                                />
+                                <div className="h-shine" />
+                            </div>
+                        ))}
+                    </motion.div>
+                </motion.div>
 
-        {/* ════════════════════════════════════════════════
-            TOP OVERLAY — dead zone above the rotating ring
+                {/* ════════════════════════════════════════════════
+            TOP OVERLAY
         ════════════════════════════════════════════════ */}
-        <motion.div
-          className="h-top"
-          variants={stagger}
-          initial="hidden"
-          animate="show"
-        >
-          {/* 3D Staggered Headline */}
-          <motion.h1
-            variants={up}
-            className="h-title uppercase w-full"
-            style={{ marginBottom: "clamp(0.4rem,1vw,0.7rem)" }}
-          >
-            {/* Express Yourself grouped onto a single line */}
-            <div 
-              style={{ 
-                display: "flex", 
-                flexWrap: "wrap", 
-                justifyContent: "center", 
-                gap: "clamp(0.5rem, 1.5vw, 1.2rem)",
-                transform: "translateX(clamp(-0.8rem,-2vw,-1.8rem))" 
-              }}
-            >
-              <span className="h-t1">Express</span>
-              <span className="h-t2">Yourself</span>
-            </div>
-            
-            <span
-              className="h-t3 block"
-              style={{ transform: "translateX(clamp(0.8rem,2vw,1.8rem))" }}
-            >
-              Fearlessly.
-            </span>
-          </motion.h1>
-
-          {/* Subtext */}
-          <motion.p
-            variants={up}
-            style={{
-              fontSize: "clamp(0.72rem,1.6vw,0.9rem)",
-              color: "rgba(255,255,255,0.5)",
-              maxWidth: "clamp(16rem,42vw,28rem)",
-              lineHeight: 1.6,
-            }}
-          >
-            Premium sticker tattoos that feel like real ink.{" "}
-            <span style={{ color: "var(--accent-lt)", fontWeight: 600 }}>
-              No needles. No commitment.
-            </span>{" "}
-            Up to 14 days on your skin.
-          </motion.p>
-        </motion.div>
-
-        {/* ════════════════════════════════════════════════
-            BOTTOM OVERLAY — dead zone below the rotating ring
-        ════════════════════════════════════════════════ */}
-        <motion.div
-          className="h-bot"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        >
-          {/* Scrolling marquee */}
-          <div className="h-mq-wrap">
-            <div className="h-mq-track">
-              {MARQUEE.map((item, i) => (
-                <span
-                  key={i}
-                  className={`h-mq-item ${item === "✦" ? "h-mq-dot" : ""}`}
+                <motion.div
+                    className="h-top"
+                    variants={stagger}
+                    initial="hidden"
+                    animate="show"
                 >
-                  {item}
-                </span>
-              ))}
-            </div>
-          </div>
+                    {/* 3D Staggered Headline */}
+                    <motion.h1
+                        variants={up}
+                        className="h-title uppercase w-full"
+                        style={{ marginBottom: "clamp(0.4rem,1vw,0.7rem)" }}
+                    >
+                        <div
+                            style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                justifyContent: "center",
+                                gap: "clamp(0.5rem, 1.5vw, 1.2rem)",
+                                transform: "translateX(clamp(-0.8rem,-2vw,-1.8rem))"
+                            }}
+                        >
+                            <span className="h-t1">Express</span>
+                            <span className="h-t2">Yourself</span>
+                        </div>
 
-          {/* CTA button */}
-          <Link href="/collections" className="h-cta">
-            Shop the Collection
-            <span className="h-arrow">→</span>
-          </Link>
+                        <span
+                            className="h-t3 block"
+                            style={{ transform: "translateX(clamp(0.8rem,2vw,1.8rem))" }}
+                        >
+                            Fearlessly.
+                        </span>
+                    </motion.h1>
 
-          {/* Stats */}
-          <div className="h-stats">
-            {STATS.map((s, idx) => (
-              <div
-                key={idx}
-                style={{ display: "flex", alignItems: "center", gap: "clamp(.7rem,2.5vw,1.5rem)" }}
-              >
-                <div className="h-stat">
-                  <span className="h-sval">{s.value}</span>
-                  <span className="h-slbl">{s.label}</span>
-                </div>
-                {idx < STATS.length - 1 && <div className="h-sep" />}
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      </section>
-    </>
-  );
+                    {/* Subtext */}
+                    <motion.p
+                        variants={up}
+                        style={{
+                            fontSize: "clamp(0.72rem,1.6vw,0.9rem)",
+                            color: "rgba(255,255,255,0.5)",
+                            maxWidth: "clamp(16rem,42vw,28rem)",
+                            lineHeight: 1.6,
+                        }}
+                    >
+                        Premium sticker tattoos that feel like real ink.{" "}
+                        <span style={{ color: "var(--accent-lt)", fontWeight: 600 }}>
+                            No needles. No commitment.
+                        </span>{" "}
+                        Up to 14 days on your skin.
+                    </motion.p>
+                </motion.div>
+
+                {/* ════════════════════════════════════════════════
+            BOTTOM OVERLAY
+        ════════════════════════════════════════════════ */}
+                <motion.div
+                    className="h-bot"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                >
+                    {/* Scrolling marquee */}
+                    <div className="h-mq-wrap">
+                        <div className="h-mq-track">
+                            {MARQUEE.map((item, i) => (
+                                <span
+                                    key={i}
+                                    className={`h-mq-item ${item === "✦" ? "h-mq-dot" : ""}`}
+                                >
+                                    {item}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* CTA button */}
+                    <Link href="/collections" className="h-cta">
+                        Shop the Collection
+                        <span className="h-arrow">→</span>
+                    </Link>
+
+                    {/* Stats */}
+                    <div className="h-stats">
+                        {STATS.map((s, idx) => (
+                            <div
+                                key={idx}
+                                style={{ display: "flex", alignItems: "center", gap: "clamp(0.5rem, 2vw, 1.1rem)" }}
+                            >
+                                <div className="h-stat">
+                                    <span className="h-sval">{s.value}</span>
+                                    <span className="h-slbl">{s.label}</span>
+                                </div>
+                                {idx < STATS.length - 1 && <div className="h-sep" />}
+                            </div>
+                        ))}
+                    </div>
+                </motion.div>
+            </section>
+        </>
+    );
 }

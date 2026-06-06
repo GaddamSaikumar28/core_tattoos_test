@@ -24,7 +24,7 @@ function SaleContent({ collection }: { collection?: any }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [pageInfo, setPageInfo] = useState({ hasNextPage: false, endCursor: null as string | null });
-  const [bannerImage, setBannerImage] = useState<string>('/assets/images/SaleBanner.png');
+  const [bannerImage, setBannerImage] = useState<string>('/assets/images/SaleBanner.webp');
   
   // STATE INITIALIZATION
   const [collectionMap, setCollectionMap] = useState<Record<string, string>>({});
@@ -142,7 +142,7 @@ function SaleContent({ collection }: { collection?: any }) {
           if (!cursor && result.collectionImage?.url) {
             setBannerImage(result.collectionImage.url);
           } else if (!cursor && !result.collectionImage?.url) {
-            setBannerImage('/assets/images/SaleBanner.png'); 
+            setBannerImage('/assets/images/SaleBanner.webp'); 
           }
 
           // 🚨 FALLBACK: If 'sale' is empty or doesn't exist, fetch general products

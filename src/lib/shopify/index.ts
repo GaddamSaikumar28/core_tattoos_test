@@ -611,7 +611,7 @@ export async function getHomePageNewArrivals(limit: number = 4): Promise<Formatt
         handle: collectionHandle,
         first: limit,
       },
-      cache: 'no-store',
+      //cache: 'no-store',
     });
 
     // The data shape for a collection query nests the products array

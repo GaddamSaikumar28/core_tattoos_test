@@ -20,9 +20,9 @@ export interface TattooProduct {
 }
 
 export function buildPagesFromProducts(products: TattooProduct[]) {
-  const COVER_FRONT = "/assets/images/coverfrontpage.jpg";
+  const COVER_FRONT = "/assets/images/coverfrontpage.webp";
   const PAGE_BLANK  = "https://picsum.photos/seed/page-blank/800/1200";
-  const COVER_BACK  = "/assets/images/coverbackpage.jpg";
+  const COVER_BACK  = "/assets/images/coverbackpage.webp";
 
   const pages: { front: string; back: string; meta?: TattooProduct }[] = [
     {
@@ -122,7 +122,7 @@ export const UI = ({ totalPages, productMeta }: UIProps) => {
       </div>
 
       {/* ── Product meta overlay ── */}
-      {currentMeta && (
+      {/* {currentMeta && (
         <div
           className="pointer-events-none absolute bottom-28 left-6 z-20 max-w-[220px]"
           style={{ animation: "fadeSlideUp 0.4s ease both" }}
@@ -151,7 +151,7 @@ export const UI = ({ totalPages, productMeta }: UIProps) => {
             )}
           </div>
         </div>
-      )}
+      )} */}
 
       {/* ── Bottom navigation ── */}
       <div className="pointer-events-auto absolute bottom-0 left-0 right-0 z-20">

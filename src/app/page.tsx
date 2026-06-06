@@ -11,63 +11,27 @@ import NewsletterSection       from "../components/home/NewsletterSection";
 import TattooStudio            from "../components/home/TattooStudio";
 import CommunityGallerySection from "@/src/components/home/CommunityGallery";
 import HowItWorks              from "@/src/components/home/HowItWorks";
-// import BookWrapper             from "@/src/components/3DBook/BookWrapper";
+import BookWrapper             from "@/src/components/3DBook/BookWrapper";
 import HeroCardCarousel        from "../components/sections/HeroCardCarousel";
 import type { TattooProduct }  from "@/src/components/3DBook/UI";
 
-// const getHeroCollections = cache(getHomePageHeroCollections);
-
-function toBookProduct(p: any): TattooProduct {
-  return {
-    id:             p.id,
-    title:          p.title,
-    handle:         p.handle,
-    price:          p.checkout?.price ?? 0,
-    compareAtPrice: p.checkout?.compareAtPrice ?? undefined,
-    frontImage:     p.media?.featuredImage ?? "https://picsum.photos/seed/jt-cover/800/1200",
-    backImage:      p.media?.hoverImage    ?? p.media?.featuredImage ?? "https://picsum.photos/seed/jt-back/800/1200",
-    themes:         p.attributes?.themes    ?? [],
-    placements:     p.attributes?.placements ?? [],
-    colorType:      p.styling?.tattooColorType ?? "Color",
-    badge:          p.styling?.badges?.[0]?.label,
-  };
-}
-
-// async function BookWithData() {
-//   try {
-//     const raw = await getHeroCollections();
-//     const products: TattooProduct[] = (raw ?? []).map(toBookProduct);
-//     return (
-//       <div className="w-full h-[800px] relative">
-//         <BookWrapper products={products} />
-//       </div>
-//     );
-//   } catch (error) {
-//     console.error("Failed to fetch book products:", error);
-//     return (
-//       <div className="w-full h-[800px] relative">
-//         <BookWrapper />
-//       </div>
-//     );
-//   }
-// }
-
-// function BookSkeleton() {
-//   return (
-//     <div className="w-full h-[800px] bg-[#050505] flex items-center justify-center relative overflow-hidden">
-//       <div
-//         className="absolute inset-0"
-//         style={{ background: "radial-gradient(ellipse at 50% 50%, rgba(255,122,0,0.08) 0%, transparent 70%)" }}
-//       />
-//       <div className="flex flex-col items-center gap-4 z-10">
-//         <div className="w-16 h-16 rounded-full border border-[#FF7A00]/20 animate-pulse" />
-//         <p className="text-[#FF7A00] tracking-[0.3em] text-lg" style={{ fontFamily: "'Bebas Neue', Impact, sans-serif" }}>
-//           LOADING LOOKBOOK
-//         </p>
-//       </div>
-//     </div>
-//   );
-// }
+const dummyBookProducts: TattooProduct[] = Array.from({ length: 14 }, (_, i) => i + 1)
+  .filter((num) => num !== 4) // Exclude number 4
+  .map((num) => ({
+    id:             `local-tattoo-${num}`,
+    title:          `Lookbook Design ${num}`,
+    handle:         `lookbook-design-${num}`,
+    price:          19,
+    compareAtPrice: 25,
+    // frontImage maps to the image of the tattoo ON the skin
+    frontImage:     `/assets/HeroImages/card${num}.webp`,
+    // backImage maps to the pure tattoo design
+    backImage:      `/assets/HeroImages/card${num}_tattoo.webp`,
+    themes:         ["Curated", "Lookbook"],
+    placements:     ["Arm", "Forearm", "Leg"],
+    colorType:      "Black & Grey",
+    badge:          num === 1 ? "Bestseller" : undefined,
+  }));
 
 export const revalidate = 60;
 
@@ -89,6 +53,9 @@ export default function HomePage() {
       {/* <Suspense fallback={<BookSkeleton />}>
         <BookWithData />
       </Suspense> */}
+      <div className="w-full h-[800px] relative">
+        <BookWrapper products={dummyBookProducts} />
+      </div>
 
       <ShowcaseCarousel
         overline="JUST DROPPED"

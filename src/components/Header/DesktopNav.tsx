@@ -254,7 +254,7 @@ export default function DesktopNav({ menuItems, closeProfileMenu }: DesktopNavPr
                         <div className="absolute inset-0 bg-[#222] border border-[#333] rounded-xl shadow-lg -rotate-3 -translate-x-3 origin-bottom-left transition-transform group-hover:-rotate-6 duration-500"></div>
                         <div className="absolute inset-0 bg-black rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex items-center justify-center border border-[#333] overflow-hidden z-10">
                           <Image
-                            src="/assets/images/Card1.png"
+                            src="/assets/images/Card1.webp"
                             alt="Featured Nav Image"
                             fill
                             sizes="(max-width: 768px) 220px, 25vw"

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Montserrat } from "next/font/google";
 import localFont from "next/font/local";
 import { unstable_cache } from "next/cache";
 import "./globals.css";
@@ -11,18 +10,11 @@ import { CartProvider } from "../context/CartContext";
 import FooterWrapper from "../components/layout/FooterWrapper";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AuthProvider } from "../context/AuthContext";
-import Script from "next/script"; // Required for performance
+import Script from "next/script"; 
 import { getGlobalSettingsData } from "@/src/lib/shopify";
 import CartDrawerWrapper from "../components/cart/CartDrawerWrapper";
 import MetaPixel from "../components/shared/MetaPixel";
 import Header from "../components/Header";
-
-const montserrat = Montserrat({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-montserrat",
-  display: "swap",
-});
 
 const almarena = localFont({
   src: [
@@ -92,7 +84,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${montserrat.variable} ${almarena.variable}`}
+      className={almarena.variable}
       suppressHydrationWarning
     >
       <head>
@@ -100,7 +92,6 @@ export default async function RootLayout({
         <link rel="apple-touch-icon" href="/favicon.svg?v=1" />
         <link rel="preconnect" href="https://cdn.shopify.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn.shopify.com" />
-        {/* Removed blocking GTM scripts from here */}
       </head>
       
       <body className="antialiased flex flex-col min-h-screen bg-[var(--color-bg-base)] text-[var(--color-text-primary)] selection:bg-[var(--color-brand-orange)] selection:text-white">
@@ -140,7 +131,6 @@ export default async function RootLayout({
 
         <SpeedInsights />
         
-        {/* JSON-LD Schema remains standard script to avoid Next.js Script parsing issues */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
