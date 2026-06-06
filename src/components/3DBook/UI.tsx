@@ -154,9 +154,12 @@ export const UI = ({ totalPages, productMeta }: UIProps) => {
       )} */}
 
       {/* ── Bottom navigation ── */}
+      {/* 1. Pin this back to bottom-0 so there is no gap underneath */}
       <div className="pointer-events-auto absolute bottom-0 left-0 right-0 z-20">
         <div className="h-16 bg-gradient-to-t from-black/80 to-transparent" />
-        <div className="bg-black/80 backdrop-blur-xl border-t border-white/10 px-4 py-3">
+        
+        {/* 2. Add padding-bottom (pb-12 or pb-20) here to lift the content instead of the whole bar */}
+        <div className="bg-black/80 backdrop-blur-xl border-t border-white/10 px-4 pt-3 pb-30 md:pb-20">
           <div
             ref={scrollRef}
             className="flex items-center gap-2 overflow-x-auto no-scrollbar"

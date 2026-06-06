@@ -90,7 +90,8 @@ function BookScene({ products }: BookSceneProps) {
       setCameraZ(isMobile ? 6.0 : 4.0);
       
       // Shift the 3D group downwards to close the gap to the UI
-      setPositionY(isMobile ? -0.8 : -0.3); // <-- ADD THIS
+      setPositionY(isMobile ? 0.6 : 0.4);
+      //setPositionY(isMobile ? -0.8 : -0.3); // <-- ADD THIS
     };
     
     update();
