@@ -647,7 +647,7 @@ export async function getHomePageCollections(limit: number = 15): Promise<Format
         handle: collectionHandle,
         first: limit,
       },
-      cache: 'no-store',
+      // cache: 'no-store',
     });
 
     // Extract the nested products array from the collection response
@@ -716,7 +716,6 @@ export async function getHomePageHeroCollections(limit: number = 15): Promise<Fo
         handle: collectionHandle,
         first: limit,
       },
-      cache: 'no-store',
     });
 
     const productsData = res.body?.data?.collection?.products;
