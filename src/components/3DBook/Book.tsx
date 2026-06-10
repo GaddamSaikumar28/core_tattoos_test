@@ -216,24 +216,6 @@ export const Book = ({ customPages, ...props }: BookProps) => {
   const bookPages  = customPages ?? pages;
   const totalPages = bookPages.length;
 
-  // Swapped useMemo out for useEffect to execute texture pre-cache clear safely
-  // useEffect(() => {
-  //   if (!customPages) return;
-
-  //   if (customPages[0]) {
-  //     useTexture.preload(customPages[0].front);
-  //     useTexture.preload(customPages[0].back);
-  //   }
-
-  //   const timer = setTimeout(() => {
-  //     customPages.slice(1).forEach((p) => {
-  //       useTexture.preload(p.front);
-  //       useTexture.preload(p.back);
-  //     });
-  //   }, 600);
-
-  //   return () => clearTimeout(timer);
-  // }, [customPages]);
   const customPagesCacheKey = useMemo(() => {
     return customPages ? JSON.stringify(customPages) : "";
   }, [customPages]);

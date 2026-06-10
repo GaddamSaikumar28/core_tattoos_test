@@ -55,44 +55,6 @@ export async function POST(req: Request) {
       throw new Error("No image data returned from Gemini");
     }
 
-    // ==========================================
-    // OPTION 2: HUGGING FACE (100% Free Alternative)
-    // ==========================================
-    // if (provider === 'huggingface') {
-    //   const HF_API_KEY = process.env.HF_API_KEY; 
-      
-    //   // FIX 1: Guard against missing token before shooting the request
-    //   if (!HF_API_KEY) {
-    //     return NextResponse.json({ error: "Hugging Face API token is missing from env variables" }, { status: 500 });
-    //   }
-      
-    //   // Using Stable Diffusion XL (Excellent for tattoo designs)
-    //   const MODEL = "stabilityai/stable-diffusion-xl-base-1.0"; 
-      
-    //   const response = await fetch(`https://api-inference.huggingface.co/models/${MODEL}`, {
-    //     method: "POST",
-    //     headers: {
-    //       "Authorization": `Bearer ${HF_API_KEY}`,
-    //       "Content-Type": "application/json",
-    //     },
-    //     body: JSON.stringify({ inputs: prompt }),
-    //   });
-
-    //   if (!response.ok) {
-    //     const errText = await response.text();
-    //     throw new Error(`Hugging Face API error: ${errText}`);
-    //   }
-
-    //   // Hugging Face returns raw binary data
-    //   const arrayBuffer = await response.arrayBuffer();
-    //   const buffer = Buffer.from(arrayBuffer);
-    //   const base64Image = buffer.toString('base64');
-      
-    //   return NextResponse.json({ 
-    //     success: true, 
-    //     imageUrl: `data:image/jpeg;base64,${base64Image}` 
-    //   });
-    // }
 
     if (provider === 'huggingface') {
       const HF_API_KEY = process.env.HF_API_KEY; 

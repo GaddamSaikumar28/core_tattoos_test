@@ -1,5 +1,6 @@
 
 
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
@@ -24,16 +25,14 @@ interface CartContextType {
   isCartLoading: boolean;
   isAddingToCart: boolean;
   setCartOpen: (open: boolean) => void;
-//   addToCart: (variantId: string, quantity: number) => Promise<void>;
   addToCart: (variantOrId: any, quantity?: number) => Promise<void>;
   updateQuantity: (lineId: string, quantity: number) => Promise<void>;
   removeLineItem: (lineId: string) => Promise<void>;
   linkCartToUser: (customerAccessToken: string) => Promise<void>;
-  buyNow: (variantId: string, quantity: number) => Promise<string | undefined>; // <-- NEW
+  buyNow: (variantId: string, quantity: number) => Promise<string | undefined>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
-
 const CART_ID_KEY = "shopify_cart_id";
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
@@ -42,19 +41,36 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [isCartLoading, setIsCartLoading] = useState(true);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
-  // 1. Initialize Cart from LocalStorage
+  // 1. Initialize Cart from LocalStorage & Ensure Identity Synchronization
   const initializeCart = useCallback(async () => {
     setIsCartLoading(true);
     const savedCartId = typeof window !== 'undefined' ? localStorage.getItem(CART_ID_KEY) : null;
 
     if (savedCartId) {
       try {
-        const existingCart = await getCart(savedCartId);
+        let existingCart = await getCart(savedCartId);
         if (existingCart) {
+          // FIX: If a user is logged in on mount, sync identity immediately to clear initial race conditions
+          const userToken = Cookies.get("shopify_customer_token");
+          if (userToken) {
+            const [profile, addressData] = await Promise.all([
+              getCustomer(userToken),
+              getCustomerAddresses(userToken)
+            ]);
+
+            const defaultAddress = addressData?.addresses?.find(
+              (a: any) => a.id === addressData.defaultAddressId
+            ) || addressData?.addresses?.[0];
+
+            existingCart = await updateCartBuyerIdentity(
+              existingCart.id,
+              userToken,
+              profile?.email,
+              defaultAddress
+            );
+          }
           setCart(existingCart);
         } else {
-          // IMPORTANT: If cart returns null, it has expired on Shopify's end (10 days).
-          // We must wipe it locally so the user isn't stuck with a broken cart.
           localStorage.removeItem(CART_ID_KEY);
           setCart(null);
         }
@@ -66,13 +82,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setIsCartLoading(false);
   }, []);
 
-  // Run on mount
   useEffect(() => {
     initializeCart();
   }, [initializeCart]);
 
-  // 2. Cross-Tab Synchronization
-  // If user opens two tabs and adds an item in Tab A, Tab B will automatically sync.
+  // Cross-Tab Synchronization
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === CART_ID_KEY) {
@@ -84,28 +98,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [initializeCart]);
 
   // --- ACTIONS ---
-const addToCart = async (variantOrId: any, incomingQuantity?: number) => {
+  const addToCart = async (variantOrId: any, incomingQuantity?: number) => {
     setIsAddingToCart(true);
     try {
-      // 1. SMART EXTRACTION: Figure out the exact String ID
       let finalVariantId = "";
-      
       if (typeof variantOrId === 'string') {
         finalVariantId = variantOrId;
       } else if (variantOrId?.variantId) {
-        finalVariantId = variantOrId.variantId; // From ProductCard (FormattedProduct)
+        finalVariantId = variantOrId.variantId;
       } else if (variantOrId?.id) {
-        finalVariantId = variantOrId.id; // From TattooProductDetail (Combination)
+        finalVariantId = variantOrId.id;
       } else {
         toast.error("Invalid product selected.");
         return;
       }
 
-      // 2. SMART QUANTITY: Fallback to 1 if it's missing or an object (e.g., an event payload)
-      const safeQuantity = (typeof incomingQuantity === 'number' && incomingQuantity > 0) 
-        ? incomingQuantity 
-        : 1;
-
+      const safeQuantity = (typeof incomingQuantity === 'number' && incomingQuantity > 0) ? incomingQuantity : 1;
       const savedCartId = localStorage.getItem(CART_ID_KEY);
       let newCart: Cart;
 
@@ -113,26 +121,6 @@ const addToCart = async (variantOrId: any, incomingQuantity?: number) => {
         // A. CREATE BRAND NEW CART
         newCart = await createCart(finalVariantId, safeQuantity);
         localStorage.setItem(CART_ID_KEY, newCart.id);
-        const userToken = Cookies.get("shopify_customer_token");
-        if (userToken) {
-          const [profile, addressData] = await Promise.all([
-            getCustomer(userToken),
-            getCustomerAddresses(userToken)
-          ]);
-
-          const defaultAddress = addressData?.addresses?.find(
-            (a: any) => a.id === addressData.defaultAddressId
-          ) || addressData?.addresses?.[0];
-
-          newCart = await updateCartBuyerIdentity(
-            newCart.id, 
-            userToken,
-            profile?.email,
-            defaultAddress
-          );
-          //newCart = await updateCartBuyerIdentity(newCart.id, userToken);
-        }
-
       } else {
         // B. CHECK FOR EXISTING ITEM TO PREVENT DUPLICATES
         const existingLineItem = cart.lines.find(
@@ -140,16 +128,31 @@ const addToCart = async (variantOrId: any, incomingQuantity?: number) => {
         );
 
         if (existingLineItem) {
-          // Just update the quantity of the existing item in the cart!
           const newTotalQuantity = existingLineItem.quantity + safeQuantity;
-          await updateQuantity(existingLineItem.id, newTotalQuantity);
-          setIsCartOpen(true);
-          toast.success("Added to cart");
-          return; // Exit early, since updateQuantity handles the state update
+          newCart = await updateCartItem(cart.id, existingLineItem.id, newTotalQuantity);
         } else {
-          // Add brand new line item to existing cart
           newCart = await apiAddToCart(savedCartId, finalVariantId, safeQuantity);
         }
+      }
+
+      // FIX: Always attach/verify user identity after any mutation if logged in
+      const userToken = Cookies.get("shopify_customer_token");
+      if (userToken) {
+        const [profile, addressData] = await Promise.all([
+          getCustomer(userToken),
+          getCustomerAddresses(userToken)
+        ]);
+
+        const defaultAddress = addressData?.addresses?.find(
+          (a: any) => a.id === addressData.defaultAddressId
+        ) || addressData?.addresses?.[0];
+
+        newCart = await updateCartBuyerIdentity(
+          newCart.id, 
+          userToken,
+          profile?.email,
+          defaultAddress
+        );
       }
       
       setCart(newCart);
@@ -165,9 +168,8 @@ const addToCart = async (variantOrId: any, incomingQuantity?: number) => {
 
   const updateQuantity = async (lineId: string, quantity: number) => {
     if (!cart?.id) return;
-    
-    // Optimistic UI update (optional, but makes it feel instant)
     const previousCart = { ...cart };
+    
     setCart(prev => prev ? {
       ...prev,
       lines: prev.lines.map(line => line.id === lineId ? { ...line, quantity } : line)
@@ -177,12 +179,23 @@ const addToCart = async (variantOrId: any, incomingQuantity?: number) => {
       if (quantity === 0) {
         await removeLineItem(lineId);
       } else {
-        const updatedCart = await updateCartItem(cart.id, lineId, quantity);
+        let updatedCart = await updateCartItem(cart.id, lineId, quantity);
+        
+        // Reinforce identity on modifications
+        const userToken = Cookies.get("shopify_customer_token");
+        if (userToken) {
+          const [profile, addressData] = await Promise.all([
+            getCustomer(userToken),
+            getCustomerAddresses(userToken)
+          ]);
+          const defaultAddress = addressData?.addresses?.find((a: any) => a.id === addressData.defaultAddressId) || addressData?.addresses?.[0];
+          updatedCart = await updateCartBuyerIdentity(updatedCart.id, userToken, profile?.email, defaultAddress);
+        }
         setCart(updatedCart);
       }
     } catch (error) {
       console.error("Update quantity error:", error);
-      setCart(previousCart); // Revert on failure
+      setCart(previousCart);
       toast.error("Failed to update quantity");
     }
   };
@@ -199,23 +212,17 @@ const addToCart = async (variantOrId: any, incomingQuantity?: number) => {
   };
 
   // 3. Guest to Logged-in User Handoff
-  // Call this function when a user successfully logs in.
-  // It attaches the current guest cart to their official customer account.
   const linkCartToUser = async (customerAccessToken: string) => {
-    // if (!cart?.id) return;
     try {
       const savedCartId = localStorage.getItem(CART_ID_KEY);
-      if (!savedCartId || !cart) return;
+      if (!savedCartId) return; // FIX: Removed "!cart" dependency to protect against on-mount race condition
 
-      // 1. Fetch the user's basic profile (for email) and their addresses
       const [customerProfile, addressData] = await Promise.all([
         getCustomer(customerAccessToken),
         getCustomerAddresses(customerAccessToken)
       ]);
 
-      // 2. Identify the default address (or fallback to the first saved address)
       let defaultAddress: ShopifyAddress | undefined = undefined;
-      
       if (addressData?.addresses?.length > 0) {
         defaultAddress = addressData.addresses.find(
           (addr: ShopifyAddress) => addr.id === addressData.defaultAddressId
@@ -230,9 +237,6 @@ const addToCart = async (variantOrId: any, incomingQuantity?: number) => {
       );
       
       setCart(updatedCart);
-
-      // const linkedCart = await updateCartBuyerIdentity(cart.id, customerAccessToken);
-      // setCart(linkedCart);
     } catch (error) {
       console.error("Failed to link cart to user:", error);
     }
@@ -244,54 +248,29 @@ const addToCart = async (variantOrId: any, incomingQuantity?: number) => {
       let checkoutCart: Cart;
 
       if (!savedCartId || !cart) {
-        // Create a new cart if one doesn't exist
         checkoutCart = await createCart(variantId, quantity);
         localStorage.setItem(CART_ID_KEY, checkoutCart.id);
-        const userToken = Cookies.get("shopify_customer_token");
-        if (userToken) {
-          const [profile, addressData] = await Promise.all([
-            getCustomer(userToken),
-            getCustomerAddresses(userToken)
-          ]);
-
-          const defaultAddress = addressData?.addresses?.find(
-            (a: any) => a.id === addressData.defaultAddressId
-          ) || addressData?.addresses?.[0];
-
-          checkoutCart = await updateCartBuyerIdentity(
-            checkoutCart.id, 
-            userToken,
-            profile?.email,
-            defaultAddress
-          );
-
-          //checkoutCart = await updateCartBuyerIdentity(checkoutCart.id, userToken);
-        }
       } else {
-        // Check if item already exists in the cart
-        const existingLineItem = cart.lines.find(
-          (line) => line.merchandise.id === variantId
-        );
-
+        const existingLineItem = cart.lines.find((line) => line.merchandise.id === variantId);
         if (existingLineItem) {
-          // Update quantity if it exists
-          checkoutCart = await updateCartItem(
-            cart.id, 
-            existingLineItem.id, 
-            existingLineItem.quantity + quantity
-          );
+          checkoutCart = await updateCartItem(cart.id, existingLineItem.id, existingLineItem.quantity + quantity);
         } else {
-          // Add new line item to existing cart
           checkoutCart = await apiAddToCart(savedCartId, variantId, quantity);
         }
       }
-      
-      // Update global cart state quietly
-      setCart(checkoutCart);
-      
-      // Return the fresh checkout URL
-      return checkoutCart.checkoutUrl;
 
+      const userToken = Cookies.get("shopify_customer_token");
+      if (userToken) {
+        const [profile, addressData] = await Promise.all([
+          getCustomer(userToken),
+          getCustomerAddresses(userToken)
+        ]);
+        const defaultAddress = addressData?.addresses?.find((a: any) => a.id === addressData.defaultAddressId) || addressData?.addresses?.[0];
+        checkoutCart = await updateCartBuyerIdentity(checkoutCart.id, userToken, profile?.email, defaultAddress);
+      }
+      
+      setCart(checkoutCart);
+      return checkoutCart.checkoutUrl;
     } catch (error) {
       console.error("Buy Now process failed:", error);
       toast.error("Failed to initialize checkout.");
@@ -299,7 +278,6 @@ const addToCart = async (variantOrId: any, incomingQuantity?: number) => {
     }
   };
 
-  // Calculate global total quantity
   const cartCount = cart?.totalQuantity || 0;
 
   return (
