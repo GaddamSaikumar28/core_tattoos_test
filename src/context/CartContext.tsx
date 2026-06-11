@@ -1,6 +1,3 @@
-
-
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
@@ -18,6 +15,14 @@ import {
   getCustomerAddresses,
 } from "@/src/lib/shopify";
 import Cookies from "js-cookie";
+
+// Add global declaration for Klaviyo so TypeScript doesn't throw errors
+declare global {
+  interface Window {
+    _learnq: any[];
+  }
+}
+
 interface CartContextType {
   cart: Cart | null;
   cartCount: number;
@@ -50,7 +55,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       try {
         let existingCart = await getCart(savedCartId);
         if (existingCart) {
-          // FIX: If a user is logged in on mount, sync identity immediately to clear initial race conditions
           const userToken = Cookies.get("shopify_customer_token");
           if (userToken) {
             const [profile, addressData] = await Promise.all([
@@ -62,11 +66,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               (a: any) => a.id === addressData.defaultAddressId
             ) || addressData?.addresses?.[0];
 
+            // const countryCode = defaultAddress?.country || "IN";
+            const countryCode = "US";
             existingCart = await updateCartBuyerIdentity(
               existingCart.id,
               userToken,
               profile?.email,
-              defaultAddress
+              defaultAddress,
+              countryCode
             );
           }
           setCart(existingCart);
@@ -108,7 +115,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         finalVariantId = variantOrId.variantId;
       } else if (variantOrId?.id) {
         finalVariantId = variantOrId.id;
-      } else {
+      } else {  
         toast.error("Invalid product selected.");
         return;
       }
@@ -118,11 +125,29 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       let newCart: Cart;
 
       if (!savedCartId || !cart) {
-        // A. CREATE BRAND NEW CART
-        newCart = await createCart(finalVariantId, safeQuantity);
+        const userToken = Cookies.get("shopify_customer_token");
+        if (userToken) {
+          const [profile, addressData] = await Promise.all([
+            getCustomer(userToken),
+            getCustomerAddresses(userToken)
+          ]);
+          
+          const defaultAddress = addressData?.addresses?.find(
+            (a: any) => a.id === addressData.defaultAddressId
+          ) || addressData?.addresses?.[0];
+          
+          const countryCode = defaultAddress?.country || "IN";
+
+          newCart = await createCart(finalVariantId, safeQuantity, {
+            customerAccessToken: userToken,
+            email: profile?.email,
+            countryCode
+          });
+        } else {
+          newCart = await createCart(finalVariantId, safeQuantity);
+        }
         localStorage.setItem(CART_ID_KEY, newCart.id);
       } else {
-        // B. CHECK FOR EXISTING ITEM TO PREVENT DUPLICATES
         const existingLineItem = cart.lines.find(
           (line) => line.merchandise.id === finalVariantId
         );
@@ -135,9 +160,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // FIX: Always attach/verify user identity after any mutation if logged in
       const userToken = Cookies.get("shopify_customer_token");
-      if (userToken) {
+      if (userToken && savedCartId) {
         const [profile, addressData] = await Promise.all([
           getCustomer(userToken),
           getCustomerAddresses(userToken)
@@ -147,14 +171,70 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           (a: any) => a.id === addressData.defaultAddressId
         ) || addressData?.addresses?.[0];
 
+        const countryCode = defaultAddress?.country || "IN";
+
         newCart = await updateCartBuyerIdentity(
           newCart.id, 
           userToken,
           profile?.email,
-          defaultAddress
+          defaultAddress,
+          countryCode
         );
       }
       
+      try {
+        if (typeof window !== "undefined") {
+          window._learnq = window._learnq || [];
+          
+          // 1. Find the item that was just added
+          const addedItem = newCart.lines.find(line => line.merchandise.id === finalVariantId);
+          
+          if (addedItem) {
+            const productHandle = addedItem.merchandise.product?.handle;
+            const productUrl = productHandle 
+              ? `${window.location.origin}/products/${productHandle}`
+              : window.location.href;
+
+            window._learnq.push(["track", "Added to Cart", {
+              // Special Klaviyo properties used for analytics tracking
+              "$value": parseFloat(newCart.cost?.totalAmount?.amount || "0"),
+              "CurrencyCode": newCart.cost?.totalAmount?.currencyCode || "USD",
+              
+              // Direct properties of the specifically added item
+              "ProductID": finalVariantId,
+              "ProductName": addedItem.merchandise.product?.title || "Unknown Product",
+              "VariantTitle": addedItem.merchandise.title || "",
+              "Price": parseFloat(addedItem.merchandise.price?.amount || "0"),
+              "ImageURL": addedItem.merchandise.product?.featuredImage?.url || "",
+              "Quantity": safeQuantity,
+              "URL": productUrl,
+              
+              // Cart-wide properties to build advanced tables/reminders
+              "CartTotal": parseFloat(newCart.cost?.totalAmount?.amount || "0"),
+              "CheckoutURL": newCart.checkoutUrl || "",
+              "ItemNames": newCart.lines.map(line => line.merchandise.product?.title || "Unknown Product"),
+              
+              // Full items array structure to satisfy standard Klaviyo table loops
+              "Items": newCart.lines.map(line => ({
+                "ProductID": line.merchandise.id,
+                "ProductName": line.merchandise.product?.title || "Unknown Product",
+                "Quantity": line.quantity,
+                "ItemPrice": parseFloat(line.merchandise.price?.amount || "0"),
+                "RowTotal": parseFloat(line.cost?.totalAmount?.amount || "0"),
+                "ImageURL": line.merchandise.product?.featuredImage?.url || "",
+                "URL": line.merchandise.product?.handle 
+                  ? `${window.location.origin}/products/${line.merchandise.product?.handle}`
+                  : window.location.href
+              }))
+            }]);
+          }
+        }
+      } catch (trackError) {
+        // Fail silently so tracking errors never interrupt the user checkout experience
+        console.error("Klaviyo tracking error:", trackError);
+      }
+      // --- END KLAVIYO TRACKING ---
+
       setCart(newCart);
       setIsCartOpen(true);
       toast.success("Added to cart");
@@ -181,7 +261,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       } else {
         let updatedCart = await updateCartItem(cart.id, lineId, quantity);
         
-        // Reinforce identity on modifications
         const userToken = Cookies.get("shopify_customer_token");
         if (userToken) {
           const [profile, addressData] = await Promise.all([
@@ -189,7 +268,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             getCustomerAddresses(userToken)
           ]);
           const defaultAddress = addressData?.addresses?.find((a: any) => a.id === addressData.defaultAddressId) || addressData?.addresses?.[0];
-          updatedCart = await updateCartBuyerIdentity(updatedCart.id, userToken, profile?.email, defaultAddress);
+          const countryCode = defaultAddress?.country || "IN";
+
+          updatedCart = await updateCartBuyerIdentity(updatedCart.id, userToken, profile?.email, defaultAddress, countryCode);
         }
         setCart(updatedCart);
       }
@@ -211,11 +292,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // 3. Guest to Logged-in User Handoff
   const linkCartToUser = async (customerAccessToken: string) => {
     try {
       const savedCartId = localStorage.getItem(CART_ID_KEY);
-      if (!savedCartId) return; // FIX: Removed "!cart" dependency to protect against on-mount race condition
+      if (!savedCartId) return; 
 
       const [customerProfile, addressData] = await Promise.all([
         getCustomer(customerAccessToken),
@@ -229,11 +309,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         ) || addressData.addresses[0];
       }
 
+      const countryCode = defaultAddress?.country || "IN";
+
       const updatedCart = await updateCartBuyerIdentity(
         savedCartId, 
         customerAccessToken,
         customerProfile?.email, 
-        defaultAddress          
+        defaultAddress,
+        countryCode
       );
       
       setCart(updatedCart);
@@ -248,7 +331,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       let checkoutCart: Cart;
 
       if (!savedCartId || !cart) {
-        checkoutCart = await createCart(variantId, quantity);
+        const userToken = Cookies.get("shopify_customer_token");
+        if (userToken) {
+          const [profile, addressData] = await Promise.all([
+            getCustomer(userToken),
+            getCustomerAddresses(userToken)
+          ]);
+          
+          const defaultAddress = addressData?.addresses?.find(
+            (a: any) => a.id === addressData.defaultAddressId
+          ) || addressData?.addresses?.[0];
+          
+          const countryCode = defaultAddress?.country || "IN";
+
+          checkoutCart = await createCart(variantId, quantity, {
+            customerAccessToken: userToken,
+            email: profile?.email,
+            countryCode
+          });
+        } else {
+          checkoutCart = await createCart(variantId, quantity);
+        }
         localStorage.setItem(CART_ID_KEY, checkoutCart.id);
       } else {
         const existingLineItem = cart.lines.find((line) => line.merchandise.id === variantId);
@@ -260,13 +363,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
 
       const userToken = Cookies.get("shopify_customer_token");
-      if (userToken) {
+      if (userToken && savedCartId) {
         const [profile, addressData] = await Promise.all([
           getCustomer(userToken),
           getCustomerAddresses(userToken)
         ]);
         const defaultAddress = addressData?.addresses?.find((a: any) => a.id === addressData.defaultAddressId) || addressData?.addresses?.[0];
-        checkoutCart = await updateCartBuyerIdentity(checkoutCart.id, userToken, profile?.email, defaultAddress);
+        const countryCode = defaultAddress?.country || "IN";
+
+        checkoutCart = await updateCartBuyerIdentity(checkoutCart.id, userToken, profile?.email, defaultAddress, countryCode);
       }
       
       setCart(checkoutCart);

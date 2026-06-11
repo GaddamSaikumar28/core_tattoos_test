@@ -114,6 +114,12 @@ export default async function RootLayout({
           }}
         />
 
+        <Script
+          id="klaviyo-onsite-script"
+          strategy="afterInteractive"
+          src="https://static.klaviyo.com/onsite/js/klaviyo.js?company_id=Siqp6J"
+        />
+
         {/* OPTIMIZATION 2: Next.js Script for inline logic to prevent hydration mismatch */}
         <Script
           id="splash-screen-logic"

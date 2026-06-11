@@ -15,6 +15,11 @@ import {
 import { useCart } from "@/src/context/CartContext";
 
 const TOKEN_KEY = "shopify_customer_token";
+declare global {
+  interface Window {
+    _learnq: any[];
+  }
+}
 
 interface AuthContextType {
   customer: Customer | null;
@@ -45,6 +50,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (fetchedCustomer) {
             setCustomer(fetchedCustomer);
             await linkCartToUser(token);
+            if (typeof window !== "undefined") {
+              window._learnq = window._learnq || [];
+              window._learnq.push(['identify', {
+                '$email': fetchedCustomer.email,
+                '$first_name': fetchedCustomer.firstName,
+                '$last_name': fetchedCustomer.lastName
+              }]);
+            }
           } else {
             Cookies.remove(TOKEN_KEY);
           }
@@ -70,7 +83,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // 3. Link existing guest cart to the newly logged-in user!
         await linkCartToUser(tokenData.accessToken);
-        
+        if (typeof window !== "undefined") {
+          window._learnq = window._learnq || [];
+          window._learnq.push(['identify', {
+            '$email': fetchedCustomer.email,
+            '$first_name': fetchedCustomer.firstName,
+            '$last_name': fetchedCustomer.lastName
+          }]);
+        }
         toast.success(`Welcome back, ${fetchedCustomer.firstName}!`);
         return true;
       }

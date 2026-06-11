@@ -513,14 +513,96 @@ const reshapeCart = (cart: any): Cart => {
   };
 };
 
-export async function createCart(variantId: string, quantity: number): Promise<Cart> {
+// export async function createCart(variantId: string, quantity: number): Promise<Cart> {
+//   const res = await shopifyFetch<any>({
+//     query: createCartMutation,
+//     variables: { lineItems: [{ merchandiseId: variantId, quantity }] },
+//     //cache: 'no-store', // Carts should never be cached
+//   });
+//   return reshapeCart(res.body.data.cartCreate.cart);
+// }
+
+export async function createCart(
+  variantId: string, 
+  quantity: number,
+  buyerIdentity?: { customerAccessToken?: string; email?: string; countryCode?: string }
+): Promise<Cart> {
+  if (buyerIdentity) {
+    buyerIdentity.countryCode = "US";
+  }
+  
   const res = await shopifyFetch<any>({
     query: createCartMutation,
-    variables: { lineItems: [{ merchandiseId: variantId, quantity }] },
+    variables: { 
+      lineItems: [{ merchandiseId: variantId, quantity }],
+      ...(buyerIdentity && { buyerIdentity })
+    },
     //cache: 'no-store', // Carts should never be cached
   });
   return reshapeCart(res.body.data.cartCreate.cart);
 }
+
+// Associates a guest cart with a logged-in user's Shopify Account
+export async function updateCartBuyerIdentity(
+  cartId: string, 
+  customerAccessToken: string, 
+  email?: string,
+  shippingAddress?: ShopifyAddress,
+  countryCode?: string
+): Promise<Cart> {
+  const buyerIdentity: any = { customerAccessToken };
+
+  // Explicitly attach the email so it pre-fills the checkout contact field
+  if (email) buyerIdentity.email = email;
+  
+  // Explicitly attach countryCode for abandoned cart tracking
+  // if (countryCode) buyerIdentity.countryCode = countryCode;
+  buyerIdentity.countryCode = "US";
+
+  // Map the saved customer address to Shopify's expected DeliveryAddressInput
+  if (shippingAddress) {
+    buyerIdentity.deliveryAddressPreferences = [{
+      deliveryAddress: {
+        firstName: shippingAddress.firstName,
+        lastName: shippingAddress.lastName,
+        address1: shippingAddress.address1,
+        address2: shippingAddress.address2 || "",
+        city: shippingAddress.city,
+        province: shippingAddress.province,
+        // country: shippingAddress.country,
+        country: "US",
+        zip: shippingAddress.zip,
+        phone: shippingAddress.phone || "",
+        company: shippingAddress.company || ""
+      }
+    }];
+  }
+
+  const res = await shopifyFetch<any>({
+    query: updateCartBuyerIdentityMutation,
+    variables: { 
+      cartId, 
+      buyerIdentity
+    },
+    cache: 'no-store',
+  });
+  return reshapeCart(res.body.data.cartBuyerIdentityUpdate.cart);
+}
+// export async function createCart(
+//   variantId: string,
+//   quantity: number,
+//   buyerIdentity?: { customerAccessToken?: string; email?: string; countryCode?: string }
+// ): Promise<Cart> {
+//   const res = await shopifyFetch<any>({
+//     query: createCartMutation,
+//     variables: {
+//       lineItems: [{ merchandiseId: variantId, quantity }],
+//       ...(buyerIdentity && { buyerIdentity }),
+//     },
+//     cache: 'no-store',
+//   });
+//   return reshapeCart(res.body.data.cartCreate.cart);
+// }
 
 export async function getCart(cartId: string): Promise<Cart | null> {
   const res = await shopifyFetch<any>({
@@ -560,43 +642,43 @@ export async function removeFromCart(cartId: string, lineId: string): Promise<Ca
 }
 
 // Associates a guest cart with a logged-in user's Shopify Account
-export async function updateCartBuyerIdentity(cartId: string, customerAccessToken: string, email?: string,
-  shippingAddress?: ShopifyAddress): Promise<Cart> {
-    const buyerIdentity: any = { customerAccessToken };
+// export async function updateCartBuyerIdentity(cartId: string, customerAccessToken: string, email?: string,
+//   shippingAddress?: ShopifyAddress): Promise<Cart> {
+//     const buyerIdentity: any = { customerAccessToken };
 
-  // 1. Explicitly attach the email so it pre-fills the checkout contact field
-    if (email) {
-      buyerIdentity.email = email;
-    }
+//   // 1. Explicitly attach the email so it pre-fills the checkout contact field
+//     if (email) {
+//       buyerIdentity.email = email;
+//     }
 
-  // 2. Map the saved customer address to Shopify's expected DeliveryAddressInput
-    if (shippingAddress) {
-      buyerIdentity.deliveryAddressPreferences = [{
-        deliveryAddress: {
-          firstName: shippingAddress.firstName,
-          lastName: shippingAddress.lastName,
-          address1: shippingAddress.address1,
-          address2: shippingAddress.address2 || "",
-          city: shippingAddress.city,
-          province: shippingAddress.province,
-          country: shippingAddress.country,
-          zip: shippingAddress.zip,
-          phone: shippingAddress.phone || "",
-          company: shippingAddress.company || ""
-        }
-      }];
-    }
+//   // 2. Map the saved customer address to Shopify's expected DeliveryAddressInput
+//     if (shippingAddress) {
+//       buyerIdentity.deliveryAddressPreferences = [{
+//         deliveryAddress: {
+//           firstName: shippingAddress.firstName,
+//           lastName: shippingAddress.lastName,
+//           address1: shippingAddress.address1,
+//           address2: shippingAddress.address2 || "",
+//           city: shippingAddress.city,
+//           province: shippingAddress.province,
+//           country: shippingAddress.country,
+//           zip: shippingAddress.zip,
+//           phone: shippingAddress.phone || "",
+//           company: shippingAddress.company || ""
+//         }
+//       }];
+//     }
 
-  const res = await shopifyFetch<any>({
-    query: updateCartBuyerIdentityMutation,
-    variables: { 
-      cartId, 
-      buyerIdentity
-    },
-    cache: 'no-store',
-  });
-  return reshapeCart(res.body.data.cartBuyerIdentityUpdate.cart);
-}
+//   const res = await shopifyFetch<any>({
+//     query: updateCartBuyerIdentityMutation,
+//     variables: { 
+//       cartId, 
+//       buyerIdentity
+//     },
+//     cache: 'no-store',
+//   });
+//   return reshapeCart(res.body.data.cartBuyerIdentityUpdate.cart);
+// }
 
 
 export async function getHomePageNewArrivals(limit: number = 4): Promise<FormattedProduct[]> {
