@@ -31,7 +31,7 @@ function HeaderContent({ logoUrl = "/assets/icons/DesktopLogo-Light.svg" }: Head
   
   // Global Contexts
   const { cartCount, setCartOpen } = useCart();
-  const { customer, logout } = useAuth();
+  const { customer, logout, isLoading} = useAuth();
   const isLoggedIn = !!customer;
 
   // Global UI States
@@ -264,6 +264,7 @@ function HeaderContent({ logoUrl = "/assets/icons/DesktopLogo-Light.svg" }: Head
         isLoggedIn={isLoggedIn}
         customer={customer}
         logout={logout}
+        isLoading={isLoading}
       />
     </>
   );

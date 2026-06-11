@@ -18,6 +18,7 @@ interface MobileDrawerProps {
   isLoggedIn: boolean;
   customer: any;
   logout: () => Promise<void>;
+  isLoading?: boolean;
 }
 
 const drawerVariants: Variants = {
@@ -186,15 +187,20 @@ export default function MobileDrawer({
               <div className="flex flex-col gap-4">
                 {isLoggedIn ? (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md">
-                      <div className="w-11 h-11 bg-[#FF5A24] text-white rounded-full flex items-center justify-center font-bold text-lg shadow-lg">
+                    <Link 
+                      href="/account"
+                      onClick={() => setIsMobileDrawerOpen(false)}
+                      className="flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 transition-colors rounded-2xl border border-white/10 backdrop-blur-md cursor-pointer block"
+                    >
+                    <div className="w-11 h-11 bg-[#FF5A24] text-white rounded-full flex items-center justify-center font-bold text-lg shadow-lg shrink-0">
                         {customer?.firstName?.charAt(0) || "U"}
                       </div>
                       <div className="flex flex-col">
                         <span className="text-[11px] font-medium text-white/50 uppercase tracking-wider">Welcome back</span>
                         <span className="text-[15px] font-semibold text-white">{customer?.firstName || "User"}</span>
                       </div>
-                    </div>
+                    </Link>
+                    
                     <button
                       onClick={async () => { await logout(); setIsMobileDrawerOpen(false); }}
                       className="w-full py-3.5 rounded-full text-[13px] font-medium text-white/60 hover:text-white hover:bg-white/5 transition-all flex items-center justify-center gap-2 border border-transparent hover:border-white/10"

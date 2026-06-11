@@ -106,6 +106,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // --- ACTIONS ---
   const addToCart = async (variantOrId: any, incomingQuantity?: number) => {
+    const customer = Cookies.get("shopify_customer_token");
+    if (!customer) {
+      toast.error("Please log in to add items to your cart.");
+      return;
+    }
     setIsAddingToCart(true);
     try {
       let finalVariantId = "";
